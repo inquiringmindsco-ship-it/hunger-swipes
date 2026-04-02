@@ -138,65 +138,69 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ photos: getMockPhotos(), mock: true })
     }
 
-    const { data: swipedPhotoIds } = await (supabase as any)
-      .from('swipes')
-      .select('photo_id')
-      .eq('eater_id', eaterId)
+    let swipedIds: string[] = []
+    try {
+      const { data: swipedPhotoIds } = await (supabase as any)
+        .from('swipes')
+        .select('photo_id')
+        .eq('eater_id', eaterId)
+      swipedIds = swipedPhotoIds?.map((s: any) => s.photo_id) || []
+    } catch { /* swipes table may not exist */ }
 
-    const swipedIds = swipedPhotoIds?.map((s: any) => s.photo_id) || []
-
-    let query = (supabase as any)
-      .from('photos')
-      .select(`
-        id,
-        image_url,
-        thumbnail_url,
-        title,
-        description,
-        dish_name,
-        restaurant_name,
-        restaurant_location,
-        location_text,
-        cuisine_type,
-        cuisine_tags,
-        price_range,
-        price,
-        commission_rate,
-        hunger_score,
-        completeness_score,
-        metadata_quality_status,
-        tags,
-        dietary_tags,
-        calories,
-        spice_level,
-        portion_size,
-        vegetarian_option,
-        vegan_option,
-        gluten_free_option,
-        health_category,
-        viral_score,
-        content_label,
-        created_at,
-        creator:profiles!creator_id (
+    try {
+      let query = (supabase as any)
+        .from('photos')
+        .select(`
           id,
-          username,
-          avatar_url
-        )
-      `)
-      .eq('status', 'active')
-      .order('hunger_score', { ascending: false })
-      .limit(limit)
+          image_url,
+          thumbnail_url,
+          title,
+          description,
+          dish_name,
+          restaurant_name,
+          restaurant_location,
+          location_text,
+          cuisine_type,
+          cuisine_tags,
+          price_range,
+          price,
+          commission_rate,
+          hunger_score,
+          completeness_score,
+          metadata_quality_status,
+          tags,
+          dietary_tags,
+          calories,
+          spice_level,
+          portion_size,
+          vegetarian_option,
+          vegan_option,
+          gluten_free_option,
+          health_category,
+          viral_score,
+          content_label,
+          created_at,
+          creator:profiles!creator_id (
+            id,
+            username,
+            avatar_url
+          )
+        `)
+        .eq('status', 'active')
+        .order('hunger_score', { ascending: false })
+        .limit(limit)
 
-    if (swipedIds.length > 0) {
-      query = query.not('id', 'in', `(${swipedIds.join(',')})`)
+      if (swipedIds.length > 0) {
+        query = query.not('id', 'in', `(${swipedIds.join(',')})`)
+      }
+
+      const { data: photos, error } = await query
+      if (error) throw error
+      return NextResponse.json({ photos: photos || [] })
+    } catch (err: any) {
+      console.warn('Swipe GET failed, using mock:', err.message)
+      return NextResponse.json({ photos: getMockPhotos(), mock: true })
     }
-
-    const { data: photos, error } = await query
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    return NextResponse.json({ photos: photos || [] })
-
   } catch (error) {
     console.error('Get photos error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

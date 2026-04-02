@@ -18,21 +18,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ vendors: getMockVendors(), mock: true })
     }
 
-    let query = (supabase as any)
-      .from('vendors')
-      .select('*')
-      .eq('active', true)
-      .order('created_at', { ascending: false })
+    let vendors: any[] = []
+    try {
+      let query = (supabase as any)
+        .from('vendors')
+        .select('*')
+        .eq('active', true)
+        .order('created_at', { ascending: false })
 
-    if (city) query = query.eq('city', city)
-    if (cuisine) query = query.eq('cuisine_type', cuisine)
-    if (hasDiscount) query = query.not('discount_offer', 'is', null)
+      if (city) query = query.eq('city', city)
+      if (cuisine) query = query.eq('cuisine_type', cuisine)
+      if (hasDiscount) query = query.not('discount_offer', 'is', null)
 
-    const { data: vendors, error } = await query
+      const { data, error } = await query
+      if (error) throw error
+      vendors = data || []
+    } catch (err: any) {
+      console.warn('Vendors query failed, using mock:', err.message)
+      return NextResponse.json({ vendors: getMockVendors(), mock: true, note: 'DB not ready — using demo vendors' })
+    }
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    if (!vendors || vendors.length === 0) {
-      return NextResponse.json({ vendors: getMockVendors(), mock: true, note: 'DB empty' })
+    if (vendors.length === 0) {
+      return NextResponse.json({ vendors: getMockVendors(), mock: true, note: 'DB empty — using demo vendors' })
     }
 
     return NextResponse.json({ vendors })

@@ -123,11 +123,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { data: photos, error } = await query
+    let photos: any[] = []
+    try {
+      const { data, error } = await query
+      if (error) throw error
+      photos = data || []
+    } catch (err: any) {
+      // Table or relationship doesn't exist yet — use mock data
+      console.warn('Photos query failed, using mock data:', err.message)
+      return NextResponse.json({ photos: getMockPhotos(), mock: true, note: 'DB not ready — using demo photos' })
+    }
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    const photosWithComputed = (photos || []).map((photo: any) => ({
+    const photosWithComputed = photos.map((photo: any) => ({
       ...photo,
       rank_score: calculateRankScore({
         hungerScore: photo.hunger_score || 0,
@@ -138,11 +145,6 @@ export async function GET(request: NextRequest) {
       }),
       payout_tier: getPayoutTier(photo.completeness_score || 0),
     }))
-
-    // If DB is empty, fall back to mock photos
-    if (photosWithComputed.length === 0) {
-      return NextResponse.json({ photos: getMockPhotos(), mock: true, note: 'DB empty — using demo photos' })
-    }
 
     return NextResponse.json({ photos: photosWithComputed })
 
