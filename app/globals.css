@@ -1,0 +1,141 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #FF6A00;
+  --color-primary-dark: #E05A00;
+  --color-secondary: #1A1A2E;
+  --color-accent: #FFD500;
+  --color-accent-dark: #E0BB00;
+  --color-success: #10B981;
+  --color-error: #EF4444;
+  --color-bg: #0A0A0A;
+  --color-card: #141414;
+  --color-card-hover: #1E1E1E;
+  --color-border: rgba(255,255,255,0.08);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html {
+  background: #0D0D0D;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #0D0D0D;
+  color: white;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Hide scrollbar but allow scroll */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animations */
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-bounce {
+  animation: bounce 0.5s ease;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Swipe animations */
+.swipe-right {
+  animation: swipeRight 0.3s ease forwards;
+}
+
+.swipe-left {
+  animation: swipeLeft 0.3s ease forwards;
+}
+
+@keyframes swipeRight {
+  to {
+    transform: translateX(150%) rotate(20deg);
+    opacity: 0;
+  }
+}
+
+@keyframes swipeLeft {
+  to {
+    transform: translateX(-150%) rotate(-20deg);
+    opacity: 0;
+  }
+}
+
+/* Confetti animation for matches */
+@keyframes confetti-fall {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti {
+  animation: confetti-fall 3s ease forwards;
+}
+
+/* Gold gradient for earnings */
+.gold-gradient {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Safe area insets for iOS */
+@supports (padding: max(0px)) {
+  .safe-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .safe-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+}
