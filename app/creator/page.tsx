@@ -223,7 +223,7 @@ export default function CreatorDashboard() {
           )}
 
           {/* Earnings Summary */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-white/10 rounded-xl p-3 text-center">
               <div className="text-2xl font-bold text-[#FFD700]">{formatCurrency(MOCK_EARNINGS.total)}</div>
               <div className="text-xs text-gray-300">Total Earnings</div>
@@ -411,24 +411,42 @@ export default function CreatorDashboard() {
                         </div>
                       )}
                       
-                      {/* Stats */}
-                      <div className="grid grid-cols-4 gap-2 mt-3 text-center text-xs">
-                        <div>
-                          <div className="font-bold text-[#1A1A2E]">{photo.totalSwipes.toLocaleString()}</div>
-                          <div className="text-[#6B7280]">Views</div>
+                      {/* Stats + Boost */}
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
+                          <div>
+                            <div className="font-bold text-[#1A1A2E]">{photo.totalSwipes.toLocaleString()}</div>
+                            <div className="text-[#6B7280]">Views</div>
+                          </div>
+                          <div>
+                            <div className="font-bold text-[#10B981]">{Math.round(photo.rightSwipes / photo.totalSwipes * 100)}%</div>
+                            <div className="text-[#6B7280]">Right</div>
+                          </div>
+                          <div>
+                            <div className="font-bold text-[#FF5722]">{photo.orders}</div>
+                            <div className="text-[#6B7280]">Orders</div>
+                          </div>
+                          <div>
+                            <div className="font-bold text-[#FFD700]">{formatCurrency(photo.earnings)}</div>
+                            <div className="text-[#6B7280]">Earned</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-bold text-[#10B981]">{Math.round(photo.rightSwipes / photo.totalSwipes * 100)}%</div>
-                          <div className="text-[#6B7280]">Right</div>
-                        </div>
-                        <div>
-                          <div className="font-bold text-[#FF5722]">{photo.orders}</div>
-                          <div className="text-[#6B7280]">Orders</div>
-                        </div>
-                        <div>
-                          <div className="font-bold text-[#FFD700]">{formatCurrency(photo.earnings)}</div>
-                          <div className="text-[#6B7280]">Earned</div>
-                        </div>
+                        <button
+                          onClick={() => {
+                            const amount = photo.orders > 5 ? 'trending' : 'featured'
+                            fetch('/api/checkout', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ creatorId: 'current-user', promotion: amount, photoId: photo.id }),
+                            }).then(r => r.json()).then(d => {
+                              if (d.url) window.location.href = d.url
+                              else alert('Checkout not ready yet — add Stripe keys to enable')
+                            }).catch(() => alert('Checkout not ready yet'))
+                          }}
+                          className="ml-3 px-3 py-1.5 bg-gradient-to-r from-[#FFD700] to-[#FFA000] text-[#0D0D0D] rounded-full text-xs font-bold hover:opacity-90 transition"
+                        >
+                          ⭐ Boost
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -562,7 +580,7 @@ export default function CreatorDashboard() {
                 <h2 className="text-lg font-bold text-[#1A1A2E]">👥 Followers</h2>
                 <Link href="/creator/followers" className="text-sm text-[#FF5722]">See all →</Link>
               </div>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                 <div className="p-4 bg-[#F7F7F7] rounded-xl">
                   <div className="text-2xl font-bold text-[#1A1A2E]">1,247</div>
                   <div className="text-sm text-[#6B7280]">Followers</div>

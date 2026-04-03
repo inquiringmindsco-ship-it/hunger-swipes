@@ -393,8 +393,14 @@ export default function SwipePage() {
             <img src="/logo.png" alt="HungerSwipes" className="h-8 w-8 rounded-lg object-cover" />
             <span className="font-bold text-lg text-white">HungerSwipes</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Link href="/preferences" className="text-xl"><Gear size={22} /></Link>
+            <Link href="/vendor" className="hidden sm:block text-sm text-[#FF5722] font-semibold">
+              For Restaurants
+            </Link>
+            <Link href="/vendor-intake" className="hidden sm:block text-sm text-white/60 hover:text-white font-semibold">
+              + List Food
+            </Link>
             <Link href="/matches" className="relative">
               <span className="text-2xl"><Bookmark size={22} /></span>
               {matches.length > 0 && (
@@ -532,7 +538,7 @@ export default function SwipePage() {
         </div>
 
         {/* Card Stack */}
-        <div className="relative h-[520px]">
+        <div className="relative h-[65vh] max-h-[520px]">
           {/* Next Card (behind) */}
           {nextPhoto && (
             <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-lg scale-95 opacity-50">
