@@ -4,6 +4,12 @@ export interface HungerIconProps extends Omit<SVGProps<SVGSVGElement>, 'width' |
   size?: number
 }
 
+interface BrandMarkProps {
+  size?: number
+  className?: string
+  'aria-label'?: string
+}
+
 function iconProps(size: number, className?: string) {
   return {
     width: size,
@@ -20,15 +26,16 @@ function iconProps(size: number, className?: string) {
   }
 }
 
-export function BrandMark({ size = 32, className, ...props }: HungerIconProps) {
-  const labelled = Boolean(props['aria-label'])
+export function BrandMark({ size = 32, className, 'aria-label': label }: BrandMarkProps) {
   return (
-    <svg {...iconProps(size, className)} {...props} aria-hidden={labelled ? undefined : true} role={labelled ? 'img' : undefined} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="9" fill="#171717" stroke="none" />
-      <path d="M8 9v7.5a4 4 0 0 0 8 0V9M8 12h8" stroke="#FF6422" strokeWidth="2.3" />
-      <path d="M21 8v16M18.5 8v5M23.5 8v5M18.5 13h5" stroke="#FFD34E" strokeWidth="2.3" />
-      <path d="M7.5 23h8m0 0-2.5-2.5m2.5 2.5L13 25.5" stroke="#FF6422" strokeWidth="2.1" />
-    </svg>
+    <img
+      src="/logo-full.png"
+      alt={label || ''}
+      aria-hidden={label ? undefined : true}
+      width={Math.round(size * 1.777)}
+      height={size}
+      className={`shrink-0 rounded-[0.18em] object-contain ${className || ''}`}
+    />
   )
 }
 
