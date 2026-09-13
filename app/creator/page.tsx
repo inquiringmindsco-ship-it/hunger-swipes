@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ForkFlame, Flame, Camera, Heart, CheckLine, XMark, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, Gear, CheckBold } from '@/app/components/HwIcon'
 import { getTierBadge } from '@/lib/metadata-scoring'
+import { Badge, ClipboardCheck, CreditCard, HeartHandshake, MessageCircle, Rocket, Users } from 'lucide-react'
+import { MakeItIcon } from '@/app/components/icons/HungerIcons'
 
 interface Photo {
   id: string
@@ -134,19 +136,19 @@ const OPTIMIZATION_TIPS: Record<string, { tip: string, points: number }> = {
 }
 
 const CONTENT_LABELS: Record<string, { label: string, color: string, bg: string }> = {
-  discovery: { label: '🔍 Discovery', color: '#6B7280', bg: 'bg-gray-500/20' },
-  trending: { label: '<Sparkle size={16} /> Trending', color: '#FF5722', bg: 'bg-[#FF5722]/20' },
-  monetized: { label: '<Dollar size={24} /> Monetized', color: '#10B981', bg: 'bg-[#10B981]/20' },
-  verified_kitchen: { label: '<CheckLine size={14} /> Verified Kitchen', color: '#FFD700', bg: 'bg-[#FFD700]/20' },
+  discovery: { label: 'Discovery', color: '#6B7280', bg: 'bg-gray-500/20' },
+  trending: { label: 'Trending', color: '#FF5722', bg: 'bg-[#FF5722]/20' },
+  monetized: { label: 'Monetized', color: '#10B981', bg: 'bg-[#10B981]/20' },
+  verified_kitchen: { label: 'Verified Kitchen', color: '#FFD700', bg: 'bg-[#FFD700]/20' },
 }
 
 const ROLE_INFO: Record<string, { label: string, canSell: boolean, canTips: boolean, canRecipes: boolean }> = {
-  eater: { label: '<Fork size={20} /> Eater', canSell: false, canTips: false, canRecipes: false },
-  scout: { label: '👀 Scout', canSell: false, canTips: true, canRecipes: false },
-  home_creator: { label: '🏠 Home Creator', canSell: false, canTips: true, canRecipes: true },
-  cottage_creator: { label: '🏡 Cottage Creator', canSell: true, canTips: true, canRecipes: true },
-  verified_creator: { label: '<CheckLine size={14} /> Verified Creator', canSell: true, canTips: true, canRecipes: true },
-  restaurant: { label: '🏪 Restaurant', canSell: true, canTips: false, canRecipes: false },
+  eater: { label: 'Eater', canSell: false, canTips: false, canRecipes: false },
+  scout: { label: 'Scout', canSell: false, canTips: true, canRecipes: false },
+  home_creator: { label: 'Home Creator', canSell: false, canTips: true, canRecipes: true },
+  cottage_creator: { label: 'Cottage Creator', canSell: true, canTips: true, canRecipes: true },
+  verified_creator: { label: 'Verified Creator', canSell: true, canTips: true, canRecipes: true },
+  restaurant: { label: 'Restaurant', canSell: true, canTips: false, canRecipes: false },
 }
 
 export default function CreatorDashboard() {
@@ -195,7 +197,7 @@ export default function CreatorDashboard() {
             </div>
             <div className="flex gap-2">
               <Link href="/social" className="px-3 py-2 bg-white/10 rounded-full text-sm hover:bg-white/20 transition">
-                📱 Social
+                <MessageCircle size={16} className="inline-block mr-1" aria-hidden="true" /> Social
               </Link>
               <Link href="/creator/upload" className="px-4 py-2 bg-[#FF5722] rounded-full font-semibold hover:bg-[#e64a19] transition">
                 + Upload
@@ -373,7 +375,7 @@ export default function CreatorDashboard() {
                           </span>
                           {photo.hasRecipe && (
                             <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/20 text-[#10B981]">
-                              📖 Recipe
+                              <MakeItIcon size={14} className="inline-block mr-1" /> Recipe
                             </span>
                           )}
                         </div>
@@ -488,7 +490,7 @@ export default function CreatorDashboard() {
                 {roleInfo.canTips && (
                   <div className="flex items-center justify-between p-4 bg-[#F7F7F7] rounded-xl">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#FFD700]/20 rounded-full flex items-center justify-center">💝</div>
+                      <div className="w-10 h-10 bg-[#FFD700]/20 rounded-full flex items-center justify-center text-[#B77900]"><HeartHandshake size={20} aria-hidden="true" /></div>
                       <div>
                         <div className="font-medium text-[#1A1A2E]">Tips Received</div>
                         <div className="text-xs text-[#6B7280]">100% to you (no platform fee)</div>
@@ -503,7 +505,7 @@ export default function CreatorDashboard() {
                 {roleInfo.canRecipes && (
                   <div className="flex items-center justify-between p-4 bg-[#F7F7F7] rounded-xl">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#10B981]/20 rounded-full flex items-center justify-center">📖</div>
+                      <div className="w-10 h-10 bg-[#10B981]/20 rounded-full flex items-center justify-center text-[#10B981]"><MakeItIcon size={20} /></div>
                       <div>
                         <div className="font-medium text-[#1A1A2E]">Recipe Sales</div>
                         <div className="text-xs text-[#6B7280]">Rewards coming soon</div>
@@ -554,7 +556,7 @@ export default function CreatorDashboard() {
             {/* Followers */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-[#1A1A2E]">👥 Followers</h2>
+                <h2 className="text-lg font-bold text-[#1A1A2E] inline-flex items-center gap-2"><Users size={20} aria-hidden="true" /> Followers</h2>
                 <Link href="/creator/followers" className="text-sm text-[#FF5722]">See all →</Link>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
@@ -590,7 +592,7 @@ export default function CreatorDashboard() {
 
             {/* Post a Food Mood */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-[#1A1A2E] mb-4">💭 Share Your Food Mood</h2>
+              <h2 className="text-lg font-bold text-[#1A1A2E] mb-4 inline-flex items-center gap-2"><MessageCircle size={20} aria-hidden="true" /> Share Your Food Mood</h2>
               <Link href="/social" className="block w-full py-3 bg-[#FF5722] text-white rounded-xl font-semibold text-center hover:bg-[#e64a19] transition">
                 Go to Social Feed →
               </Link>
@@ -602,7 +604,7 @@ export default function CreatorDashboard() {
           <div className="space-y-6">
             {/* Role & Upgrade */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-[#1A1A2E] mb-4">🏷️ Account Type</h2>
+              <h2 className="text-lg font-bold text-[#1A1A2E] mb-4 inline-flex items-center gap-2"><Badge size={20} aria-hidden="true" /> Account Type</h2>
               <div className="flex items-center justify-between p-4 bg-[#F7F7F7] rounded-xl mb-4">
                 <div>
                   <div className="font-bold text-[#1A1A2E]">{roleInfo.label}</div>
@@ -610,11 +612,11 @@ export default function CreatorDashboard() {
                     {roleInfo.canSell ? 'Can sell food directly' : roleInfo.canRecipes ? 'Can sell recipes & receive tips' : 'Limited to discovery'}
                   </div>
                 </div>
-                <span className="text-2xl">🏷️</span>
+                <Badge size={24} className="text-[#FF5722]" aria-hidden="true" />
               </div>
               {!roleInfo.canSell && (
                 <Link href="/creator/upgrade" className="block w-full py-3 bg-gradient-to-r from-[#FFD700] to-[#FFA000] text-[#0D0D0D] rounded-xl font-bold text-center hover:opacity-90 transition">
-                  🚀 Upgrade to Sell Food
+                  <Rocket size={18} className="inline-block mr-2" aria-hidden="true" /> Upgrade to Sell Food
                 </Link>
               )}
             </div>
@@ -643,7 +645,7 @@ export default function CreatorDashboard() {
 
             {/* Payout Settings */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-[#1A1A2E] mb-4">💳 Payout Settings</h2>
+              <h2 className="text-lg font-bold text-[#1A1A2E] mb-4 inline-flex items-center gap-2"><CreditCard size={20} aria-hidden="true" /> Payout Settings</h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-[#6B7280] mb-1">Payout Method</label>
@@ -662,7 +664,7 @@ export default function CreatorDashboard() {
 
             {/* Compliance */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-[#1A1A2E] mb-4">📋 Compliance</h2>
+              <h2 className="text-lg font-bold text-[#1A1A2E] mb-4 inline-flex items-center gap-2"><ClipboardCheck size={20} aria-hidden="true" /> Compliance</h2>
               <div className="flex items-center gap-3 p-4 bg-[#10B981]/10 rounded-xl border border-[#10B981]/20">
                 <CheckLine size={16} />
                 <span className="text-sm text-[#1A1A2E]">You have agreed to follow local food laws</span>

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckBold, XMark, Dollar, Trophy, Star } from '@/app/components/HwIcon'
+import { ArrowLeft, Lightbulb, Rocket } from 'lucide-react'
+import { SellerTypeIcon } from '@/app/components/icons/HungerIcons'
 
 type KitchenType = 'home' | 'commercial' | 'shared' | 'pop-up'
 
@@ -117,8 +119,8 @@ export default function CreatorUpgradePage() {
       {/* Header */}
       <header className="bg-[#0D0D0D] border-b border-white/5 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <Link href="/creator" className="text-gray-600 font-medium">
-            ← Cancel
+          <Link href="/creator" className="inline-flex min-h-11 items-center gap-1 text-gray-600 font-medium">
+            <ArrowLeft size={17} aria-hidden="true" /> Cancel
           </Link>
           <h1 className="font-bold text-white">Start Selling Food</h1>
           <div className="w-16" />
@@ -142,7 +144,7 @@ export default function CreatorUpgradePage() {
         {state.step === 1 && (
           <div className="space-y-6">
             <div className="text-center">
-              <div className="text-6xl mb-4">🚀</div>
+              <Rocket size={56} className="mx-auto mb-4 text-[#FFD700]" aria-hidden="true" />
               <h2 className="text-2xl font-bold text-white mb-2">Ready to Level Up?</h2>
               <p className="text-gray-600">You have what it takes to sell food legally</p>
             </div>
@@ -208,10 +210,10 @@ export default function CreatorUpgradePage() {
               <label className="block text-sm font-medium text-gray-600 mb-2">Kitchen Type *</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { value: 'home', label: '🏠 Home Kitchen', desc: 'Cottage food laws apply' },
-                  { value: 'commercial', label: '🏪 Commercial', desc: 'Licensed kitchen' },
-                  { value: 'shared', label: '🤝 Shared Kitchen', desc: 'Co-op or rental' },
-                  { value: 'pop-up', label: '🎪 Pop-up', desc: 'Events & markets' },
+                  { value: 'home', label: 'Home Kitchen', desc: 'Cottage food laws apply', iconType: 'home_kitchen' },
+                  { value: 'commercial', label: 'Commercial', desc: 'Licensed kitchen', iconType: 'restaurant' },
+                  { value: 'shared', label: 'Shared Kitchen', desc: 'Co-op or rental', iconType: 'caterer' },
+                  { value: 'pop-up', label: 'Pop-up', desc: 'Events & markets', iconType: 'pop_up' },
                 ].map(type => (
                   <button
                     key={type.value}
@@ -222,7 +224,7 @@ export default function CreatorUpgradePage() {
                         : 'bg-white/10 text-gray-600 hover:bg-white/20'
                     }`}
                   >
-                    <div className="font-semibold">{type.label}</div>
+                    <div className="font-semibold inline-flex items-center gap-2"><SellerTypeIcon type={type.iconType} size={20} /> {type.label}</div>
                     <div className={`text-xs ${state.kitchenType === type.value ? 'text-white/80' : 'text-gray-500'}`}>
                       {type.desc}
                     </div>
@@ -275,8 +277,8 @@ export default function CreatorUpgradePage() {
             {/* Needs Kitchen Assistance */}
             {!state.hasKitchen && (
               <div className="bg-[#FFD700]/10 rounded-2xl p-4 border border-[#FFD700]/20">
-                <p className="text-sm text-[#FFD700]">
-                  💡 We&apos;ll connect you with kitchen partners in your area. We&apos;re building a network of shared kitchens and commercial spaces for creators like you!
+                <p className="text-sm text-[#FFD700] flex items-start gap-2">
+                  <Lightbulb size={18} className="mt-0.5 shrink-0" aria-hidden="true" /> <span>We&apos;ll connect you with kitchen partners in your area. We&apos;re building a network of shared kitchens and commercial spaces for creators like you!</span>
                 </p>
               </div>
             )}
@@ -390,7 +392,7 @@ export default function CreatorUpgradePage() {
                 disabled={!state.agreedToTerms || isSubmitting}
                 className="flex-1 py-4 bg-[#10B981] text-white rounded-2xl font-bold hover:bg-[#059669] transition disabled:opacity-50"
               >
-                {isSubmitting ? 'Submitting...' : '🚀 Submit Application'}
+                {isSubmitting ? 'Submitting...' : <span className="inline-flex items-center gap-2"><Rocket size={18} aria-hidden="true" /> Submit Application</span>}
               </button>
             </div>
           </div>

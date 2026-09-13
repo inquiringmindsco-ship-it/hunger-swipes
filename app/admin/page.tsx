@@ -3,7 +3,9 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, CheckCircle, XCircle, Trash2, RefreshCw } from 'lucide-react'
+import { ArrowUpRight, CheckCircle2, Eye, Heart, RefreshCw, Shield, Trash2, XCircle } from 'lucide-react'
+import { PassIcon } from '@/app/components/icons/HungerIcons'
+import { IconButton } from '@/app/components/ui/IconButton'
 
 function AdminContent() {
   const params = useSearchParams()
@@ -108,10 +110,10 @@ function AdminContent() {
           <span className="font-bold">Hunger Swipes Admin</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={loadData} className="p-2 bg-white/5 rounded-lg">
-            <RefreshCw size={16} />
-          </button>
-          <Link href="/swipe" className="text-sm text-[#FF5722]">App →</Link>
+          <IconButton label="Refresh admin data" onClick={loadData} className="rounded-lg bg-white/5">
+            <RefreshCw size={17} aria-hidden="true" />
+          </IconButton>
+          <Link href="/swipe" className="inline-flex min-h-11 items-center gap-1 text-sm text-[#FF5722]">App <ArrowUpRight size={15} aria-hidden="true" /></Link>
         </div>
       </header>
 
@@ -153,41 +155,43 @@ function AdminContent() {
                   <div className="flex gap-1 flex-wrap">
                     {(seller.status === 'pending_review' || seller.verification_status === 'pending') && (
                       <>
-                        <button
+                        <IconButton
+                          label={`Approve ${seller.business_name}`}
                           onClick={() => doAction('seller', seller.id, 'approve')}
                           disabled={actionLoading === `seller:${seller.id}:approve`}
-                          className="p-2 bg-[#10B981]/20 text-[#10B981] rounded-lg"
-                          title="Approve"
+                          className="rounded-lg bg-[#10B981]/20 text-[#10B981]"
                         >
-                          <CheckCircle size={16} />
-                        </button>
-                        <button
+                          <CheckCircle2 size={17} aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
+                          label={`Reject ${seller.business_name}`}
                           onClick={() => doAction('seller', seller.id, 'reject', 'Does not meet requirements')}
                           disabled={actionLoading === `seller:${seller.id}:reject`}
-                          className="p-2 bg-red-500/20 text-red-500 rounded-lg"
-                          title="Reject"
+                          className="rounded-lg bg-red-500/20 text-red-500"
                         >
-                          <XCircle size={16} />
-                        </button>
+                          <XCircle size={17} aria-hidden="true" />
+                        </IconButton>
                       </>
                     )}
                     {seller.status !== 'active' && seller.status !== 'pending_review' && (
-                      <button
+                      <IconButton
+                        label={`Activate ${seller.business_name}`}
                         onClick={() => doAction('seller', seller.id, 'activate')}
                         disabled={actionLoading === `seller:${seller.id}:activate`}
-                        className="p-2 bg-[#10B981]/20 text-[#10B981] rounded-lg"
+                        className="rounded-lg bg-[#10B981]/20 text-[#10B981]"
                       >
-                        <CheckCircle size={16} />
-                      </button>
+                        <CheckCircle2 size={17} aria-hidden="true" />
+                      </IconButton>
                     )}
                     {seller.status !== 'suspended' && seller.status !== 'pending_review' && (
-                      <button
+                      <IconButton
+                        label={`Suspend ${seller.business_name}`}
                         onClick={() => doAction('seller', seller.id, 'suspend', 'Admin moderation')}
                         disabled={actionLoading === `seller:${seller.id}:suspend`}
-                        className="p-2 bg-amber-500/20 text-amber-500 rounded-lg"
+                        className="rounded-lg bg-amber-500/20 text-amber-500"
                       >
-                        <XCircle size={16} />
-                      </button>
+                        <XCircle size={17} aria-hidden="true" />
+                      </IconButton>
                     )}
                   </div>
                 </div>
@@ -203,26 +207,32 @@ function AdminContent() {
                   <div className="flex-1">
                     <p className="font-bold">{dish.name}</p>
                     <p className="text-sm text-gray-400">{dish.seller?.business_name || 'Unknown'} · ${Number(dish.price).toFixed(2)} · {dish.status}</p>
-                    <p className="text-xs text-gray-500 mt-1">👁 {dish.impressions || 0} · 👍 {dish.right_swipes || 0} · 👎 {dish.left_swipes || 0}</p>
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                      <span className="inline-flex items-center gap-1"><Eye size={13} aria-hidden="true" /> {dish.impressions || 0}</span>
+                      <span className="inline-flex items-center gap-1"><Heart size={13} aria-hidden="true" /> {dish.right_swipes || 0}</span>
+                      <span className="inline-flex items-center gap-1"><PassIcon size={13} /> {dish.left_swipes || 0}</span>
+                    </p>
                   </div>
                   <div className="flex gap-1">
                     {dish.status !== 'active' && (
-                      <button
+                      <IconButton
+                        label={`Activate ${dish.name}`}
                         onClick={() => doAction('dish', dish.id, 'activate')}
                         disabled={actionLoading === `dish:${dish.id}:activate`}
-                        className="p-2 bg-[#10B981]/20 text-[#10B981] rounded-lg"
+                        className="rounded-lg bg-[#10B981]/20 text-[#10B981]"
                       >
-                        <CheckCircle size={16} />
-                      </button>
+                        <CheckCircle2 size={17} aria-hidden="true" />
+                      </IconButton>
                     )}
                     {dish.status !== 'removed' && (
-                      <button
+                      <IconButton
+                        label={`Remove ${dish.name}`}
                         onClick={() => doAction('dish', dish.id, 'remove', 'Admin moderation')}
                         disabled={actionLoading === `dish:${dish.id}:remove`}
-                        className="p-2 bg-red-500/20 text-red-500 rounded-lg"
+                        className="rounded-lg bg-red-500/20 text-red-500"
                       >
-                        <Trash2 size={16} />
-                      </button>
+                        <Trash2 size={17} aria-hidden="true" />
+                      </IconButton>
                     )}
                   </div>
                 </div>

@@ -7,6 +7,8 @@ import {
   Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight,
   ArrowRight, Note, Crown, Comment, Sparkle, Plate
 } from '@/app/components/HwIcon'
+import { BrandMark } from '@/app/components/icons/HungerIcons'
+import { Monitor, Smartphone } from 'lucide-react'
 import { getEaterId } from '@/lib/eater-id'
 
 // ============================================================
@@ -24,15 +26,15 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 
   return (
     <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#C8102E] transition-opacity duration-500 ${phase === 'out' || phase === 'done' ? 'opacity-0' : 'opacity-100'}`}>
-      <img
-        src="/logo.png"
-        alt="HungerSwipes"
-        className="w-64 h-64 object-contain transition-all duration-700"
+      <div
+        className="transition-all duration-700"
         style={{
           transform: phase === 'in' ? 'scale(0.7)' : phase === 'hold' ? 'scale(1)' : 'scale(1.05)',
           opacity: phase === 'in' ? 0 : 1,
         }}
-      />
+      >
+        <BrandMark size={176} aria-label="HungerSwipes" />
+      </div>
       <div className="mt-8 flex items-center gap-1">
         {[0, 1, 2].map(i => (
           <div
@@ -110,10 +112,10 @@ function HomeTab() {
     <div className="pb-24">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
-        <img src="/logo.png" alt="HungerSwipes" className="h-9 w-9 rounded-xl object-cover" />
+        <BrandMark size={36} aria-label="HungerSwipes" />
         <div className="flex items-center gap-3">
-          <Link href="/leaderboard" className="text-gray-600 hover:text-white transition">
-            <Trophy size={20} />
+          <Link href="/leaderboard" aria-label="Open leaderboard" className="inline-flex min-h-11 min-w-11 items-center justify-center text-gray-600 hover:text-white transition">
+            <Trophy size={20} aria-hidden="true" />
           </Link>
           <Link href="/auth" className="px-4 py-1.5 bg-[#FF6A00] text-white rounded-full font-bold text-xs">
             Sign In
@@ -441,12 +443,12 @@ export default function AppShell() {
         >
           {viewMode === 'mobile' ? (
             <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+              <Monitor size={13} aria-hidden="true" />
               Desktop
             </>
           ) : (
             <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+              <Smartphone size={13} aria-hidden="true" />
               Mobile
             </>
           )}

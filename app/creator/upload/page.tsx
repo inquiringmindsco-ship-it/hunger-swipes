@@ -21,6 +21,8 @@ import {
   calculateEarningsBoost
 } from '@/lib/metadata-scoring'
 import { ForkFlame, Flame, Camera, Heart, CheckLine, XMark, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle } from '@/app/components/HwIcon'
+import { Leaf, Lightbulb, ListChecks, Rocket, Sprout, WheatOff } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 export default function CreatorUpload() {
   const router = useRouter()
@@ -209,8 +211,8 @@ export default function CreatorUpload() {
       {/* Header */}
       <header className="bg-[#0D0D0D] border-b border-white/5 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <Link href="/creator" className="text-gray-600 font-medium">
-            ← Cancel
+          <Link href="/creator" className="inline-flex min-h-11 items-center gap-1 text-gray-600 font-medium">
+            <ArrowLeft size={17} aria-hidden="true" /> Cancel
           </Link>
           <h1 className="font-bold text-white">Upload Photo</h1>
           <div className="w-16" />
@@ -249,7 +251,7 @@ export default function CreatorUpload() {
                 </div>
               ) : (
                 <div className="p-12 text-center">
-                  <div className="text-6xl mb-4">📸</div>
+                  <Camera size={56} className="mx-auto mb-4 text-[#FF5722]" aria-hidden="true" />
                   <p className="text-gray-600 mb-4">Drag & drop or tap to upload</p>
                   <label className="inline-block px-6 py-3 bg-[#FFD700] text-[#0D0D0D] rounded-full font-semibold cursor-pointer hover:bg-[#FFD700]/90 transition">
                     Select Photo
@@ -260,7 +262,7 @@ export default function CreatorUpload() {
             </div>
 
             <div className="bg-[#FFD700]/10 rounded-2xl p-4 border border-[#FFD700]/20">
-              <h3 className="font-bold text-[#FFD700] mb-2">💡 Pro Tips</h3>
+              <h3 className="font-bold text-[#FFD700] mb-2 inline-flex items-center gap-2"><Lightbulb size={18} aria-hidden="true" /> Pro Tips</h3>
               <ul className="text-sm text-gray-600 space-y-1">
                 <li>• Natural lighting works best</li>
                 <li>• Shoot at a 45° angle for depth</li>
@@ -544,9 +546,9 @@ export default function CreatorUpload() {
                 <label className="block text-sm font-medium text-gray-600 mb-1">Dietary Options</label>
                 <div className="flex gap-3">
                   {[
-                    { key: 'vegetarianOption', label: '🥗 Vegetarian' },
-                    { key: 'veganOption', label: '🌱 Vegan' },
-                    { key: 'glutenFreeOption', label: '🌾 Gluten-Free' },
+                    { key: 'vegetarianOption', label: 'Vegetarian', icon: Leaf },
+                    { key: 'veganOption', label: 'Vegan', icon: Sprout },
+                    { key: 'glutenFreeOption', label: 'Gluten-Free', icon: WheatOff },
                   ].map(opt => (
                     <button
                       key={opt.key}
@@ -557,7 +559,7 @@ export default function CreatorUpload() {
                           : 'bg-white/10 text-gray-600 hover:bg-white/20'
                       }`}
                     >
-                      {opt.label}
+                      <opt.icon size={16} className="inline-block mr-1.5 align-[-3px]" aria-hidden="true" />{opt.label}
                     </button>
                   ))}
                 </div>
@@ -695,7 +697,7 @@ export default function CreatorUpload() {
             {/* Missing Items Checklist */}
             {completenessResult.missingItems.length > 0 && (
               <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                <h3 className="font-bold text-white mb-4">📝 Missing Items ({completenessResult.missingItems.length})</h3>
+                <h3 className="font-bold text-white mb-4 inline-flex items-center gap-2"><ListChecks size={18} aria-hidden="true" /> Missing Items ({completenessResult.missingItems.length})</h3>
                 <ul className="space-y-2">
                   {completenessResult.missingItems.slice(0, 5).map(item => (
                     <li key={item} className="flex items-center gap-2 text-sm text-gray-600">
@@ -784,7 +786,7 @@ export default function CreatorUpload() {
                 disabled={isSubmitting}
                 className="flex-1 py-4 bg-[#10B981] text-white rounded-2xl font-bold hover:bg-[#059669] transition disabled:opacity-50"
               >
-                {isSubmitting ? 'Uploading...' : '🚀 Publish Photo'}
+                {isSubmitting ? 'Uploading...' : <span className="inline-flex items-center gap-2"><Rocket size={18} aria-hidden="true" /> Publish Photo</span>}
               </button>
             </div>
           </div>

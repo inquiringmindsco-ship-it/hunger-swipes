@@ -3,26 +3,27 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Clock, DollarSign, Phone, CheckCircle, Camera, Upload } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bike, CheckCircle2, Clock3, ExternalLink, Hand, MapPin, PackageCheck, Phone, Search, Smartphone, Upload } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { authFetch } from '@/lib/auth-fetch'
 import { getSupabase } from '@/lib/supabase'
+import { BrandMark, GetItIcon, SellerTypeIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
 
 const SELLER_TYPES = [
-  { value: 'restaurant', label: '🍽️ Restaurant' },
-  { value: 'home_kitchen', label: '🏠 Home Kitchen' },
-  { value: 'food_truck', label: '🚚 Food Truck' },
-  { value: 'caterer', label: '🎉 Caterer' },
-  { value: 'pop_up', label: '🎪 Pop-Up' },
-  { value: 'meal_prep', label: '🥗 Meal Prep' },
-  { value: 'other', label: '🍴 Other' },
+  { value: 'restaurant', label: 'Restaurant' },
+  { value: 'home_kitchen', label: 'Home Kitchen' },
+  { value: 'food_truck', label: 'Food Truck' },
+  { value: 'caterer', label: 'Caterer' },
+  { value: 'pop_up', label: 'Pop-Up' },
+  { value: 'meal_prep', label: 'Meal Prep' },
+  { value: 'other', label: 'Other' },
 ]
 
 const ORDERING_METHODS = [
-  { value: 'phone', label: '📞 Phone' },
-  { value: 'link', label: '🔗 Order Link' },
-  { value: 'in_app', label: '📱 In-App (coming)' },
-  { value: 'none', label: '👋 Tell them in person' },
+  { value: 'phone', label: 'Phone', icon: Phone },
+  { value: 'link', label: 'Order Link', icon: ExternalLink },
+  { value: 'in_app', label: 'In-App (coming)', icon: Smartphone },
+  { value: 'none', label: 'In person', icon: Hand },
 ]
 
 function JoinContent() {
@@ -133,14 +134,14 @@ function JoinContent() {
       <div className="min-h-screen bg-[#FAFAFA] text-gray-900">
         <header className="bg-white border-b border-gray-200 px-4 py-4">
           <div className="max-w-lg mx-auto flex items-center gap-2">
-            <div className="w-9 h-9 bg-[#FF5722] rounded-lg flex items-center justify-center font-black text-white text-xs">HS</div>
+            <BrandMark size={36} />
             <span className="font-bold text-gray-900">HungerSwipes</span>
           </div>
         </header>
 
         <div className="max-w-lg mx-auto px-4 py-8 text-center">
           <div className="w-20 h-20 bg-[#10B981] rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={40} className="text-white" />
+            <CheckCircle2 size={40} className="text-white" aria-hidden="true" />
           </div>
           <h1 className="text-2xl font-black mb-2">You&apos;re on Hunger Swipes!</h1>
           {seller.status === 'pending_review' && (
@@ -165,7 +166,7 @@ function JoinContent() {
             href="/seller/dashboard"
             className="block w-full py-4 bg-[#FF5722] text-white rounded-xl font-bold text-center hover:bg-[#e64a19] transition mb-3"
           >
-            Add Your First Dish →
+            <span className="inline-flex items-center gap-2">Add Your First Dish <ArrowRight size={18} aria-hidden="true" /></span>
           </Link>
           <Link
             href="/swipe"
@@ -182,12 +183,25 @@ function JoinContent() {
     <div className="min-h-screen bg-[#FAFAFA] text-gray-900">
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center gap-2">
-          <div className="w-9 h-9 bg-[#FF5722] rounded-lg flex items-center justify-center font-black text-white text-xs">HS</div>
+          <BrandMark size={36} />
           <span className="font-bold text-gray-900">Join Hunger Swipes</span>
         </div>
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6">
+        <section aria-label="How Hunger Swipes works" className="grid grid-cols-4 gap-2 mb-6">
+          {[
+            { label: 'Post food', icon: Upload },
+            { label: 'Get discovered', icon: Search },
+            { label: 'People swipe', icon: WantItIcon },
+            { label: 'People get it', icon: GetItIcon },
+          ].map(({ label, icon: Icon }) => (
+            <div key={label} className="rounded-xl border border-gray-200 bg-white px-2 py-3 text-center shadow-sm">
+              <Icon size={21} className="mx-auto mb-1.5 text-[#FF5722]" aria-hidden="true" />
+              <p className="text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-600">{label}</p>
+            </div>
+          ))}
+        </section>
         {step === 1 ? (
           <div className="space-y-5">
             <div>
@@ -207,11 +221,13 @@ function JoinContent() {
                   <button
                     key={t.value}
                     onClick={() => setForm({ ...form, seller_type: t.value })}
-                    className={`p-3 rounded-xl border text-sm font-medium transition ${
+                    aria-pressed={form.seller_type === t.value}
+                    className={`min-h-16 p-3 rounded-xl border text-sm font-medium transition flex items-center gap-2 text-left ${
                       form.seller_type === t.value ? 'border-[#FF5722] bg-[#FF5722]/10 text-[#FF5722]' : 'border-gray-200 bg-white'
                     }`}
                   >
-                    {t.label}
+                    <SellerTypeIcon type={t.value} size={23} className="shrink-0" />
+                    <span>{t.label}</span>
                   </button>
                 ))}
               </div>
@@ -220,7 +236,7 @@ function JoinContent() {
             <div>
               <label className="block text-sm font-semibold mb-2">Location / where to find you *</label>
               <div className="relative">
-                <MapPin size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <MapPin size={17} className="absolute left-3 top-3.5 text-gray-400" aria-hidden="true" />
                 <input
                   value={form.location_text}
                   onChange={(e) => setForm({ ...form, location_text: e.target.value })}
@@ -233,7 +249,7 @@ function JoinContent() {
             <div>
               <label className="block text-sm font-semibold mb-2">Phone / contact</label>
               <div className="relative">
-                <Phone size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <Phone size={16} className="absolute left-3 top-3.5 text-gray-400" aria-hidden="true" />
                 <input
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -246,9 +262,9 @@ function JoinContent() {
             <button
               onClick={() => setStep(2)}
               disabled={!form.business_name || !form.location_text}
-              className="w-full py-4 bg-[#FF5722] text-white rounded-xl font-bold disabled:opacity-40"
-            >
-              Continue
+            className="w-full min-h-12 py-3 bg-[#FF5722] text-white rounded-xl font-bold disabled:opacity-40 inline-flex items-center justify-center gap-2"
+          >
+              Continue <ArrowRight size={18} aria-hidden="true" />
             </button>
           </div>
         ) : (
@@ -267,7 +283,7 @@ function JoinContent() {
             <div>
               <label className="block text-sm font-semibold mb-2">Hours</label>
               <div className="relative">
-                <Clock size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <Clock3 size={16} className="absolute left-3 top-3.5 text-gray-400" aria-hidden="true" />
                 <input
                   value={form.hours_text}
                   onChange={(e) => setForm({ ...form, hours_text: e.target.value })}
@@ -280,17 +296,22 @@ function JoinContent() {
             <div>
               <label className="block text-sm font-semibold mb-2">How can customers order?</label>
               <div className="grid grid-cols-2 gap-2">
-                {ORDERING_METHODS.map((m) => (
+                {ORDERING_METHODS.map((m) => {
+                  const MethodIcon = m.icon
+                  return (
                   <button
                     key={m.value}
                     onClick={() => setForm({ ...form, ordering_method: m.value })}
-                    className={`p-3 rounded-xl border text-sm font-medium transition ${
+                    aria-pressed={form.ordering_method === m.value}
+                    className={`min-h-14 p-3 rounded-xl border text-sm font-medium transition flex items-center gap-2 text-left ${
                       form.ordering_method === m.value ? 'border-[#FF5722] bg-[#FF5722]/10 text-[#FF5722]' : 'border-gray-200 bg-white'
                     }`}
                   >
-                    {m.label}
+                    <MethodIcon size={19} className="shrink-0" aria-hidden="true" />
+                    <span>{m.label}</span>
                   </button>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
@@ -313,6 +334,7 @@ function JoinContent() {
                   checked={form.pickup_available}
                   onChange={(e) => setForm({ ...form, pickup_available: e.target.checked })}
                 />
+                <PackageCheck size={18} className="text-gray-500" aria-hidden="true" />
                 <span className="text-sm">Pickup</span>
               </label>
               <label className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-3 flex-1">
@@ -321,6 +343,7 @@ function JoinContent() {
                   checked={form.delivery_available}
                   onChange={(e) => setForm({ ...form, delivery_available: e.target.checked })}
                 />
+                <Bike size={18} className="text-gray-500" aria-hidden="true" />
                 <span className="text-sm">Delivery</span>
               </label>
             </div>
@@ -333,7 +356,7 @@ function JoinContent() {
                     <img src={logoPreview} alt="Preview" className="w-24 h-24 object-cover rounded-xl mx-auto" />
                   ) : (
                     <div className="text-gray-400 flex flex-col items-center gap-2">
-                      <Upload size={24} />
+                      <Upload size={24} aria-hidden="true" />
                       <span className="text-sm">Tap to upload logo</span>
                     </div>
                   )}
@@ -345,16 +368,16 @@ function JoinContent() {
             <div className="flex gap-3 pt-4">
               <button
                 onClick={() => setStep(1)}
-                className="px-6 py-4 bg-white border border-gray-200 rounded-xl font-semibold"
+                className="min-h-12 px-5 py-3 bg-white border border-gray-200 rounded-xl font-semibold inline-flex items-center gap-2"
               >
-                ← Back
+                <ArrowLeft size={18} aria-hidden="true" /> Back
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex-1 py-4 bg-[#FF5722] text-white rounded-xl font-bold disabled:opacity-50"
+                className="flex-1 min-h-12 py-3 bg-[#FF5722] text-white rounded-xl font-bold disabled:opacity-50 inline-flex items-center justify-center gap-2"
               >
-                {loading ? 'Creating...' : '🔥 Go Live'}
+                {loading ? 'Creating...' : <>Submit for Review <ArrowRight size={18} aria-hidden="true" /></>}
               </button>
             </div>
           </div>

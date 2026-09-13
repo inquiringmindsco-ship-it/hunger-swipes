@@ -4,9 +4,11 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { QRCodeSVG } from 'qrcode.react'
-import { MapPin, Clock, Phone, DollarSign, Plus, Edit2, ToggleLeft, ToggleRight, ExternalLink } from 'lucide-react'
+import { Ban, CheckCircle2, Clock3, ExternalLink, LogOut, MapPin, Phone, Plus, Timer, ToggleLeft, ToggleRight } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
 import { getSupabase } from '@/lib/supabase'
+import { BrandMark, SellerTypeIcon } from '@/app/components/icons/HungerIcons'
+import { IconButton } from '@/app/components/ui/IconButton'
 
 function DashboardContent() {
   const params = useSearchParams()
@@ -75,18 +77,22 @@ function DashboardContent() {
     router.replace('/auth?next=%2Fseller%2Fdashboard')
   }
 
+  const StatusIcon = seller.status === 'active' ? CheckCircle2 : seller.status === 'suspended' ? Ban : Timer
+
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white">
       <header className="px-4 py-4 border-b border-white/5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#FF5722] rounded-lg flex items-center justify-center font-black text-xs">HS</div>
+          <BrandMark size={32} />
           <span className="font-bold text-sm">Seller Dashboard</span>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/swipe" className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
             <ExternalLink size={14} /> Preview
           </Link>
-          <button onClick={logout} className="text-xs text-gray-400 hover:text-white">Log out</button>
+          <button onClick={logout} className="inline-flex min-h-11 items-center gap-1.5 text-xs text-gray-400 hover:text-white">
+            <LogOut size={15} aria-hidden="true" /> Log out
+          </button>
         </div>
       </header>
 
@@ -96,8 +102,8 @@ function DashboardContent() {
           seller.status === 'active' ? 'bg-[#10B981]/10 border-[#10B981]/20' : 'bg-amber-500/10 border-amber-500/20'
         }`}>
           <div>
-            <p className="text-sm font-semibold">
-              {seller.status === 'active' ? '🟢 Active' : `⏳ ${seller.status}`}
+            <p className="text-sm font-semibold capitalize inline-flex items-center gap-2">
+              <StatusIcon size={18} aria-hidden="true" /> {seller.status.replace('_', ' ')}
             </p>
             {seller.seller_type === 'home_kitchen' && seller.verification_status !== 'approved' && (
               <p className="text-xs text-amber-400 mt-0.5">Home kitchen pending verification</p>
@@ -109,7 +115,7 @@ function DashboardContent() {
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-black">{seller.business_name}</h1>
+              <h1 className="text-2xl font-black inline-flex items-center gap-2"><SellerTypeIcon type={seller.seller_type} size={24} className="text-[#FF5722]" /> {seller.business_name}</h1>
               <p className="text-sm text-gray-400 capitalize mt-1">{seller.seller_type.replace('_', ' ')}</p>
               {seller.description && <p className="text-sm text-gray-400 mt-2">{seller.description}</p>}
             </div>
@@ -117,7 +123,7 @@ function DashboardContent() {
           </div>
           <div className="mt-4 space-y-2 text-sm text-gray-400">
             {seller.location_text && <div className="flex items-center gap-2"><MapPin size={14} className="text-[#FF5722]" /> {seller.location_text}</div>}
-            {seller.hours_text && <div className="flex items-center gap-2"><Clock size={14} className="text-[#FF5722]" /> {seller.hours_text}</div>}
+            {seller.hours_text && <div className="flex items-center gap-2"><Clock3 size={14} className="text-[#FF5722]" aria-hidden="true" /> {seller.hours_text}</div>}
             {seller.phone && <div className="flex items-center gap-2"><Phone size={14} className="text-[#FF5722]" /> {seller.phone}</div>}
           </div>
         </div>
@@ -176,16 +182,17 @@ function DashboardContent() {
                     <p className="text-sm text-[#FF5722] font-semibold">${Number(dish.price).toFixed(2)}</p>
                     <p className="text-xs text-gray-500">{dish.availability === 'available' ? 'Available' : 'Unavailable'}</p>
                   </div>
-                  <button
+                  <IconButton
+                    label={`${dish.availability === 'available' ? 'Mark unavailable' : 'Mark available'}: ${dish.name}`}
                     onClick={() => toggleAvailability(dish)}
-                    className="text-3xl"
+                    className="rounded-xl text-3xl"
                   >
                     {dish.availability === 'available' ? (
                       <ToggleRight size={36} className="text-[#10B981]" />
                     ) : (
                       <ToggleLeft size={36} className="text-gray-500" />
                     )}
-                  </button>
+                  </IconButton>
                 </div>
               ))}
             </div>

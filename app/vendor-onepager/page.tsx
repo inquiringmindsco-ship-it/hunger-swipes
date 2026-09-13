@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Smartphone } from 'lucide-react'
+import { BrandMark } from '@/app/components/icons/HungerIcons'
 
 export default function VendorOnePagerPage() {
   const [vendorUrl, setVendorUrl] = useState('')
@@ -20,9 +21,7 @@ export default function VendorOnePagerPage() {
         
         {/* Logo + Title */}
         <div className="flex items-center gap-3 mb-8 border-b border-gray-200 pb-6">
-          <div className="w-14 h-14 bg-[#FF5722] rounded-xl flex items-center justify-center">
-            <span className="font-black text-white text-lg">HS</span>
-          </div>
+          <BrandMark size={56} aria-label="HungerSwipes" />
           <div>
             <h1 className="text-2xl font-black text-gray-900" style={{ fontFamily: 'system-ui, sans-serif' }}>HungerSwipes</h1>
             <p className="text-gray-500 text-sm">For Restaurants & Local Food Vendors</p>
@@ -78,7 +77,7 @@ export default function VendorOnePagerPage() {
             'We photograph your food',
           ].map(b => (
             <div key={b} className="flex items-center gap-2 text-sm text-gray-700">
-              <CheckCircle size={16} className="text-[#FF5722] flex-shrink-0" />
+              <CheckCircle2 size={16} className="text-[#FF5722] flex-shrink-0" aria-hidden="true" />
               {b}
             </div>
           ))}
@@ -93,7 +92,7 @@ export default function VendorOnePagerPage() {
             {/* QR Code placeholder */}
             <div className="bg-white p-3 rounded-xl w-28 h-28 flex items-center justify-center flex-shrink-0">
               <div className="text-center">
-                <div className="text-3xl mb-1">📱</div>
+                <Smartphone size={30} className="mx-auto mb-1 text-[#FF5722]" aria-hidden="true" />
                 <p className="text-gray-900 text-xs font-bold">Scan to Register</p>
               </div>
             </div>
@@ -138,7 +137,7 @@ export default function VendorOnePagerPage() {
         {/* CTA Button */}
         <div className="mt-6 text-center">
           <Link href="/vendor-intake" className="inline-flex px-8 py-4 bg-[#FF5722] text-white rounded-xl font-black text-lg hover:bg-[#e64a19] transition items-center gap-2" style={{ fontFamily: 'system-ui, sans-serif' }}>
-            Get Listed Now →
+            Get Listed Now <ArrowRight size={19} aria-hidden="true" />
           </Link>
           <p className="text-gray-400 text-xs mt-2">hungerswipes.vercel.app/vendor-intake</p>
         </div>

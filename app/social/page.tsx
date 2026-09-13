@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Fork, Comment, ForkFlame } from '@/app/components/HwIcon'
+import { ArrowLeft, Heart, UserRound } from 'lucide-react'
 
 interface FoodMood {
   id: string
@@ -85,8 +86,8 @@ export default function SocialFeedPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0D0D0D]/90 backdrop-blur-sm border-b border-white/5 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <Link href="/swipe" className="text-gray-400">
-            ← Back
+          <Link href="/swipe" className="inline-flex min-h-11 items-center gap-1 text-gray-400">
+            <ArrowLeft size={17} aria-hidden="true" /> Back
           </Link>
           <h1 className="font-bold text-white">Food Moods</h1>
           <div className="w-16" />
@@ -137,7 +138,7 @@ export default function SocialFeedPage() {
               <div key={mood.id} className="bg-white/5 rounded-2xl p-4 border border-white/10">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 rounded-full bg-[#FF5722]/20 flex items-center justify-center">
-                    <span className="text-lg">👤</span>
+                    <UserRound size={20} className="text-[#FF5722]" aria-hidden="true" />
                   </div>
                   <div className="flex-1">
                     <span className="font-semibold text-white">{mood.user.username}</span>
@@ -146,8 +147,8 @@ export default function SocialFeedPage() {
                 </div>
                 <p className="text-white mb-3">{mood.content}</p>
                 <div className="flex gap-4 text-gray-500 text-sm">
-                  <button className="flex items-center gap-1 hover:text-[#FF5722] transition">
-                    <span>❤️</span>
+                  <button aria-label={`Like post by ${mood.user.username}`} className="flex min-h-11 items-center gap-1 hover:text-[#FF5722] transition">
+                    <Heart size={18} aria-hidden="true" />
                     <span>{mood.like_count}</span>
                   </button>
                   <button className="flex items-center gap-1 hover:text-[#FF5722] transition">

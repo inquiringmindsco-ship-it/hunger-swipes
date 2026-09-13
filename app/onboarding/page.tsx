@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { ForkFlame, Camera, ArrowRight, CheckLine, Dollar } from '@/app/components/HwIcon'
+import { ArrowLeft } from 'lucide-react'
 
 export default function OnboardingPage() {
   const [role, setRole] = useState<'creator' | 'restaurant' | null>(null)
@@ -137,8 +138,8 @@ export default function OnboardingPage() {
         {/* Step 2: Basic info */}
         {step === 2 && (
           <div>
-            <button onClick={() => setStep(1)} className="text-gray-400 hover:text-white text-sm mb-6">
-              ← Back
+            <button onClick={() => setStep(1)} className="inline-flex min-h-11 items-center gap-1 text-gray-400 hover:text-white text-sm mb-6">
+              <ArrowLeft size={17} aria-hidden="true" /> Back
             </button>
             <h1 className="text-3xl font-bold text-white mb-2">
               {role === 'creator' ? 'Start earning.' : 'Get listed.'}

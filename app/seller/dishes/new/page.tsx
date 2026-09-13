@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Upload, CheckCircle } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
+import { BrandMark } from '@/app/components/icons/HungerIcons'
 
 const CATEGORIES = [
   'American', 'BBQ', 'Breakfast', 'Cajun', 'Chinese', 'Dessert', 'Healthy', 'Indian', 'Italian',
@@ -122,13 +123,13 @@ function NewDishContent() {
       <div className="min-h-screen bg-[#FAFAFA] text-gray-900">
         <header className="bg-white border-b border-gray-200 px-4 py-4">
           <div className="max-w-lg mx-auto flex items-center gap-2">
-            <div className="w-9 h-9 bg-[#FF5722] rounded-lg flex items-center justify-center font-black text-white text-xs">HS</div>
+            <BrandMark size={36} />
             <span className="font-bold text-gray-900">HungerSwipes</span>
           </div>
         </header>
         <div className="max-w-lg mx-auto px-4 py-8 text-center">
           <div className="w-20 h-20 bg-[#10B981] rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={40} className="text-white" />
+            <CheckCircle2 size={40} className="text-white" aria-hidden="true" />
           </div>
           <h1 className="text-2xl font-black mb-2">Dish saved!</h1>
           <p className="text-gray-600 mb-6">
@@ -155,8 +156,8 @@ function NewDishContent() {
     <div className="min-h-screen bg-[#FAFAFA] text-gray-900">
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center gap-2">
-          <Link href="/seller/dashboard" className="text-gray-600 hover:text-gray-900">
-            <ArrowLeft size={20} />
+          <Link href="/seller/dashboard" aria-label="Back to seller dashboard" className="inline-flex min-h-11 min-w-11 items-center justify-center text-gray-600 hover:text-gray-900">
+            <ArrowLeft size={20} aria-hidden="true" />
           </Link>
           <span className="font-bold text-gray-900">Add Your First Dish</span>
         </div>
@@ -235,7 +236,7 @@ function NewDishContent() {
                 <img src={preview || form.photo_url} alt="Preview" className="w-32 h-32 object-cover rounded-xl mx-auto" />
               ) : (
                 <div className="text-gray-400 flex flex-col items-center gap-2">
-                  <Upload size={24} />
+                  <ImagePlus size={24} aria-hidden="true" />
                   <span className="text-sm">Tap to upload dish photo</span>
                 </div>
               )}
@@ -257,16 +258,16 @@ function NewDishContent() {
         <div className="flex gap-3 pt-4">
           <Link
             href="/seller/dashboard"
-            className="px-6 py-4 bg-white border border-gray-200 rounded-xl font-semibold"
+            className="min-h-12 px-5 py-3 bg-white border border-gray-200 rounded-xl font-semibold inline-flex items-center gap-2"
           >
-            ← Back
+            <ArrowLeft size={18} aria-hidden="true" /> Back
           </Link>
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="flex-1 py-4 bg-[#FF5722] text-white rounded-xl font-bold disabled:opacity-50"
+            className="flex-1 min-h-12 py-3 bg-[#FF5722] text-white rounded-xl font-bold disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
-            {submitting ? 'Publishing...' : '🔥 Publish Dish'}
+            {submitting ? 'Publishing...' : <>Publish Dish <ArrowRight size={18} aria-hidden="true" /></>}
           </button>
         </div>
       </main>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ForkFlame, MapPin, Dollar, Star, Verified, CheckLine, ArrowRight, Sparkle } from '@/app/components/HwIcon'
+import { BrandMark } from '@/app/components/icons/HungerIcons'
 
 interface Vendor {
   id: string
@@ -96,7 +97,7 @@ export default function NearbyPage() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
         <Link href="/" className="flex items-center gap-3">
-          <img src="/logo.png" alt="HungerSwipes" className="h-10 w-10 rounded-xl object-cover" />
+          <BrandMark size={40} aria-label="HungerSwipes" />
           <span className="font-black text-lg tracking-tight">HungerSwipes</span>
         </Link>
         <div className="flex items-center gap-4">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plate, Globe, Flame, Dollar, Gear, ArrowRight, CheckLine, Leaf, Protein, Light, MapPin, Sparkle, Filter, Crown, Star, Rising, Close, Veggie as VeggieIcon, Rising as RisingIcon, FireIcon } from '@/app/components/HwIcon'
+import { ArrowLeft, Check, ChevronDown } from 'lucide-react'
 
 // ─── DIETARY ───
 const DIETARY = [
@@ -86,10 +87,7 @@ function Section({ title, subtitle, icon: Icon, iconColor, children, open, onTog
           <p className="font-bold text-white text-sm">{title}</p>
           {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
         </div>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
-          style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }}>
-          <path d="M4 6l4 4 4-4" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        <ChevronDown size={16} className={`text-gray-500 transition-transform ${open ? '' : '-rotate-90'}`} aria-hidden="true" />
       </button>
       {open && <div className="px-5 pb-5">{children}</div>}
     </div>
@@ -138,10 +136,8 @@ export default function PreferencesPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 py-3.5">
-          <Link href="/" className="text-gray-500 hover:text-white transition">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          <Link href="/" aria-label="Back home" className="inline-flex min-h-11 min-w-11 items-center justify-center text-gray-500 hover:text-white transition">
+            <ArrowLeft size={20} aria-hidden="true" />
           </Link>
           <div className="text-center">
             <h1 className="font-black text-white text-base">Your Preferences</h1>
@@ -233,9 +229,7 @@ export default function PreferencesPage() {
                   style={prefs.dietary.includes(item.id) ? { backgroundColor: item.color } : {}}
                 >
                   {prefs.dietary.includes(item.id) ? (
-                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-                      <path d="M1.5 4.5L3.5 6.5L7.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
+                    <Check size={10} aria-hidden="true" />
                   ) : null}
                   {item.label}
                 </button>
@@ -294,9 +288,7 @@ export default function PreferencesPage() {
                   >
                     {prefs.health.includes(item.id) && (
                       <span className="absolute top-1.5 right-1.5">
-                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                          <path d="M1 4l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                        </svg>
+                        <Check size={9} aria-hidden="true" />
                       </span>
                     )}
                     <ItemIcon size={22} style={{ color: item.color }} />

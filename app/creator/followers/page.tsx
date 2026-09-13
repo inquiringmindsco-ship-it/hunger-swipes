@@ -31,8 +31,8 @@ export default function FollowersPage() {
       <header className="bg-[#1A1A2E] text-white sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-4">
           <div className="flex items-center gap-3 mb-4">
-            <Link href="/creator" className="text-white/70 hover:text-white transition">
-              <ArrowLeft size={22} />
+            <Link href="/creator" aria-label="Back to creator profile" className="inline-flex min-h-11 min-w-11 items-center justify-center text-white/70 hover:text-white transition">
+              <ArrowLeft size={22} aria-hidden="true" />
             </Link>
             <h1 className="font-bold text-lg">Followers</h1>
           </div>

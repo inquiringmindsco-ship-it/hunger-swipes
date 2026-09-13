@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { TrustBadge, getTrustBadgeFromType, getPointsForType, getTierFromPoints } from '@/app/components/TrustBadge'
 import { ForkFlame, Flame, Camera, Heart, CheckLine, XMark, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, SettingsGear, CheckBold, StarFilled, ChatBubble, DollarSign } from '@/app/components/HwIcon'
+import { CircleCheck, PartyPopper } from 'lucide-react'
 import { getEaterId } from '@/lib/eater-id'
 
 interface Verification {
@@ -301,13 +302,14 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                 localStorage.setItem('hungerswipes_shortlist', JSON.stringify(reswipeShortlist))
               }
             }}
-            className="text-gray-400 hover:text-white text-sm transition"
+            aria-label="Close reswipe"
+            className="inline-flex min-h-11 items-center gap-1 text-gray-400 hover:text-white text-sm transition"
           >
-            ✕ Close
+            <XMark size={17} aria-hidden="true" /> Close
           </button>
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-white">{progress}</span>
-            <span className="text-sm text-[#FFD700]">♥ {reswipeShortlist.length}</span>
+            <span className="inline-flex items-center gap-1 text-sm text-[#FFD700]"><Heart size={15} aria-hidden="true" /> {reswipeShortlist.length}</span>
           </div>
           <div className="w-12" />
         </header>
@@ -346,16 +348,18 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
         {!isLast && (
           <div className="flex items-center justify-center gap-10 pb-8">
             <button
+              aria-label={`Pass on ${current.dish}`}
               onClick={() => handleReswipe('left')}
               className="w-14 h-14 rounded-full bg-[#1A1A1A] border-2 border-[#EF4444] flex items-center justify-center text-xl text-[#EF4444] hover:bg-[#EF4444]/10 transition active:scale-90"
             >
-              ✕
+              <SwipeLeft size={25} aria-hidden="true" />
             </button>
             <button
+              aria-label={`Shortlist ${current.dish}`}
               onClick={() => handleReswipe('right')}
               className="w-16 h-16 rounded-full bg-[#FF5722] flex items-center justify-center text-2xl text-white hover:bg-[#e64a19] transition active:scale-90"
             >
-              ♥
+              <SwipeRight size={28} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -422,7 +426,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                 onClick={startReswipe}
                 className="w-full mb-4 py-3 bg-[#FFD700] text-[#0D0D0D] rounded-xl font-bold text-sm hover:bg-[#FFD700]/90 transition flex items-center justify-center gap-2"
               >
-                <span>♥</span>
+                <Heart size={18} aria-hidden="true" />
                 <span>Re-swipe to Shortlist ({matches.length})</span>
               </button>
             )}
@@ -476,7 +480,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                           <img src={match.imageUrl} alt={match.dish} className="w-full h-full object-cover" />
                           <div className="absolute top-2 right-2">
                             <span className="w-7 h-7 bg-[#FFD700] text-[#0D0D0D] rounded-full flex items-center justify-center text-sm font-bold">
-                              ✓
+                              <CircleCheck size={16} aria-hidden="true" />
                             </span>
                           </div>
                         </div>
@@ -494,10 +498,10 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                         <div className="mt-1 px-1">
                           <div className="flex gap-1 flex-wrap">
                             {photoCount > 0 && (
-                              <span className="text-[10px] text-blue-400">📸 {photoCount}</span>
+                              <span className="inline-flex items-center gap-1 text-[10px] text-blue-400"><Camera size={11} aria-hidden="true" /> {photoCount}</span>
                             )}
                             {receiptCount > 0 && (
-                              <span className="text-[10px] text-[#FFD700]">🧾 {receiptCount}</span>
+                              <span className="inline-flex items-center gap-1 text-[10px] text-[#FFD700]"><Note size={11} aria-hidden="true" /> {receiptCount}</span>
                             )}
                           </div>
                         </div>
@@ -511,7 +515,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
         ) : (
           <>
             <button onClick={handleReset} className="flex items-center gap-1 text-gray-400 text-sm mb-4 hover:text-white transition">
-              <span>←</span>
+              <SwipeLeft size={16} aria-hidden="true" />
               <span>Back to matches</span>
             </button>
 
@@ -523,7 +527,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                 <h2 className="text-xl font-bold text-white">{selectedPhoto.dish}</h2>
                 <p className="text-gray-400">{selectedPhoto.restaurant}</p>
                 {selectedPhoto.photographer && (
-                  <p className="text-xs text-[#FFD700] mt-1">📸 {selectedPhoto.photographer}</p>
+                  <p className="inline-flex items-center gap-1 text-xs text-[#FFD700] mt-1"><Camera size={12} aria-hidden="true" /> {selectedPhoto.photographer}</p>
                 )}
               </div>
             </div>
@@ -551,7 +555,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                       onClick={() => { setConfirmed(true); handleStep1Confirm() }}
                       className="w-full py-4 bg-[#FF5722] text-white rounded-xl font-semibold text-lg hover:bg-[#e64a19] transition"
                     >
-                      Yes, I went! 🎉
+                      <span className="inline-flex items-center justify-center gap-2"><PartyPopper size={19} aria-hidden="true" /> Yes, I went!</span>
                     </button>
                     <button
                       onClick={handleClose}
@@ -572,7 +576,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                       onClick={() => handleStep2Select('self-reported')}
                       className="w-full p-4 bg-[#1A1A1A] rounded-xl border border-white/10 hover:border-[#10B981] transition text-left flex items-center gap-4"
                     >
-                      <span className="text-3xl">🏠</span>
+                      <MapPin size={28} className="text-[#10B981]" aria-hidden="true" />
                       <div>
                         <p className="font-semibold text-white">Just checking in</p>
                         <p className="text-sm text-gray-400">Self-reported visit · <span className="text-[#FFD700]">5 pts</span></p>
@@ -582,7 +586,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                       onClick={() => handleStep2Select('photo-confirmed')}
                       className="w-full p-4 bg-[#1A1A1A] rounded-xl border border-white/10 hover:border-[#3B82F6] transition text-left flex items-center gap-4"
                     >
-                      <span className="text-3xl">📸</span>
+                      <Camera size={28} className="text-[#3B82F6]" aria-hidden="true" />
                       <div>
                         <p className="font-semibold text-white">I took a photo</p>
                         <p className="text-sm text-gray-400">Photo-confirmed visit · <span className="text-[#FFD700]">15 pts</span></p>
@@ -592,7 +596,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                       onClick={() => handleStep2Select('receipt-confirmed')}
                       className="w-full p-4 bg-[#1A1A1A] rounded-xl border border-white/10 hover:border-[#FFD700] transition text-left flex items-center gap-4"
                     >
-                      <span className="text-3xl">🧾</span>
+                      <Note size={28} className="text-[#FFD700]" aria-hidden="true" />
                       <div>
                         <p className="font-semibold text-white">I have receipt/confirmation</p>
                         <p className="text-sm text-gray-400">Receipt-verified visit · <span className="text-[#FFD700]">20 pts</span></p>
@@ -665,7 +669,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                         : 'bg-[#1A1A1A] text-gray-500 cursor-not-allowed'
                     }`}
                   >
-                    {verificationType === 'photo-confirmed' ? 'Upload Photo →' : 'Submit'}
+                    {verificationType === 'photo-confirmed' ? <span className="inline-flex items-center gap-2">Upload Photo <Upload size={18} aria-hidden="true" /></span> : 'Submit'}
                   </button>
                 </div>
               )}
@@ -685,7 +689,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
                         isDragging ? 'border-[#FFD700] bg-[#FFD700]/5' : 'border-white/20 hover:border-white/40'
                       }`}
                     >
-                      <div className="text-5xl mb-3">📷</div>
+                      <Camera size={48} className="mx-auto mb-3 text-gray-300" aria-hidden="true" />
                       <p className="text-white font-medium mb-1">Drop your photo here</p>
                       <p className="text-gray-400 text-sm">or click to browse</p>
                       <p className="text-gray-500 text-xs mt-2">JPG, PNG, WEBP up to 10MB</p>

@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Heart, MapPin, Phone, Clock, ExternalLink, Trash2, ChefHat } from 'lucide-react'
+import { ArrowLeft, Clock3, ExternalLink, MapPin, Phone, Trash2 } from 'lucide-react'
 import { getEaterId } from '@/lib/eater-id'
+import { BrandMark, GetItIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
+import { IconButton } from '@/app/components/ui/IconButton'
 
 interface SavedItem {
   id: string
@@ -58,11 +60,11 @@ export default function SavedPage() {
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#FF5722] rounded-lg flex items-center justify-center font-black text-white text-xs">HS</div>
+            <BrandMark size={32} />
             <span className="font-bold text-lg text-[#1A1A2E]">Saved Food</span>
           </div>
-          <Link href="/swipe" className="text-[#FF5722] font-semibold text-sm">
-            ← Swipe More
+          <Link href="/swipe" className="inline-flex min-h-11 items-center gap-1 text-[#FF5722] font-semibold text-sm">
+            <ArrowLeft size={17} aria-hidden="true" /> Swipe More
           </Link>
         </div>
       </header>
@@ -72,7 +74,7 @@ export default function SavedPage() {
           <p className="text-center text-gray-500">Loading...</p>
         ) : saved.length === 0 ? (
           <div className="text-center py-16">
-            <ChefHat size={48} className="mx-auto text-[#FF5722] mb-4" />
+            <WantItIcon size={48} className="mx-auto text-[#FF5722] mb-4" />
             <h2 className="text-xl font-bold text-[#1A1A2E] mb-2">No saved dishes yet</h2>
             <p className="text-gray-600 mb-6">Swipe right on food you like.</p>
             <Link href="/swipe" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold">
@@ -100,7 +102,7 @@ export default function SavedPage() {
 
                     <div className="mt-3 space-y-1 text-sm text-gray-600">
                       {seller.location_text && <div className="flex items-center gap-1"><MapPin size={14} className="text-[#FF5722]" /> {seller.location_text}</div>}
-                      {seller.hours_text && <div className="flex items-center gap-1"><Clock size={14} className="text-[#FF5722]" /> {seller.hours_text}</div>}
+                      {seller.hours_text && <div className="flex items-center gap-1"><Clock3 size={14} className="text-[#FF5722]" aria-hidden="true" /> {seller.hours_text}</div>}
                       {seller.phone && <div className="flex items-center gap-1"><Phone size={14} className="text-[#FF5722]" /> {seller.phone}</div>}
                     </div>
 
@@ -112,7 +114,7 @@ export default function SavedPage() {
                           rel="noreferrer"
                           className="flex-1 py-3 bg-[#FF5722] text-white rounded-xl font-bold text-center flex items-center justify-center gap-1"
                         >
-                          <ExternalLink size={16} /> Order
+                          <GetItIcon size={17} /> Get it <ExternalLink size={14} aria-hidden="true" />
                         </a>
                       ) : seller.phone ? (
                         <a
@@ -126,12 +128,13 @@ export default function SavedPage() {
                           Contact seller in person
                         </div>
                       )}
-                      <button
+                      <IconButton
+                        label={`Remove ${dish.name} from saved dishes`}
                         onClick={() => removeSaved(dish.id)}
-                        className="px-3 py-3 bg-gray-100 rounded-xl text-gray-500 hover:text-red-500"
+                        className="rounded-xl bg-gray-100 text-gray-500 hover:text-red-600"
                       >
-                        <Trash2 size={18} />
-                      </button>
+                        <Trash2 size={18} aria-hidden="true" />
+                      </IconButton>
                     </div>
                   </div>
                 </div>

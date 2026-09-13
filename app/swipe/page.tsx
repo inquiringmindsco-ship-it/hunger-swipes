@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES, SPICE_LEVELS } from '@/lib/tags'
 import { getTierBadge } from '@/lib/metadata-scoring'
 import { getEaterId } from '@/lib/eater-id'
-import { ForkFlame, ForkFlameLarge, Camera, Heart, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, Gear, CheckLine, Close, CloseSolid, OrderMark, Filter, Leaf, Globe, Veggie, Light, Rising, DollarLine, CheckBold } from '@/app/components/HwIcon'
+import { Bookmark, ExternalLink, Leaf, Phone, Settings, SlidersHorizontal, Sprout, WheatOff } from 'lucide-react'
+import { BrandMark, GetItIcon, PassIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
+import { IconButton } from '@/app/components/ui/IconButton'
 
 interface FoodDish {
   id: string
@@ -251,11 +253,11 @@ export default function SwipePage() {
     return (
       <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
         <div className="text-center px-4">
-          <div className="text-8xl mb-6"><ForkFlame size={72} /></div>
+          <div className="mb-6 flex justify-center"><BrandMark size={72} /></div>
           <h1 className="text-3xl font-bold text-white mb-4">No dishes are live yet.</h1>
           <p className="text-gray-400 mb-8">Check back soon, or invite a food seller to publish the first dish.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button onClick={() => fetchDishes()} className="px-6 py-3 bg-white/10 text-white rounded-full font-semibold hover:bg-white/20 transition">
+            <button onClick={() => fetchDishes()} className="min-h-11 px-6 py-3 bg-white/10 text-white rounded-full font-semibold hover:bg-white/20 transition">
               Refresh
             </button>
             <Link href="/join" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
@@ -271,7 +273,7 @@ export default function SwipePage() {
     return (
       <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
         <div className="text-center px-4">
-          <div className="text-8xl mb-6"><ForkFlame size={72} /></div>
+          <div className="mb-6 flex justify-center"><BrandMark size={72} /></div>
           <h1 className="text-3xl font-bold text-white mb-4">You're all caught up!</h1>
           <p className="text-gray-600 mb-8">Check back later for more delicious photos.</p>
           <Link href="/matches" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
@@ -292,19 +294,21 @@ export default function SwipePage() {
       <header className="sticky top-0 z-50 bg-[#0D0D0D]/90 backdrop-blur-sm border-b border-white/5 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="HungerSwipes" className="h-8 w-8 rounded-lg object-cover" />
+            <BrandMark size={32} />
             <span className="font-bold text-lg text-white">HungerSwipes</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/preferences" className="text-xl"><Gear size={22} /></Link>
+            <Link href="/preferences" aria-label="Food preferences" title="Food preferences" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-gray-300 hover:bg-white/10 hover:text-white">
+              <Settings size={21} aria-hidden="true" />
+            </Link>
             <Link href="/vendor" className="hidden sm:block text-sm text-[#FF5722] font-semibold">
               For Restaurants
             </Link>
             <Link href="/join" className="hidden sm:block text-sm text-white/60 hover:text-white font-semibold">
               + List Food
             </Link>
-            <Link href="/matches" className="relative">
-              <span className="text-2xl"><Bookmark size={22} /></span>
+            <Link href="/matches" aria-label={`Saved dishes${savedCount ? `, ${savedCount}` : ''}`} title="Saved dishes" className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-gray-300 hover:bg-white/10 hover:text-white">
+              <Bookmark size={21} aria-hidden="true" />
               {savedCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF5722] text-white text-xs rounded-full flex items-center justify-center font-bold">
                   {savedCount}
@@ -325,15 +329,15 @@ export default function SwipePage() {
         <div className="max-w-lg mx-auto flex gap-2 overflow-x-auto pb-1">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+            className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition flex items-center gap-2 ${
               showFilters ? 'bg-[#FFD700] text-[#0D0D0D]' : 'bg-white/10 text-gray-300 hover:bg-white/20'
             }`}
           >
-            <Filter size={18} /> Filters
+            <SlidersHorizontal size={18} aria-hidden="true" /> Filters
           </button>
           <button
             onClick={() => { setFilters({...filters, cuisine: ''}); applyFilters() }}
-            className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
+            className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
               filters.cuisine ? 'bg-[#FF5722] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
             }`}
           >
@@ -341,7 +345,7 @@ export default function SwipePage() {
           </button>
           <button
             onClick={() => { setFilters({...filters, dietary: ''}); applyFilters() }}
-            className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
+            className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
               filters.dietary ? 'bg-[#10B981] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
             }`}
           >
@@ -349,7 +353,7 @@ export default function SwipePage() {
           </button>
           <button
             onClick={() => { setFilters({...filters, health: ''}); applyFilters() }}
-            className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
+            className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
               filters.health ? 'bg-[#8B5CF6] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
             }`}
           >
@@ -369,7 +373,7 @@ export default function SwipePage() {
                   <button
                     key={c}
                     onClick={() => setFilters({...filters, cuisine: c})}
-                    className={`px-2 py-1 rounded text-xs ${
+                    className={`min-h-11 px-3 py-2 rounded text-xs ${
                       filters.cuisine === c ? 'bg-[#FF5722] text-white' : 'bg-white/10 text-gray-600'
                     }`}
                   >
@@ -385,7 +389,7 @@ export default function SwipePage() {
                   <button
                     key={d}
                     onClick={() => setFilters({...filters, dietary: d})}
-                    className={`px-2 py-1 rounded text-xs ${
+                    className={`min-h-11 px-3 py-2 rounded text-xs ${
                       filters.dietary === d ? 'bg-[#10B981] text-white' : 'bg-white/10 text-gray-600'
                     }`}
                   >
@@ -401,7 +405,7 @@ export default function SwipePage() {
                   <button
                     key={h}
                     onClick={() => setFilters({...filters, health: h})}
-                    className={`px-2 py-1 rounded text-xs ${
+                    className={`min-h-11 px-3 py-2 rounded text-xs ${
                       filters.health === h ? 'bg-[#8B5CF6] text-white' : 'bg-white/10 text-gray-600'
                     }`}
                   >
@@ -412,7 +416,7 @@ export default function SwipePage() {
             </div>
             <button
               onClick={applyFilters}
-              className="w-full py-2 bg-[#FFD700] text-[#0D0D0D] rounded-lg font-semibold text-sm"
+              className="w-full min-h-11 py-2 bg-[#FFD700] text-[#0D0D0D] rounded-lg font-semibold text-sm"
             >
               Apply Filters
             </button>
@@ -436,7 +440,7 @@ export default function SwipePage() {
                 setFilters({ ...filters, cuisine: '' })
                 applyFilters()
               }}
-              className={`flex-1 py-2 rounded-full font-medium text-sm transition ${
+              className={`flex-1 min-h-11 py-2 rounded-full font-medium text-sm transition ${
                 feedTab === key ? 'bg-[#FF5722] text-white' : 'text-gray-600 hover:text-white'
               }`}
             >
@@ -473,7 +477,7 @@ export default function SwipePage() {
               {lastSwipe === 'right' && (
                 <div className="absolute inset-0 bg-[#10B981]/40 flex items-center justify-center">
                   <div className="bg-[#10B981] text-white text-4xl font-bold px-8 py-4 rounded-2xl rotate-[-15deg] shadow-lg">
-                    ORDER! <ForkFlame size={72} />
+                    WANT IT <WantItIcon size={46} className="inline-block" />
                   </div>
                 </div>
               )}
@@ -491,13 +495,13 @@ export default function SwipePage() {
                   </span>
                 )}
                 {currentDish.vegetarianOption && (
-                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><Leaf size={10} /> Veg</span>
+                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><Leaf size={11} aria-hidden="true" /> Veg</span>
                 )}
                 {currentDish.veganOption && (
-                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><Veggie size={10} /> Vegan</span>
+                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><Sprout size={11} aria-hidden="true" /> Vegan</span>
                 )}
                 {currentDish.glutenFreeOption && (
-                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><Globe size={10} /> GF</span>
+                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><WheatOff size={11} aria-hidden="true" /> GF</span>
                 )}
                 {currentDish.calories && (
                   <span className="px-2 py-1 rounded-full text-xs font-bold bg-white/80 text-gray-800">
@@ -543,19 +547,21 @@ export default function SwipePage() {
                   )}
                 </div>
 
-                <div className="flex justify-center gap-5 mt-6">
-                  <button
+                <div className="flex justify-center gap-6 mt-6">
+                  <IconButton
+                    label={`Pass on ${currentDish.dish}`}
                     onClick={() => handleSwipe('left')}
-                    className="w-14 h-14 rounded-full bg-white/10 backdrop-blur flex items-center justify-center text-white text-xl hover:bg-white/20 transition hover:scale-105"
+                    className="h-16 w-16 border border-white/20 bg-black/35 text-white shadow-xl backdrop-blur hover:scale-105 hover:bg-black/55"
                   >
-                    <Close size={22} />
-                  </button>
-                  <button
+                    <PassIcon size={29} />
+                  </IconButton>
+                  <IconButton
+                    label={`Want ${currentDish.dish}`}
                     onClick={() => handleSwipe('right')}
-                    className="w-14 h-14 rounded-full bg-[#10B981] flex items-center justify-center text-white text-xl hover:scale-110 transition shadow-lg shadow-[#10B981]/30"
+                    className="h-16 w-16 bg-[#10B981] text-white shadow-xl shadow-[#10B981]/25 hover:scale-105 hover:bg-[#0f9f71]"
                   >
-                    <ForkFlame size={72} />
-                  </button>
+                    <WantItIcon size={31} />
+                  </IconButton>
                 </div>
               </div>
             </div>
@@ -564,12 +570,12 @@ export default function SwipePage() {
 
         <div className="flex justify-center gap-8 mt-6 text-gray-500 text-sm">
           <div className="flex items-center gap-2">
-            <SwipeLeft size={16} />
-            <span>Pass</span>
+            <PassIcon size={17} />
+            <span>PASS</span>
           </div>
           <div className="flex items-center gap-2">
-            <SwipeRight size={16} />
-            <span>Order</span>
+            <WantItIcon size={17} />
+            <span>WANT IT</span>
           </div>
         </div>
       </main>
@@ -577,19 +583,19 @@ export default function SwipePage() {
       {showMatch && currentDish && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-[#1A1A1A] rounded-3xl p-8 text-center border border-white/10 animate-bounce">
-            <div className="mb-4"><ForkFlameLarge size={64} /></div>
+            <div className="mb-4 flex justify-center text-[#10B981]"><WantItIcon size={64} /></div>
             <h2 className="text-2xl font-bold text-white mb-2">Match!</h2>
             <p className="text-gray-600 mb-4">Added to your matches</p>
             <p className="text-lg font-semibold text-white">{currentDish.dish}</p>
             <p className="text-gray-600">{currentDish.restaurant}</p>
             {currentDish.seller?.phone && (
-              <a href={`tel:${currentDish.seller.phone}`} className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#10B981] text-white rounded-full text-sm font-semibold">
-                📞 Call to order
+              <a href={`tel:${currentDish.seller.phone}`} className="mt-4 inline-flex min-h-11 items-center gap-2 px-4 py-2 bg-[#10B981] text-white rounded-full text-sm font-semibold">
+                <Phone size={17} aria-hidden="true" /> Call to order
               </a>
             )}
             {currentDish.seller?.ordering_url && (
-              <a href={currentDish.seller.ordering_url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-[#FFD700] text-[#0D0D0D] rounded-full text-sm font-semibold">
-                🌐 Order online
+              <a href={currentDish.seller.ordering_url} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center gap-2 px-4 py-2 bg-[#FFD700] text-[#0D0D0D] rounded-full text-sm font-semibold">
+                <GetItIcon size={17} /> Get it online <ExternalLink size={14} aria-hidden="true" />
               </a>
             )}
           </div>

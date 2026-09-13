@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { ForkFlame, Flame, Camera, Heart, CheckLine, XMark, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, SettingsGear, CheckBold, StarFilled, ChatBubble, DollarSign } from '@/app/components/HwIcon'
+import { BrandMark } from '@/app/components/icons/HungerIcons'
 
 interface Creator {
   rank: number
@@ -75,11 +76,11 @@ export default function LeaderboardPage() {
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-6">
             <Link href="/" className="flex items-center gap-2">
-              <img src="/logo.png" alt="HungerSwipes" className="h-8 w-8 rounded-lg object-cover" />
+              <BrandMark size={32} aria-label="HungerSwipes" />
               <span className="font-bold text-lg">HungerSwipes</span>
             </Link>
-            <Link href="/creator" className="text-sm font-semibold text-[#FFD700]">
-              Join as Creator →
+            <Link href="/creator" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[#FFD700]">
+              Join as Creator <ArrowRight size={16} aria-hidden="true" />
             </Link>
           </div>
           <h1 className="text-3xl font-bold mb-2"><Trophy size={20} /> Creator Leaderboard</h1>
