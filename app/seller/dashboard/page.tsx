@@ -1,13 +1,16 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { QRCodeSVG } from 'qrcode.react'
 import { MapPin, Clock, Phone, DollarSign, Plus, Edit2, ToggleLeft, ToggleRight, ExternalLink } from 'lucide-react'
+import { authFetch } from '@/lib/auth-fetch'
+import { getSupabase } from '@/lib/supabase'
 
 function DashboardContent() {
   const params = useSearchParams()
+  const router = useRouter()
   const sellerId = params.get('id')
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'
 
@@ -18,34 +21,42 @@ function DashboardContent() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (!sellerId) {
-      setLoading(false)
-      return
-    }
     loadData()
   }, [sellerId])
 
   const loadData = async () => {
     setLoading(true)
     try {
-      const [sellerRes, dishesRes, statsRes] = await Promise.all([
-        fetch(`/api/sellers?id=${sellerId}`),
-        fetch(`/api/sellers/${sellerId}/dishes`),
-        fetch(`/api/sellers/${sellerId}/stats`),
-      ])
+      const sellerRes = await authFetch(sellerId ? `/api/sellers?id=${sellerId}` : '/api/sellers?mine=true')
       const sellerData = await sellerRes.json()
+      if (sellerRes.status === 401) {
+        router.replace('/auth?next=%2Fseller%2Fdashboard')
+        return
+      }
+      if (!sellerData.seller) {
+        setSeller(null)
+        return
+      }
+      const ownedSellerId = sellerData.seller.id
+      const [dishesRes, statsRes] = await Promise.all([
+        authFetch(`/api/sellers/${ownedSellerId}/dishes`),
+        authFetch(`/api/sellers/${ownedSellerId}/stats`),
+      ])
       const dishesData = await dishesRes.json()
       const statsData = await statsRes.json()
-      if (sellerData.seller) setSeller(sellerData.seller)
+      setSeller(sellerData.seller)
       if (dishesData.dishes) setDishes(dishesData.dishes)
       if (statsData.stats) setStats(statsData.stats)
-    } catch {}
-    setLoading(false)
+    } catch {
+      router.replace('/auth?next=%2Fseller%2Fdashboard')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const toggleAvailability = async (dish: any) => {
     const next = dish.availability === 'available' ? 'unavailable' : 'available'
-    await fetch(`/api/dishes?id=${dish.id}`, {
+    await authFetch(`/api/dishes?id=${dish.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ availability: next }),
@@ -54,10 +65,15 @@ function DashboardContent() {
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
-  if (!sellerId) return <div className="min-h-screen flex items-center justify-center">No seller ID</div>
-  if (!seller) return <div className="min-h-screen flex items-center justify-center">Seller not found</div>
+  if (!seller) return <div className="min-h-screen flex items-center justify-center">No seller profile found. <Link href="/join" className="ml-2 text-[#FF5722]">Create one</Link></div>
 
-  const joinUrl = `${appUrl}/join?seller_id=${seller.id}`
+  const joinUrl = `${appUrl}/join`
+
+  const logout = async () => {
+    await getSupabase()?.auth.signOut()
+    localStorage.removeItem('hungerswipes_user')
+    router.replace('/auth?next=%2Fseller%2Fdashboard')
+  }
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white">
@@ -66,9 +82,12 @@ function DashboardContent() {
           <div className="w-8 h-8 bg-[#FF5722] rounded-lg flex items-center justify-center font-black text-xs">HS</div>
           <span className="font-bold text-sm">Seller Dashboard</span>
         </div>
-        <Link href="/swipe" className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
-          <ExternalLink size={14} /> Preview
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/swipe" className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
+            <ExternalLink size={14} /> Preview
+          </Link>
+          <button onClick={logout} className="text-xs text-gray-400 hover:text-white">Log out</button>
+        </div>
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
@@ -129,7 +148,7 @@ function DashboardContent() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold">Your Dishes</h2>
             <Link
-              href={`/seller/dishes/new?seller_id=${sellerId}`}
+              href="/seller/dishes/new"
               className="px-3 py-2 bg-[#FF5722] text-white rounded-xl text-sm font-bold flex items-center gap-1"
             >
               <Plus size={16} /> Add
@@ -139,7 +158,7 @@ function DashboardContent() {
           {dishes.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-400 mb-4">No dishes yet.</p>
-              <Link href={`/seller/dishes/new?seller_id=${sellerId}`} className="text-[#FF5722] font-semibold">
+              <Link href="/seller/dishes/new" className="text-[#FF5722] font-semibold">
                 Add your first dish
               </Link>
             </div>

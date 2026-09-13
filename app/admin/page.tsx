@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, CheckCircle, XCircle, Trash2, RefreshCw, ExternalLink } from 'lucide-react'
+import { Shield, CheckCircle, XCircle, Trash2, RefreshCw } from 'lucide-react'
 
 function AdminContent() {
   const params = useSearchParams()
@@ -189,14 +189,6 @@ function AdminContent() {
                         <XCircle size={16} />
                       </button>
                     )}
-                    <a
-                      href={`/seller/dashboard?id=${seller.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-2 bg-white/5 text-gray-400 rounded-lg"
-                    >
-                      <ExternalLink size={16} />
-                    </a>
                   </div>
                 </div>
               </div>

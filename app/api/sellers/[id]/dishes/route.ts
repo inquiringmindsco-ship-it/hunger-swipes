@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { getRequestUser } from '@/lib/server-auth'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
+    const user = await getRequestUser(request)
+    if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     const admin = getSupabaseAdmin()
     if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
 
     const { data, error } = await admin
       .from('dishes')
-      .select('*')
+      .select('*, seller:sellers!inner(owner_user_id)')
       .eq('seller_id', id)
+      .eq('sellers.owner_user_id', user.id)
       .order('created_at', { ascending: false })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ dishes: data || [] })
@@ -19,10 +23,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
+    const user = await getRequestUser(request)
+    if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     const {
       name,
       description,
@@ -40,6 +46,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     if ((status || 'active') === 'active' && !photo_url?.trim()) {
       return NextResponse.json({ error: 'A real dish photo is required before publishing' }, { status: 400 })
     }
+    if (status && !['draft', 'active'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid seller-managed dish status' }, { status: 400 })
+    }
 
     const admin = getSupabaseAdmin()
     if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
@@ -49,7 +58,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       .from('sellers')
       .select('id')
       .eq('id', id)
-      .single()
+      .eq('owner_user_id', user.id)
+      .maybeSingle()
     if (sellerError || !seller) return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
 
     const { data, error } = await admin

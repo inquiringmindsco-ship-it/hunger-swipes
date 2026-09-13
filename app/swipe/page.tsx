@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES, SPICE_LEVELS } from '@/lib/tags'
 import { getTierBadge } from '@/lib/metadata-scoring'
 import { getEaterId } from '@/lib/eater-id'
-import { ForkFlame, ForkFlameLarge, Flame, Camera, Heart, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, Gear, CheckLine, Close, CloseSolid, OrderMark, Filter, Leaf, Globe, Veggie, Light, Rising, SuperSwipe, DollarLine, CheckBold } from '@/app/components/HwIcon'
+import { ForkFlame, ForkFlameLarge, Camera, Heart, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, Gear, CheckLine, Close, CloseSolid, OrderMark, Filter, Leaf, Globe, Veggie, Light, Rising, DollarLine, CheckBold } from '@/app/components/HwIcon'
 
 interface FoodDish {
   id: string
@@ -47,7 +47,7 @@ function priceToRange(price?: number): string {
 export default function SwipePage() {
   const [dishes, setDishes] = useState<FoodDish[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [lastSwipe, setLastSwipe] = useState<'left' | 'right' | 'up' | null>(null)
+  const [lastSwipe, setLastSwipe] = useState<'left' | 'right' | null>(null)
   const [savedCount, setSavedCount] = useState(0)
   const [showMatch, setShowMatch] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -171,15 +171,14 @@ export default function SwipePage() {
     }
   }
 
-  const handleSwipe = useCallback((direction: 'left' | 'right' | 'up') => {
+  const handleSwipe = useCallback((direction: 'left' | 'right') => {
     if (!dishes[currentIndex]) return
 
     const currentDish = dishes[currentIndex]
     setLastSwipe(direction)
 
-    const persistedDirection = direction === 'left' ? 'left' : 'right'
-    void recordSwipe(currentDish.id, persistedDirection).then((saved) => {
-      if (saved && persistedDirection === 'right') {
+    void recordSwipe(currentDish.id, direction).then((saved) => {
+      if (saved && direction === 'right') {
         setSavedCount((count) => count + 1)
         setShowMatch(true)
         setTimeout(() => setShowMatch(false), 1500)
@@ -216,8 +215,6 @@ export default function SwipePage() {
 
       if (Math.abs(deltaX) > 80) {
         handleSwipe(deltaX > 0 ? 'right' : 'left')
-      } else if (Math.abs(deltaX) < 10 && Math.abs(dragOffset.y) > 80) {
-        handleSwipe('up')
       } else {
         setDragOffset({ x: 0, y: 0 })
       }
@@ -487,14 +484,6 @@ export default function SwipePage() {
                   </div>
                 </div>
               )}
-              {lastSwipe === 'up' && (
-                <div className="absolute inset-0 bg-[#FFD700]/50 flex items-center justify-center">
-                  <div className="bg-[#FFD700] text-[#0D0D0D] text-4xl font-bold px-8 py-4 rounded-2xl shadow-lg">
-                    <ForkFlameLarge size={72} /> SUPER HUNGER!
-                  </div>
-                </div>
-              )}
-
               <div className="absolute top-4 left-4 right-4 flex flex-wrap gap-2">
                 {currentDish.completenessScore !== undefined && (
                   <span className={`px-2 py-1 rounded-full text-xs font-bold ${tierBadge.bgColor}`} style={{ color: tierBadge.color }}>
@@ -562,12 +551,6 @@ export default function SwipePage() {
                     <Close size={22} />
                   </button>
                   <button
-                    onClick={() => handleSwipe('up')}
-                    className="w-14 h-14 rounded-full bg-[#FFD700] flex items-center justify-center text-[#0D0D0D] text-xl hover:scale-110 transition shadow-lg shadow-[#FFD700]/30"
-                  >
-                    <Flame size={14} />
-                  </button>
-                  <button
                     onClick={() => handleSwipe('right')}
                     className="w-14 h-14 rounded-full bg-[#10B981] flex items-center justify-center text-white text-xl hover:scale-110 transition shadow-lg shadow-[#10B981]/30"
                   >
@@ -583,10 +566,6 @@ export default function SwipePage() {
           <div className="flex items-center gap-2">
             <SwipeLeft size={16} />
             <span>Pass</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <SuperSwipe size={16} />
-            <span>Super</span>
           </div>
           <div className="flex items-center gap-2">
             <SwipeRight size={16} />

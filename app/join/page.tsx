@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MapPin, Clock, DollarSign, Phone, CheckCircle, Camera, Upload } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
+import { authFetch } from '@/lib/auth-fetch'
+import { getSupabase } from '@/lib/supabase'
 
 const SELLER_TYPES = [
   { value: 'restaurant', label: '🍽️ Restaurant' },
@@ -25,12 +27,14 @@ const ORDERING_METHODS = [
 
 function JoinContent() {
   const params = useSearchParams()
+  const router = useRouter()
   const prefillType = params.get('seller_type') || ''
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'
 
   const [step, setStep] = useState(1)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [authChecking, setAuthChecking] = useState(true)
   const [seller, setSeller] = useState<any>(null)
   const [logoPreview, setLogoPreview] = useState('')
 
@@ -50,6 +54,20 @@ function JoinContent() {
   })
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = getSupabase()
+      const { data } = supabase
+        ? await supabase.auth.getSession()
+        : { data: { session: null } }
+      if (!data.session) {
+        const next = `/join${prefillType ? `?seller_type=${encodeURIComponent(prefillType)}` : ''}`
+        router.replace(`/auth?next=${encodeURIComponent(next)}`)
+        return
+      }
+      setAuthChecking(false)
+    }
+    checkAuth()
+
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -72,7 +90,7 @@ function JoinContent() {
     fd.append('file', file)
     fd.append('folder', 'seller-logos')
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const res = await authFetch('/api/upload', { method: 'POST', body: fd })
       const data = await res.json()
       if (data.url) setForm((f) => ({ ...f, logo_url: data.url }))
     } catch {}
@@ -85,7 +103,7 @@ function JoinContent() {
     }
     setLoading(true)
     try {
-      const res = await fetch('/api/sellers', {
+      const res = await authFetch('/api/sellers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -103,11 +121,14 @@ function JoinContent() {
     setLoading(false)
   }
 
-  const joinUrl = seller ? `${appUrl}/join?seller_id=${seller.id}` : appUrl
-  const dashboardUrl = seller ? `${appUrl}/seller/dashboard?id=${seller.id}` : appUrl
+  const joinUrl = `${appUrl}/join`
+  const dashboardUrl = seller ? `${appUrl}/seller/dashboard` : appUrl
+
+  if (authChecking) {
+    return <div className="min-h-screen flex items-center justify-center">Checking your account...</div>
+  }
 
   if (submitted && seller) {
-    const isHomeKitchen = seller.seller_type === 'home_kitchen'
     return (
       <div className="min-h-screen bg-[#FAFAFA] text-gray-900">
         <header className="bg-white border-b border-gray-200 px-4 py-4">
@@ -122,9 +143,9 @@ function JoinContent() {
             <CheckCircle size={40} className="text-white" />
           </div>
           <h1 className="text-2xl font-black mb-2">You&apos;re on Hunger Swipes!</h1>
-          {isHomeKitchen && (
+          {seller.status === 'pending_review' && (
             <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-2 mb-4">
-              Home Kitchen profile is pending review. You can still add dishes, but they will remain hidden until verification.
+              Your seller profile is pending review. You can add dishes now, but they stay hidden until an admin approves your profile.
             </p>
           )}
 
@@ -141,7 +162,7 @@ function JoinContent() {
           </div>
 
           <Link
-            href={`/seller/dashboard?id=${seller.id}`}
+            href="/seller/dashboard"
             className="block w-full py-4 bg-[#FF5722] text-white rounded-xl font-bold text-center hover:bg-[#e64a19] transition mb-3"
           >
             Add Your First Dish →

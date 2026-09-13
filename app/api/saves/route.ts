@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       .from('saved_dishes')
       .select(`
         *,
-        dish:dishes!inner(*, seller:sellers!inner(*))
+        dish:dishes!inner(*, seller:sellers!inner(id,business_name,seller_type,description,logo_url,location_text,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status))
       `)
       .eq('eater_id', eaterId)
       .eq('dish.status', 'active')

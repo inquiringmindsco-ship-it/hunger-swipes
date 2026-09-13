@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 function checkAdmin(request: NextRequest) {
   const secret = request.headers.get('x-admin-secret') || ''

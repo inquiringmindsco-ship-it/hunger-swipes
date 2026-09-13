@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase, getSupabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
+import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getPayoutTier } from '@/lib/metadata-scoring'
 
 // POST /api/orders - Create a new order

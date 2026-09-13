@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Upload, CheckCircle } from 'lucide-react'
+import { authFetch } from '@/lib/auth-fetch'
 
 const CATEGORIES = [
   'American', 'BBQ', 'Breakfast', 'Cajun', 'Chinese', 'Dessert', 'Healthy', 'Indian', 'Italian',
@@ -11,9 +12,10 @@ const CATEGORIES = [
 ]
 
 function NewDishContent() {
-  const params = useSearchParams()
   const router = useRouter()
-  const sellerId = params.get('seller_id')
+  const [sellerId, setSellerId] = useState('')
+  const [sellerStatus, setSellerStatus] = useState('')
+  const [authChecking, setAuthChecking] = useState(true)
 
   const [form, setForm] = useState({
     name: '',
@@ -31,8 +33,28 @@ function NewDishContent() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!sellerId) return
-  }, [sellerId])
+    const loadSeller = async () => {
+      try {
+        const response = await authFetch('/api/sellers?mine=true')
+        if (response.status === 401) {
+          router.replace('/auth?next=%2Fseller%2Fdishes%2Fnew')
+          return
+        }
+        const data = await response.json()
+        if (!data.seller) {
+          router.replace('/join')
+          return
+        }
+        setSellerId(data.seller.id)
+        setSellerStatus(data.seller.status)
+      } catch {
+        setError('Unable to load your seller profile.')
+      } finally {
+        setAuthChecking(false)
+      }
+    }
+    loadSeller()
+  }, [router])
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -45,7 +67,7 @@ function NewDishContent() {
     fd.append('file', file)
     fd.append('folder', 'dish-photos')
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const res = await authFetch('/api/upload', { method: 'POST', body: fd })
       const data = await res.json()
       if (data.url) setForm((f) => ({ ...f, photo_url: data.url }))
     } catch {}
@@ -63,7 +85,7 @@ function NewDishContent() {
     setSubmitting(true)
     setError('')
     try {
-      const res = await fetch('/api/dishes', {
+      const res = await authFetch('/api/dishes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -91,6 +113,10 @@ function NewDishContent() {
     }
   }
 
+  if (authChecking) {
+    return <div className="min-h-screen flex items-center justify-center">Checking your account...</div>
+  }
+
   if (done) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] text-gray-900">
@@ -104,10 +130,12 @@ function NewDishContent() {
           <div className="w-20 h-20 bg-[#10B981] rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={40} className="text-white" />
           </div>
-          <h1 className="text-2xl font-black mb-2">Dish published!</h1>
-          <p className="text-gray-600 mb-6">It&apos;s now live on the swipe feed.</p>
+          <h1 className="text-2xl font-black mb-2">Dish saved!</h1>
+          <p className="text-gray-600 mb-6">
+            {sellerStatus === 'active' ? 'It is now live on the swipe feed.' : 'It will appear after your seller profile is approved.'}
+          </p>
           <Link
-            href={`/seller/dashboard?id=${sellerId}`}
+            href="/seller/dashboard"
             className="block w-full py-4 bg-[#FF5722] text-white rounded-xl font-bold text-center mb-3"
           >
             Back to Dashboard
@@ -127,7 +155,7 @@ function NewDishContent() {
     <div className="min-h-screen bg-[#FAFAFA] text-gray-900">
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center gap-2">
-          <Link href={`/seller/dashboard?id=${sellerId || ''}`} className="text-gray-600 hover:text-gray-900">
+          <Link href="/seller/dashboard" className="text-gray-600 hover:text-gray-900">
             <ArrowLeft size={20} />
           </Link>
           <span className="font-bold text-gray-900">Add Your First Dish</span>
@@ -228,7 +256,7 @@ function NewDishContent() {
 
         <div className="flex gap-3 pt-4">
           <Link
-            href={`/seller/dashboard?id=${sellerId || ''}`}
+            href="/seller/dashboard"
             className="px-6 py-4 bg-white border border-gray-200 rounded-xl font-semibold"
           >
             ← Back
@@ -247,9 +275,5 @@ function NewDishContent() {
 }
 
 export default function NewDishPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-      <NewDishContent />
-    </Suspense>
-  )
+  return <NewDishContent />
 }
