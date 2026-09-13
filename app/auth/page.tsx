@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import { ForkFlame, Flame, Camera, Heart, CheckLine, XMark, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, SettingsGear, CheckBold, StarFilled, ChatBubble, DollarSign } from '@/app/components/HwIcon'
 
-export default function AuthPage() {
+function AuthForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const requestedNext = searchParams?.get('next')
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,27 +28,34 @@ export default function AuthPage() {
     try {
       const supabase = getSupabase()
       if (!supabase) throw new Error('Authentication is not configured')
-      const requestedNext = new URLSearchParams(window.location.search).get('next')
-      const next = requestedNext?.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/swipe'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+      if (!appUrl) {
+        throw new Error('NEXT_PUBLIC_APP_URL is not configured')
+      }
+      const safeNext = requestedNext?.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/swipe'
+      const emailRedirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(safeNext)}`
 
-      if (mode === 'signup') {
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: fullName, username, role: next.startsWith('/join') ? 'seller' : 'eater' } },
-        })
+    if (mode === 'signup') {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName, username, role: safeNext.startsWith('/join') ? 'seller' : 'eater' },
+          emailRedirectTo,
+        },
+      })
         if (signUpError) throw signUpError
         if (!data.session) {
           setMessage('Check your email to confirm your account, then sign in to continue.')
         } else {
           localStorage.setItem('hungerswipes_user', JSON.stringify(data.user))
-          router.push(next)
+          router.push(safeNext)
         }
       } else {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
         if (signInError) throw signInError
         localStorage.setItem('hungerswipes_user', JSON.stringify(data.user))
-        router.push(next)
+        router.push(safeNext)
       }
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.')
@@ -217,5 +226,17 @@ export default function AuthPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center text-white">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    }>
+      <AuthForm />
+    </Suspense>
   )
 }
