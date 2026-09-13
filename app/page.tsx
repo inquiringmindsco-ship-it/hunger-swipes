@@ -7,6 +7,7 @@ import {
   Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight,
   ArrowRight, Note, Crown, Comment, Sparkle, Plate
 } from '@/app/components/HwIcon'
+import { getEaterId } from '@/lib/eater-id'
 
 // ============================================================
 // SPLASH SCREEN — animated logo on load
@@ -282,10 +283,21 @@ function MatchesTab() {
   const [matches, setMatches] = useState<any[]>([])
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('hungerswipes_matches')
-      if (stored) setMatches(JSON.parse(stored))
-    } catch {}
+    const loadMatches = async () => {
+      try {
+        const eaterId = getEaterId()
+        const res = await fetch(`/api/saves?eaterId=${encodeURIComponent(eaterId)}`)
+        const data = await res.json()
+        if (!res.ok) return
+        setMatches((data.saved || []).map((item: any) => ({
+          id: item.dish.id,
+          imageUrl: item.dish.photo_url,
+          dish: item.dish.name,
+          restaurant: item.dish.seller.business_name,
+        })))
+      } catch {}
+    }
+    loadMatches()
   }, [])
 
   return (

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { TrustBadge, getTrustBadgeFromType, getPointsForType, getTierFromPoints } from '@/app/components/TrustBadge'
 import { ForkFlame, Flame, Camera, Heart, CheckLine, XMark, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, SettingsGear, CheckBold, StarFilled, ChatBubble, DollarSign } from '@/app/components/HwIcon'
+import { getEaterId } from '@/lib/eater-id'
 
 interface Verification {
   id: string
@@ -36,11 +37,19 @@ interface PointsData {
   tier: string
 }
 
-function loadMatches(): MatchPhoto[] {
-  if (typeof window === 'undefined') return []
+async function loadMatches(): Promise<MatchPhoto[]> {
   try {
-    const stored = localStorage.getItem('hungerswipes_matches')
-    if (stored) return JSON.parse(stored)
+    const eaterId = getEaterId()
+    const res = await fetch(`/api/saves?eaterId=${encodeURIComponent(eaterId)}`)
+    const data = await res.json()
+    if (!res.ok) return []
+    return (data.saved || []).map((item: any) => ({
+      id: item.dish.id,
+      imageUrl: item.dish.photo_url,
+      restaurant: item.dish.seller.business_name,
+      dish: item.dish.name,
+      location: item.dish.seller.location_text,
+    }))
   } catch {}
   return []
 }
@@ -80,13 +89,13 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
   const [existingVerifications, setExistingVerifications] = useState<Verification[]>([])
 
   useEffect(() => {
-    const storedMatches = loadMatches()
-    setMatches(storedMatches)
-
-    if (photoIdParam) {
-      const match = storedMatches.find((m) => m.id === photoIdParam)
-      if (match) setSelectedPhoto(match)
-    }
+    loadMatches().then((savedMatches) => {
+      setMatches(savedMatches)
+      if (photoIdParam) {
+        const match = savedMatches.find((m) => m.id === photoIdParam)
+        if (match) setSelectedPhoto(match)
+      }
+    })
 
     fetchPoints()
     fetchVerifications()
