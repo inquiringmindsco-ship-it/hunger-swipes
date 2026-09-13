@@ -34,8 +34,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       status,
     } = body
 
-    if (!name) {
+    if (!name?.trim()) {
       return NextResponse.json({ error: 'dish name is required' }, { status: 400 })
+    }
+    if ((status || 'active') === 'active' && !photo_url?.trim()) {
+      return NextResponse.json({ error: 'A real dish photo is required before publishing' }, { status: 400 })
     }
 
     const admin = getSupabaseAdmin()
@@ -53,7 +56,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       .from('dishes')
       .insert({
         seller_id: id,
-        name,
+        name: name.trim(),
         description: description || null,
         photo_url: photo_url || null,
         price: typeof price === 'number' ? price : 0,

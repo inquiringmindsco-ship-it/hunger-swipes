@@ -14,8 +14,7 @@ export async function GET(request: NextRequest) {
 
     const admin = getSupabaseAdmin()
     if (!admin) {
-      // Fallback: return mock-friendly shape using photos route or hardcoded
-      return NextResponse.json({ dishes: [], mock: true })
+      return NextResponse.json({ error: 'Database not configured', dishes: [] }, { status: 503 })
     }
 
     let query = admin
@@ -27,6 +26,10 @@ export async function GET(request: NextRequest) {
       .eq('status', 'active')
       .eq('availability', 'available')
       .eq('sellers.status', 'active')
+      .not('photo_url', 'is', null)
+      .neq('photo_url', '')
+      .neq('name', '')
+      .neq('sellers.business_name', '')
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -85,8 +88,11 @@ export async function POST(request: NextRequest) {
       status,
     } = body
 
-    if (!seller_id || !name) {
+    if (!seller_id || !name?.trim()) {
       return NextResponse.json({ error: 'seller_id and name are required' }, { status: 400 })
+    }
+    if ((status || 'active') === 'active' && !photo_url?.trim()) {
+      return NextResponse.json({ error: 'A real dish photo is required before publishing' }, { status: 400 })
     }
 
     const admin = getSupabaseAdmin()
@@ -103,7 +109,7 @@ export async function POST(request: NextRequest) {
       .from('dishes')
       .insert({
         seller_id,
-        name,
+        name: name.trim(),
         description: description || null,
         photo_url: photo_url || null,
         price: typeof price === 'number' ? price : 0,
@@ -140,6 +146,18 @@ export async function PUT(request: NextRequest) {
 
     const admin = getSupabaseAdmin()
     if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
+
+    if (update.status === 'active') {
+      const { data: existing, error: existingError } = await admin
+        .from('dishes')
+        .select('photo_url')
+        .eq('id', id)
+        .single()
+      if (existingError || !existing) return NextResponse.json({ error: 'Dish not found' }, { status: 404 })
+      if (!(update.photo_url || existing.photo_url)?.trim()) {
+        return NextResponse.json({ error: 'A real dish photo is required before publishing' }, { status: 400 })
+      }
+    }
 
     const { data, error } = await admin
       .from('dishes')

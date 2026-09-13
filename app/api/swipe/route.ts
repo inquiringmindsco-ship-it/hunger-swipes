@@ -14,10 +14,19 @@ export async function POST(request: NextRequest) {
 
     // Read current dish stats and previous swipe direction
     const [{ data: dish, error: dishError }, { data: previousSwipe }] = await Promise.all([
-      admin.from('dishes').select('id, impressions, right_swipes, left_swipes').eq('id', dishId).single(),
+      admin
+        .from('dishes')
+        .select('id, impressions, right_swipes, left_swipes, seller:sellers!inner(id)')
+        .eq('id', dishId)
+        .eq('status', 'active')
+        .eq('availability', 'available')
+        .eq('sellers.status', 'active')
+        .not('photo_url', 'is', null)
+        .neq('photo_url', '')
+        .single(),
       admin.from('swipes').select('direction').eq('eater_id', eaterId).eq('dish_id', dishId).maybeSingle(),
     ])
-    if (dishError || !dish) return NextResponse.json({ error: 'Dish not found' }, { status: 404 })
+    if (dishError || !dish) return NextResponse.json({ error: 'Active dish not found' }, { status: 404 })
 
     const isRight = direction === 'right'
     const wasRight = previousSwipe?.direction === 'right'

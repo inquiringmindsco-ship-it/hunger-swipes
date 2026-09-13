@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Heart, MapPin, Phone, Clock, ExternalLink, Trash2, ChefHat } from 'lucide-react'
+import { getEaterId } from '@/lib/eater-id'
 
 interface SavedItem {
   id: string
@@ -25,16 +26,6 @@ interface SavedItem {
       ordering_url?: string
     }
   }
-}
-
-function getEaterId(): string {
-  if (typeof window === 'undefined') return 'demo-eater'
-  let id = localStorage.getItem('hs_eater_id')
-  if (!id) {
-    id = 'eater-' + Math.random().toString(36).slice(2, 10)
-    localStorage.setItem('hs_eater_id', id)
-  }
-  return id
 }
 
 export default function SavedPage() {

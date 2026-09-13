@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES, SPICE_LEVELS } from '@/lib/tags'
 import { getTierBadge } from '@/lib/metadata-scoring'
+import { getEaterId } from '@/lib/eater-id'
 import { ForkFlame, ForkFlameLarge, Flame, Camera, Heart, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, Gear, CheckLine, Close, CloseSolid, OrderMark, Filter, Leaf, Globe, Veggie, Light, Rising, SuperSwipe, DollarLine, CheckBold } from '@/app/components/HwIcon'
 
 interface FoodDish {
@@ -16,9 +17,7 @@ interface FoodDish {
   cuisineTags?: string[]
   priceRange: string
   price: number
-  photographer: string
-  commissionRate: number
-  hungerScore: number
+  hungerScore?: number
   title?: string
   description?: string
   tags?: string[]
@@ -35,101 +34,8 @@ interface FoodDish {
   healthCategory?: string
   completenessScore?: number
   metadataQualityStatus?: string
-  seller?: { id: string; business_name: string; location_text: string; phone?: string; ordering_method?: string; ordering_url?: string }
+  seller: { id: string; business_name: string; location_text?: string; phone?: string; ordering_method?: string; ordering_url?: string }
 }
-
-const FALLBACK_DISHES: FoodDish[] = [
-  {
-    id: 'mock-1',
-    imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=800&fit=crop',
-    restaurant: 'Pizzeria Locale',
-    location: 'St. Louis, MO',
-    dish: 'Margherita Pizza',
-    cuisine: 'Italian',
-    cuisineTags: ['Italian'],
-    priceRange: '$$',
-    price: 18,
-    photographer: '@stlfoodie',
-    commissionRate: 0.10,
-    hungerScore: 94,
-    title: 'Classic Margherita Pizza',
-    description: 'Fresh mozzarella, San Marzano tomatoes, and fragrant basil on a perfectly crispy crust.',
-    tags: ['pizza', 'cheesy', 'comfort food'],
-    dietaryTags: ['vegetarian'],
-    calories: 850,
-    proteinGrams: 32,
-    carbsGrams: 95,
-    fatGrams: 38,
-    spiceLevel: 1,
-    portionSize: 'regular',
-    vegetarianOption: true,
-    veganOption: false,
-    glutenFreeOption: false,
-    healthCategory: 'indulgent',
-    completenessScore: 75,
-    metadataQualityStatus: 'top-tier',
-  },
-  {
-    id: 'mock-2',
-    imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=800&fit=crop',
-    restaurant: 'Green Bowl',
-    location: 'St. Louis, MO',
-    dish: 'Acai Sunrise Bowl',
-    cuisine: 'Healthy',
-    cuisineTags: ['American', 'Healthy'],
-    priceRange: '$$',
-    price: 14,
-    photographer: '@healthyeats_sarah',
-    commissionRate: 0.12,
-    hungerScore: 89,
-    title: 'Acai Sunrise Bowl',
-    description: 'Organic acai blended with banana and topped with fresh berries, granola, and honey.',
-    tags: ['acai bowl', 'healthy', 'fresh'],
-    dietaryTags: ['vegan', 'gluten-free', 'organic'],
-    calories: 420,
-    proteinGrams: 8,
-    carbsGrams: 72,
-    fatGrams: 12,
-    spiceLevel: 1,
-    portionSize: 'regular',
-    vegetarianOption: true,
-    veganOption: true,
-    glutenFreeOption: true,
-    healthCategory: 'healthy',
-    completenessScore: 85,
-    metadataQualityStatus: 'top-tier',
-  },
-  {
-    id: 'mock-4',
-    imageUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&h=800&fit=crop',
-    restaurant: 'Smoke & Fire BBQ',
-    location: 'St. Louis, MO',
-    dish: 'Brisket Platter',
-    cuisine: 'BBQ',
-    cuisineTags: ['American', 'BBQ'],
-    priceRange: '$$$',
-    price: 28,
-    photographer: '@meatlovers_mike',
-    commissionRate: 0.10,
-    hungerScore: 97,
-    title: 'Texas-Style Brisket Platter',
-    description: 'Slow-smoked 14-hour brisket with signature spice rub, served with two sides.',
-    tags: ['BBQ ribs', 'steak', 'comfort food', 'soul food'],
-    dietaryTags: ['gluten-free'],
-    calories: 1200,
-    proteinGrams: 65,
-    carbsGrams: 45,
-    fatGrams: 82,
-    spiceLevel: 2,
-    portionSize: 'large',
-    vegetarianOption: false,
-    veganOption: false,
-    glutenFreeOption: true,
-    healthCategory: 'indulgent',
-    completenessScore: 65,
-    metadataQualityStatus: 'enhanced',
-  },
-]
 
 function priceToRange(price?: number): string {
   if (!price && price !== 0) return '$'
@@ -142,20 +48,12 @@ export default function SwipePage() {
   const [dishes, setDishes] = useState<FoodDish[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [lastSwipe, setLastSwipe] = useState<'left' | 'right' | 'up' | null>(null)
-  const getStoredMatches = (): FoodDish[] => {
-    if (typeof window === 'undefined') return []
-    try {
-      const stored = localStorage.getItem('hungerswipes_matches')
-      return stored ? JSON.parse(stored) : []
-    } catch {
-      return []
-    }
-  }
-  const [matches, setMatches] = useState<FoodDish[]>(getStoredMatches)
+  const [savedCount, setSavedCount] = useState(0)
   const [showMatch, setShowMatch] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [user, setUser] = useState<any>(null)
+  const [eaterId, setEaterId] = useState('')
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
@@ -170,31 +68,30 @@ export default function SwipePage() {
   useEffect(() => {
     const storedUser = localStorage.getItem('hungerswipes_user')
     if (storedUser) {
-      setUser(JSON.parse(storedUser))
+      try {
+        setUser(JSON.parse(storedUser))
+      } catch {
+        localStorage.removeItem('hungerswipes_user')
+      }
     }
-    setLoading(false)
-
-    const storedMatches = localStorage.getItem('hungerswipes_matches')
-    if (storedMatches) {
-      setMatches(JSON.parse(storedMatches))
-    }
-
-    fetchDishes()
+    localStorage.removeItem('hungerswipes_matches')
+    const id = getEaterId()
+    setEaterId(id)
+    fetchDishes(id)
+    loadSavedCount(id)
   }, [])
 
   const mapDish = (d: any): FoodDish => ({
     id: d.id,
-    imageUrl: d.photo_url || d.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=800&fit=crop',
-    restaurant: d.seller?.business_name || d.restaurant_name || 'Unknown',
-    location: d.seller?.location_text || d.location_text || d.restaurant_location || 'St. Louis, MO',
-    dish: d.name || d.dish_name || 'Mystery Dish',
-    cuisine: d.category || d.cuisine_type || '',
-    cuisineTags: d.tags || d.cuisine_tags || [],
+    imageUrl: d.photo_url,
+    restaurant: d.seller.business_name,
+    location: d.seller.location_text || '',
+    dish: d.name,
+    cuisine: d.category || '',
+    cuisineTags: d.tags || [],
     priceRange: priceToRange(typeof d.price === 'number' ? d.price : undefined),
     price: typeof d.price === 'number' ? d.price : 0,
-    photographer: '@stlfoodie',
-    commissionRate: 0.10,
-    hungerScore: d.right_swipes && d.impressions ? Math.round((d.right_swipes / Math.max(1, d.impressions)) * 100) : 90,
+    hungerScore: d.impressions > 0 ? Math.round((d.right_swipes / d.impressions) * 100) : undefined,
     title: d.name,
     description: d.description,
     tags: d.tags || [],
@@ -214,11 +111,12 @@ export default function SwipePage() {
     seller: d.seller,
   })
 
-  const fetchDishes = async () => {
+  const fetchDishes = async (requestedEaterId = eaterId) => {
+    setLoading(true)
     try {
       const params = new URLSearchParams()
       params.set('limit', '20')
-      if (user?.id) params.set('eaterId', user.id)
+      if (requestedEaterId) params.set('eaterId', requestedEaterId)
       if (filters.cuisine) params.set('cuisineTag', filters.cuisine)
       if (filters.dietary) params.set('dietaryTag', filters.dietary)
       if (filters.health) params.set('healthCategory', filters.health)
@@ -227,16 +125,25 @@ export default function SwipePage() {
       const query = params.toString() ? `?${params.toString()}` : ''
       const res = await fetch(`/api/dishes${query}`)
       const data = await res.json()
-      if (data.dishes && data.dishes.length > 0) {
-        setDishes(data.dishes.map(mapDish))
-      } else if (data.photos && data.photos.length > 0) {
-        setDishes(data.photos.map(mapDish))
-      } else {
-        setDishes(FALLBACK_DISHES)
-      }
+      if (!res.ok) throw new Error(data.error || 'Dish feed unavailable')
+      setDishes((data.dishes || []).map(mapDish))
+      setCurrentIndex(0)
     } catch (err) {
-      console.log('Dishes feed unavailable, using fallback')
-      setDishes(FALLBACK_DISHES)
+      console.error('Dishes feed unavailable', err)
+      setDishes([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadSavedCount = async (id = eaterId) => {
+    if (!id) return
+    try {
+      const res = await fetch(`/api/saves?eaterId=${encodeURIComponent(id)}`)
+      const data = await res.json()
+      setSavedCount(res.ok && Array.isArray(data.saved) ? data.saved.length : 0)
+    } catch {
+      setSavedCount(0)
     }
   }
 
@@ -245,26 +152,22 @@ export default function SwipePage() {
     fetchDishes()
   }
 
-  const saveMatches = (newMatches: FoodDish[]) => {
-    setMatches(newMatches)
-    localStorage.setItem('hungerswipes_matches', JSON.stringify(newMatches))
-  }
-
-  const recordSwipe = async (dishId: string, direction: string) => {
-    if (user?.id) {
-      try {
-        await fetch('/api/swipe', {
+  const recordSwipe = async (dishId: string, direction: 'left' | 'right') => {
+    if (!eaterId) return false
+    try {
+      const res = await fetch('/api/swipe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             dishId,
             direction,
-            eaterId: user.id
+            eaterId,
           })
-        })
-      } catch (err) {
-        console.log('Swipe recording failed (non-critical)')
-      }
+      })
+      return res.ok
+    } catch (err) {
+      console.error('Swipe recording failed', err)
+      return false
     }
   }
 
@@ -274,21 +177,21 @@ export default function SwipePage() {
     const currentDish = dishes[currentIndex]
     setLastSwipe(direction)
 
-    if (direction === 'right' || direction === 'up') {
-      const newMatches = [...matches, currentDish]
-      saveMatches(newMatches)
-      setShowMatch(true)
-      setTimeout(() => setShowMatch(false), 1500)
-    }
-
-    recordSwipe(currentDish.id, direction)
+    const persistedDirection = direction === 'left' ? 'left' : 'right'
+    void recordSwipe(currentDish.id, persistedDirection).then((saved) => {
+      if (saved && persistedDirection === 'right') {
+        setSavedCount((count) => count + 1)
+        setShowMatch(true)
+        setTimeout(() => setShowMatch(false), 1500)
+      }
+    })
 
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1)
       setLastSwipe(null)
       setDragOffset({ x: 0, y: 0 })
     }, 300)
-  }, [currentIndex, dishes, matches])
+  }, [currentIndex, dishes, eaterId])
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault()
@@ -352,11 +255,16 @@ export default function SwipePage() {
       <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
         <div className="text-center px-4">
           <div className="text-8xl mb-6"><ForkFlame size={72} /></div>
-          <h1 className="text-3xl font-bold text-white mb-4">No plates yet</h1>
-          <p className="text-gray-600 mb-8">Be the first to post a plate.</p>
-          <Link href="/vendor-intake" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
-            List Your Food
-          </Link>
+          <h1 className="text-3xl font-bold text-white mb-4">No dishes are live yet.</h1>
+          <p className="text-gray-400 mb-8">Check back soon, or invite a food seller to publish the first dish.</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button onClick={() => fetchDishes()} className="px-6 py-3 bg-white/10 text-white rounded-full font-semibold hover:bg-white/20 transition">
+              Refresh
+            </button>
+            <Link href="/join" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
+              List Your Food
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -370,7 +278,7 @@ export default function SwipePage() {
           <h1 className="text-3xl font-bold text-white mb-4">You're all caught up!</h1>
           <p className="text-gray-600 mb-8">Check back later for more delicious photos.</p>
           <Link href="/matches" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
-            View Your Matches ({matches.length})
+            View Your Matches ({savedCount})
           </Link>
         </div>
       </div>
@@ -400,9 +308,9 @@ export default function SwipePage() {
             </Link>
             <Link href="/matches" className="relative">
               <span className="text-2xl"><Bookmark size={22} /></span>
-              {matches.length > 0 && (
+              {savedCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF5722] text-white text-xs rounded-full flex items-center justify-center font-bold">
-                  {matches.length}
+                  {savedCount}
                 </span>
               )}
             </Link>
@@ -619,7 +527,7 @@ export default function SwipePage() {
                   <div className="flex-1">
                     <h2 className="text-white text-2xl font-bold mb-1">{currentDish.dish}</h2>
                     <p className="text-white/70 text-lg mb-2">
-                      {currentDish.restaurant} · {currentDish.location}
+                      {currentDish.restaurant}{currentDish.location ? ` · ${currentDish.location}` : ''}
                     </p>
                     <div className="flex items-center gap-3 text-sm text-white/60">
                       <span>{currentDish.cuisine}</span>
@@ -636,12 +544,14 @@ export default function SwipePage() {
                       </div>
                     )}
                   </div>
-                  <div className="text-right">
-                    <div className="bg-[#FFD700] text-[#0D0D0D] text-xs font-bold px-2 py-1 rounded-full">
-                      {currentDish.hungerScore}
+                  {currentDish.hungerScore !== undefined && (
+                    <div className="text-right">
+                      <div className="bg-[#FFD700] text-[#0D0D0D] text-xs font-bold px-2 py-1 rounded-full">
+                        {currentDish.hungerScore}
+                      </div>
+                      <p className="text-xs text-white/50 mt-1">HungerScore™</p>
                     </div>
-                    <p className="text-xs text-white/50 mt-1">HungerScore™</p>
-                  </div>
+                  )}
                 </div>
 
                 <div className="flex justify-center gap-5 mt-6">

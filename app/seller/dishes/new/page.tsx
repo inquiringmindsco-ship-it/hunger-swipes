@@ -56,8 +56,8 @@ function NewDishContent() {
       setError('Missing seller ID. Please return to dashboard.')
       return
     }
-    if (!form.name) {
-      setError('Dish name is required.')
+    if (!form.name || !form.photo_url) {
+      setError('Dish name and an uploaded dish photo are required.')
       return
     }
     setSubmitting(true)
@@ -74,7 +74,7 @@ function NewDishContent() {
           category: form.category,
           tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
           availability: form.availability,
-          photo_url: form.photo_url || preview || null,
+          photo_url: form.photo_url,
           status: form.status,
         }),
       })

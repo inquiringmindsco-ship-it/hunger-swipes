@@ -14,9 +14,14 @@ export async function GET(request: NextRequest) {
       .from('saved_dishes')
       .select(`
         *,
-        dish:dishes(*, seller:sellers(*))
+        dish:dishes!inner(*, seller:sellers!inner(*))
       `)
       .eq('eater_id', eaterId)
+      .eq('dish.status', 'active')
+      .eq('dish.availability', 'available')
+      .not('dish.photo_url', 'is', null)
+      .neq('dish.photo_url', '')
+      .eq('dish.seller.status', 'active')
       .order('created_at', { ascending: false })
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
