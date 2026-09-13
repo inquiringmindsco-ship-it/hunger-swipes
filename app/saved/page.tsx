@@ -6,6 +6,7 @@ import { ArrowLeft, Clock3, ExternalLink, MapPin, Phone, Trash2 } from 'lucide-r
 import { getEaterId } from '@/lib/eater-id'
 import { BrandMark, GetItIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
+import MobileNav from '@/app/components/MobileNav'
 
 interface SavedItem {
   id: string
@@ -56,7 +57,7 @@ export default function SavedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F7]">
+    <div className="min-h-screen bg-[#F7F7F7] pb-20">
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -143,6 +144,7 @@ export default function SavedPage() {
           </div>
         )}
       </main>
+      <MobileNav />
     </div>
   )
 }

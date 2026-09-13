@@ -55,7 +55,7 @@ function JoinContent() {
   })
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuthAndSeller = async () => {
       const supabase = getSupabase()
       const { data } = supabase
         ? await supabase.auth.getSession()
@@ -65,9 +65,20 @@ function JoinContent() {
         router.replace(`/auth?next=${encodeURIComponent(next)}`)
         return
       }
+      // Check if seller already exists for this user
+      try {
+        const res = await authFetch('/api/sellers?mine=true')
+        const data = await res.json()
+        if (data.seller?.id) {
+          router.replace(`/seller/dashboard?id=${data.seller.id}`)
+          return
+        }
+      } catch {
+        // If lookup fails, still let them create a seller
+      }
       setAuthChecking(false)
     }
-    checkAuth()
+    checkAuthAndSeller()
 
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(

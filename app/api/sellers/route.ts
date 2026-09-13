@@ -81,6 +81,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
     }
 
+    // V1: one seller per owner
+    const { data: existing, error: findError } = await admin
+      .from('sellers')
+      .select('*')
+      .eq('owner_user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (findError) return NextResponse.json({ error: findError.message }, { status: 500 })
+    if (existing) return NextResponse.json({ seller: existing }, { status: 200 })
+
     const insert: any = {
       owner_user_id: user.id,
       business_name,

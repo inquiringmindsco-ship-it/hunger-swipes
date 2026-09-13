@@ -8,6 +8,7 @@ import { getEaterId } from '@/lib/eater-id'
 import { Bookmark, ExternalLink, Leaf, Phone, Settings, SlidersHorizontal, Sprout, WheatOff } from 'lucide-react'
 import { BrandMark, GetItIcon, PassIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
+import MobileNav from '@/app/components/MobileNav'
 
 interface FoodDish {
   id: string
@@ -243,15 +244,16 @@ export default function SwipePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center pb-20">
         <div className="text-white text-xl">Loading...</div>
+        <MobileNav />
       </div>
     )
   }
 
   if (dishes.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0D0D0D] flex flex-col items-center justify-center pb-20">
         <div className="text-center px-4">
           <div className="mb-6 flex justify-center"><BrandMark size={72} /></div>
           <h1 className="text-3xl font-bold text-white mb-4">No dishes are live yet.</h1>
@@ -265,21 +267,23 @@ export default function SwipePage() {
             </Link>
           </div>
         </div>
+        <MobileNav />
       </div>
     )
   }
 
   if (currentIndex >= dishes.length) {
     return (
-      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0D0D0D] flex flex-col items-center justify-center pb-20">
         <div className="text-center px-4">
           <div className="mb-6 flex justify-center"><BrandMark size={72} /></div>
           <h1 className="text-3xl font-bold text-white mb-4">You're all caught up!</h1>
           <p className="text-gray-600 mb-8">Check back later for more delicious photos.</p>
-          <Link href="/matches" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
-            View Your Matches ({savedCount})
+          <Link href="/saved" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
+            View Saved ({savedCount})
           </Link>
         </div>
+        <MobileNav />
       </div>
     )
   }
@@ -289,7 +293,7 @@ export default function SwipePage() {
   const tierBadge = getTierBadge(currentDish?.completenessScore || 0)
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D]">
+    <div className="min-h-screen bg-[#0D0D0D] pb-20">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0D0D0D]/90 backdrop-blur-sm border-b border-white/5 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
@@ -301,7 +305,7 @@ export default function SwipePage() {
             <Link href="/preferences" aria-label="Food preferences" title="Food preferences" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-gray-300 hover:bg-white/10 hover:text-white">
               <Settings size={21} aria-hidden="true" />
             </Link>
-            <Link href="/vendor" className="hidden sm:block text-sm text-[#FF5722] font-semibold">
+            <Link href="/join" className="hidden sm:block text-sm text-[#FF5722] font-semibold">
               For Restaurants
             </Link>
             <Link href="/join" className="hidden sm:block text-sm text-white/60 hover:text-white font-semibold">
@@ -601,6 +605,7 @@ export default function SwipePage() {
           </div>
         </div>
       )}
+      <MobileNav />
     </div>
   )
 }

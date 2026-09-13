@@ -9,6 +9,7 @@ import { authFetch } from '@/lib/auth-fetch'
 import { getSupabase } from '@/lib/supabase'
 import { BrandMark, SellerTypeIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
+import MobileNav from '@/app/components/MobileNav'
 
 function DashboardContent() {
   const params = useSearchParams()
@@ -80,7 +81,7 @@ function DashboardContent() {
   const StatusIcon = seller.status === 'active' ? CheckCircle2 : seller.status === 'suspended' ? Ban : Timer
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white">
+    <div className="min-h-screen bg-[#0D0D0D] text-white pb-24">
       <header className="px-4 py-4 border-b border-white/5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BrandMark size={32} />
@@ -208,6 +209,7 @@ function DashboardContent() {
           <p className="text-xs text-gray-500 mt-3 break-all">{joinUrl}</p>
         </div>
       </main>
+      <MobileNav />
     </div>
   )
 }
