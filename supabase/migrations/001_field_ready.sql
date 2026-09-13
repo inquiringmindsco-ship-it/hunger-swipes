@@ -21,7 +21,7 @@ create table if not exists public.sellers (
   delivery_available boolean default false,
   ordering_method text check (ordering_method in ('phone','link','in_app','none')),
   ordering_url text,
-  status text not null default 'draft' check (status in ('draft','pending','active','suspended')),
+  status text not null default 'draft' check (status in ('draft','pending_review','active','suspended')),
   verification_status text not null default 'pending' check (verification_status in ('pending','approved','rejected')),
   permit_info jsonb,
   jurisdiction text,

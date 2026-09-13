@@ -150,8 +150,28 @@ function AdminContent() {
                     <p className="text-xs text-gray-500 mt-1">{seller.location_text}</p>
                     <p className="text-xs text-gray-500">Dishes: {seller.dishes?.length || 0}</p>
                   </div>
-                  <div className="flex gap-1">
-                    {seller.status !== 'active' && (
+                  <div className="flex gap-1 flex-wrap">
+                    {(seller.status === 'pending_review' || seller.verification_status === 'pending') && (
+                      <>
+                        <button
+                          onClick={() => doAction('seller', seller.id, 'approve')}
+                          disabled={actionLoading === `seller:${seller.id}:approve`}
+                          className="p-2 bg-[#10B981]/20 text-[#10B981] rounded-lg"
+                          title="Approve"
+                        >
+                          <CheckCircle size={16} />
+                        </button>
+                        <button
+                          onClick={() => doAction('seller', seller.id, 'reject', 'Does not meet requirements')}
+                          disabled={actionLoading === `seller:${seller.id}:reject`}
+                          className="p-2 bg-red-500/20 text-red-500 rounded-lg"
+                          title="Reject"
+                        >
+                          <XCircle size={16} />
+                        </button>
+                      </>
+                    )}
+                    {seller.status !== 'active' && seller.status !== 'pending_review' && (
                       <button
                         onClick={() => doAction('seller', seller.id, 'activate')}
                         disabled={actionLoading === `seller:${seller.id}:activate`}
@@ -160,7 +180,7 @@ function AdminContent() {
                         <CheckCircle size={16} />
                       </button>
                     )}
-                    {seller.status !== 'suspended' && (
+                    {seller.status !== 'suspended' && seller.status !== 'pending_review' && (
                       <button
                         onClick={() => doAction('seller', seller.id, 'suspend', 'Admin moderation')}
                         disabled={actionLoading === `seller:${seller.id}:suspend`}
