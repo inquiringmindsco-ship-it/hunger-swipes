@@ -9,6 +9,7 @@ import { Bookmark, ExternalLink, Leaf, Phone, Settings, SlidersHorizontal, Sprou
 import { BrandMark, GetItIcon, PassIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
+import { useAuth } from '@/lib/auth'
 
 interface FoodDish {
   id: string
@@ -55,7 +56,6 @@ export default function SwipePage() {
   const [showMatch, setShowMatch] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [user, setUser] = useState<any>(null)
   const [eaterId, setEaterId] = useState('')
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
@@ -67,16 +67,9 @@ export default function SwipePage() {
     spiceLevel: 0,
   })
   const [feedTab, setFeedTab] = useState<'for-you' | 'nearby' | 'trending'>('for-you')
+  const { user } = useAuth()
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('hungerswipes_user')
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch {
-        localStorage.removeItem('hungerswipes_user')
-      }
-    }
     localStorage.removeItem('hungerswipes_matches')
     const id = getEaterId()
     setEaterId(id)
