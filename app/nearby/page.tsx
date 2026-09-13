@@ -100,8 +100,8 @@ export default function NearbyPage() {
           <span className="font-black text-lg tracking-tight">HungerSwipes</span>
         </Link>
         <div className="flex items-center gap-4">
-          <Link href="/vendors" className="text-gray-400 hover:text-white text-sm font-medium">All Vendors</Link>
-          <Link href="/swipe" className="text-gray-400 hover:text-white text-sm font-medium">Swipe</Link>
+          <Link href="/vendors" className="text-gray-600 hover:text-white text-sm font-medium">All Vendors</Link>
+          <Link href="/swipe" className="text-gray-600 hover:text-white text-sm font-medium">Swipe</Link>
           <Link href="/auth" className="px-4 py-2 bg-[#FF6A00] text-white rounded-full font-bold text-sm">Start</Link>
         </div>
       </nav>
@@ -114,14 +114,14 @@ export default function NearbyPage() {
           </div>
           <div>
             <h1 className="text-3xl font-black">Nearby Food</h1>
-            <p className="text-gray-400 text-sm">Vendors near you with HungerSwipes discounts</p>
+            <p className="text-gray-600 text-sm">Vendors near you with HungerSwipes discounts</p>
           </div>
         </div>
 
         {/* Location status */}
         <div className="flex flex-wrap items-center gap-3 mt-4">
           {locationStatus === 'requesting' && (
-            <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
               Getting your location…
             </div>
@@ -151,7 +151,7 @@ export default function NearbyPage() {
                 className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
                   radius === r
                     ? 'bg-[#FF6A00] text-white'
-                    : 'bg-[#1A1A1A] text-gray-400 border border-white/10'
+                    : 'bg-[#1A1A1A] text-gray-600 border border-white/10'
                 }`}
               >
                 {r} mi
@@ -214,7 +214,7 @@ export default function NearbyPage() {
                             <Verified size={14} />
                           )}
                         </div>
-                        <p className="text-gray-400 text-sm truncate">{vendor.location_text}</p>
+                        <p className="text-gray-600 text-sm truncate">{vendor.location_text}</p>
                       </div>
                       <div className="flex-shrink-0 text-right">
                         <div className={`font-bold ${priceColor(vendor.price_range)}`}>
@@ -264,7 +264,7 @@ export default function NearbyPage() {
                           href={`https://www.google.com/maps/dir/?api=1&destination=${vendor.latitude},${vendor.longitude}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-center px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg text-sm transition"
+                          className="flex items-center justify-center px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-600 rounded-lg text-sm transition"
                         >
                           <MapPin size={14} />
                         </a>
@@ -283,7 +283,7 @@ export default function NearbyPage() {
         <div className="max-w-xl mx-auto text-center">
           <Sparkle size={40} style={{ margin: '0 auto', opacity: 0.8 }} />
           <h2 className="text-2xl font-black mt-3 mb-2">Own a food business?</h2>
-          <p className="text-gray-400 text-sm mb-5">
+          <p className="text-gray-600 text-sm mb-5">
             List your discount on HungerSwipes and get found by hungry eaters nearby.
           </p>
           <Link

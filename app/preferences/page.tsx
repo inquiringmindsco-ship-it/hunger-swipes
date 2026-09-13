@@ -149,7 +149,7 @@ export default function PreferencesPage() {
           </div>
           <button onClick={save}
             className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-              saved ? 'bg-[#10B981] text-white' : total > 0 ? 'bg-[#FF6A00] text-white' : 'bg-white/10 text-gray-500'
+              saved ? 'bg-[#10B981] text-white' : total > 0 ? 'bg-[#FF6A00] text-white' : 'bg-white/10 text-gray-300'
             }`}>
             {saved ? 'Saved' : 'Done'}
           </button>

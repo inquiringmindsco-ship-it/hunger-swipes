@@ -94,7 +94,7 @@ export default function AuthPage() {
             <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
               {mode === 'login' ? 'Welcome back.' : 'One account. Everything.'}
             </h1>
-            <p className="text-gray-400 text-sm leading-relaxed">
+            <p className="text-gray-600 text-sm leading-relaxed">
               {mode === 'login'
                 ? 'Sign in to swipe, save matches, and earn.'
                 : 'Sign up once. Swipe to discover food. Upgrade to creator to earn from your photos — anytime.'}
@@ -110,7 +110,7 @@ export default function AuthPage() {
                 { icon: <Dollar size={12} />, label: 'Earn per order' },
                 { icon: <Star size={12} />, label: 'Creator tools' },
               ].map(pill => (
-                <div key={pill.label} className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-xs text-gray-400">
+                <div key={pill.label} className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-xs text-gray-600">
                   {pill.icon}
                   {pill.label}
                 </div>
@@ -130,7 +130,7 @@ export default function AuthPage() {
               {mode === 'signup' && (
                 <>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Full Name</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Full Name</label>
                     <input
                       type="text"
                       placeholder="Your name"
@@ -141,7 +141,7 @@ export default function AuthPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Username</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Username</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">@</span>
                       <input
@@ -157,7 +157,7 @@ export default function AuthPage() {
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Email</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Email</label>
                 <input
                   type="email"
                   placeholder="you@example.com"
@@ -169,7 +169,7 @@ export default function AuthPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Password</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Password</label>
                 <input
                   type="password"
                   placeholder="••••••••"
@@ -184,7 +184,7 @@ export default function AuthPage() {
               {mode === 'signup' && (
                 <div className="flex items-start gap-3 pt-1">
                   <input type="checkbox" className="mt-0.5 accent-[#FF6A00] flex-shrink-0" required />
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-600">
                     I agree to the{' '}
                     <Link href="/terms" className="text-[#FF6A00]">Terms</Link>
                     {' '}and{' '}

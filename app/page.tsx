@@ -111,7 +111,7 @@ function HomeTab() {
       <div className="flex items-center justify-between px-4 py-3">
         <img src="/logo.png" alt="HungerSwipes" className="h-9 w-9 rounded-xl object-cover" />
         <div className="flex items-center gap-3">
-          <Link href="/leaderboard" className="text-gray-400 hover:text-white transition">
+          <Link href="/leaderboard" className="text-gray-600 hover:text-white transition">
             <Trophy size={20} />
           </Link>
           <Link href="/auth" className="px-4 py-1.5 bg-[#FF6A00] text-white rounded-full font-bold text-xs">
@@ -233,7 +233,7 @@ function UploadTab() {
             <Dollar size={24} style={{ color: '#FFD500' }} />
             <span className="font-black text-[#FFD500] text-lg">Earn per order</span>
           </div>
-          <p className="text-gray-400 text-sm leading-relaxed mb-4">
+          <p className="text-gray-600 text-sm leading-relaxed mb-4">
             Upload a food photo. Set your commission rate. Every time someone orders from it, you earn — forever.
           </p>
           <div className="flex gap-3 text-center">
@@ -300,7 +300,7 @@ function MatchesTab() {
           <div className="w-20 h-20 rounded-full bg-[#111] flex items-center justify-center mx-auto mb-4">
             <Heart size={36} style={{ opacity: 0.3 }} />
           </div>
-          <p className="text-gray-400 font-medium mb-1">No matches yet</p>
+          <p className="text-gray-600 font-medium mb-1">No matches yet</p>
           <p className="text-gray-600 text-sm mb-6">Swipe right on food you want to order</p>
           <Link href="/swipe" className="inline-flex items-center gap-2 px-6 py-3 bg-[#FF6A00] text-white rounded-full font-bold text-sm hover:bg-[#E05A00] transition">
             <ForkFlame size={16} /> Start Swiping
@@ -424,7 +424,7 @@ export default function AppShell() {
       <div className="fixed top-4 right-4 z-[60] flex items-center gap-2">
         <button
           onClick={toggleView}
-          className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur border border-white/15 rounded-full text-xs font-semibold text-gray-400 hover:text-white hover:bg-white/15 transition"
+          className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur border border-white/15 rounded-full text-xs font-semibold text-gray-600 hover:text-white hover:bg-white/15 transition"
           title={viewMode === 'mobile' ? 'Switch to desktop view' : 'Switch to mobile view'}
         >
           {viewMode === 'mobile' ? (

@@ -134,7 +134,7 @@ export default function VendorIntakePage() {
               <span className="font-black text-white text-xs">HS</span>
             </div>
             <span className="font-bold text-gray-900">HungerSwipes</span>
-            <span className="text-gray-400 text-xs ml-1">Vendor Registration</span>
+            <span className="text-gray-600 text-xs ml-1">Vendor Registration</span>
           </div>
         </header>
 
@@ -143,23 +143,23 @@ export default function VendorIntakePage() {
             <CheckCircle size={48} className="text-white" />
           </div>
           <h1 className="text-3xl font-black mb-3">You&apos;re Live! 🎉</h1>
-          <p className="text-gray-500 mb-8 leading-relaxed">
+          <p className="text-gray-600 mb-8 leading-relaxed">
             Vendors near {form.locationText || 'your area'} can now discover your food on HungerSwipes.
           </p>
 
           {/* QR Code + Link */}
           <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 text-left">
-            <h2 className="font-bold text-sm text-gray-500 uppercase tracking-wide mb-3">Your QR Code</h2>
-            <p className="text-xs text-gray-400 mb-3">Print this and put it where customers can see it:</p>
+            <h2 className="font-bold text-sm text-gray-600 uppercase tracking-wide mb-3">Your QR Code</h2>
+            <p className="text-xs text-gray-600 mb-3">Print this and put it where customers can see it:</p>
             <div className="bg-gray-100 rounded-xl p-4 text-center mb-4">
               <div className="text-5xl mb-2">📱</div>
-              <p className="text-xs text-gray-500">Scan to see your listing</p>
+              <p className="text-xs text-gray-600">Scan to see your listing</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3 mb-3">
-              <p className="text-xs text-gray-500 mb-1">Your vendor link:</p>
+              <p className="text-xs text-gray-600 mb-1">Your vendor link:</p>
               <p className="text-sm font-mono text-[#FF5722] break-all">{shareUrl}</p>
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-600">
               You can manage your listing at{' '}
               <span className="text-gray-700 font-medium">hunger-swipes.vercel.app/vendor-dashboard?id={vendorId}</span>
             </p>
@@ -191,7 +191,7 @@ export default function VendorIntakePage() {
 
         {/* Footer Disclaimer */}
         <footer className="border-t border-gray-200 px-4 py-4 text-center">
-          <p className="text-xs text-gray-400 max-w-xs mx-auto">
+          <p className="text-xs text-gray-600 max-w-xs mx-auto">
             HungerSwipes is a discovery platform only. All vendors operate independently. HungerSwipes does not prepare or sell food.
           </p>
         </footer>
@@ -210,7 +210,7 @@ export default function VendorIntakePage() {
             </div>
             <span className="font-bold text-gray-900">HungerSwipes</span>
           </Link>
-          <span className="text-gray-400 text-xs ml-auto">Vendor Registration</span>
+          <span className="text-gray-600 text-xs ml-auto">Vendor Registration</span>
         </div>
       </header>
 
@@ -225,7 +225,7 @@ export default function VendorIntakePage() {
               />
             ))}
           </div>
-          <p className="text-xs text-gray-500 mt-2">{step === 1 ? 'Step 1 of 2: Food Info' : 'Step 2 of 2: Location & Payment'}</p>
+          <p className="text-xs text-gray-600 mt-2">{step === 1 ? 'Step 1 of 2: Food Info' : 'Step 2 of 2: Location & Payment'}</p>
         </div>
       </div>
 
@@ -250,7 +250,7 @@ export default function VendorIntakePage() {
             {/* Description */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-gray-700">
-                Brief description <span className="text-gray-400 font-normal">(optional)</span>
+                Brief description <span className="text-gray-600 font-normal">(optional)</span>
               </label>
               <textarea
                 value={form.description}
@@ -277,7 +277,7 @@ export default function VendorIntakePage() {
                     }`}
                   >
                     <div className="text-2xl font-black mb-0.5 text-gray-900">{p.label}</div>
-                    <div className="text-xs text-gray-500">{p.desc}</div>
+                    <div className="text-xs text-gray-600">{p.desc}</div>
                   </button>
                 ))}
               </div>
@@ -286,7 +286,7 @@ export default function VendorIntakePage() {
             {/* Photo */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-gray-700">
-                Photo <span className="text-gray-400 font-normal">(highly recommended)</span>
+                Photo <span className="text-gray-600 font-normal">(highly recommended)</span>
               </label>
               <label className="block cursor-pointer">
                 {form.photoPreview ? (
@@ -301,8 +301,8 @@ export default function VendorIntakePage() {
                   </div>
                 ) : (
                   <div className="w-full h-40 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-[#FF5722]/50 transition-colors bg-white">
-                    <Camera size={32} className="text-gray-400" />
-                    <p className="text-sm text-gray-500">Tap to add a food photo</p>
+                    <Camera size={32} className="text-gray-600" />
+                    <p className="text-sm text-gray-600">Tap to add a food photo</p>
                   </div>
                 )}
                 <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
@@ -332,7 +332,7 @@ export default function VendorIntakePage() {
                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#FF5722] text-base"
               />
               {gettingLocation && (
-                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
                   <span className="w-2 h-2 bg-[#FF5722] rounded-full animate-pulse" />
                   Capturing GPS...
                 </p>
@@ -365,7 +365,7 @@ export default function VendorIntakePage() {
                     }`}
                   >
                     <div className="font-bold text-sm text-gray-900">{opt.label}</div>
-                    <div className="text-xs text-gray-500">{opt.desc}</div>
+                    <div className="text-xs text-gray-600">{opt.desc}</div>
                   </button>
                 ))}
               </div>
@@ -384,7 +384,7 @@ export default function VendorIntakePage() {
                     className={`p-3 rounded-xl border text-left text-sm transition-all ${
                       form.paymentMethods.includes(pm.value)
                         ? 'border-[#FF5722] bg-[#FF5722]/10 text-[#FF5722]'
-                        : 'border-gray-200 bg-white text-gray-500'
+                        : 'border-gray-200 bg-white text-gray-600'
                     }`}
                   >
                     {pm.label}
@@ -396,7 +396,7 @@ export default function VendorIntakePage() {
             {/* Hours */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-gray-700">
-                Hours <span className="text-gray-400 font-normal">(optional)</span>
+                Hours <span className="text-gray-600 font-normal">(optional)</span>
               </label>
               <input
                 type="text"
@@ -410,10 +410,10 @@ export default function VendorIntakePage() {
             {/* Legal Disclaimer */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
               <p className="text-sm font-semibold text-gray-700">⚠️ Important — Please Read</p>
-              <p className="text-xs text-gray-500 leading-relaxed">
+              <p className="text-xs text-gray-600 leading-relaxed">
                 HungerSwipes is a <strong className="text-gray-700">discovery platform only</strong>. We do not prepare, handle, or sell food.
               </p>
-              <p className="text-xs text-gray-500 leading-relaxed">
+              <p className="text-xs text-gray-600 leading-relaxed">
                 All food is provided by <strong className="text-gray-700">independent vendors</strong>. You assume all risk when purchasing or consuming food. Please use your own judgment.
               </p>
               <label className="flex items-start gap-2 cursor-pointer mt-2">

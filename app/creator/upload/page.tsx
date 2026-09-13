@@ -209,7 +209,7 @@ export default function CreatorUpload() {
       {/* Header */}
       <header className="bg-[#0D0D0D] border-b border-white/5 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <Link href="/creator" className="text-gray-400 font-medium">
+          <Link href="/creator" className="text-gray-600 font-medium">
             ← Cancel
           </Link>
           <h1 className="font-bold text-white">Upload Photo</h1>
@@ -235,7 +235,7 @@ export default function CreatorUpload() {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">Add Your Food Photo</h2>
-              <p className="text-gray-400">Make it look delicious — this is what drives orders</p>
+              <p className="text-gray-600">Make it look delicious — this is what drives orders</p>
             </div>
 
             <div className="bg-white/5 rounded-2xl border-2 border-dashed border-white/10 overflow-hidden">
@@ -250,7 +250,7 @@ export default function CreatorUpload() {
               ) : (
                 <div className="p-12 text-center">
                   <div className="text-6xl mb-4">📸</div>
-                  <p className="text-gray-400 mb-4">Drag & drop or tap to upload</p>
+                  <p className="text-gray-600 mb-4">Drag & drop or tap to upload</p>
                   <label className="inline-block px-6 py-3 bg-[#FFD700] text-[#0D0D0D] rounded-full font-semibold cursor-pointer hover:bg-[#FFD700]/90 transition">
                     Select Photo
                     <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
@@ -261,7 +261,7 @@ export default function CreatorUpload() {
 
             <div className="bg-[#FFD700]/10 rounded-2xl p-4 border border-[#FFD700]/20">
               <h3 className="font-bold text-[#FFD700] mb-2">💡 Pro Tips</h3>
-              <ul className="text-sm text-gray-400 space-y-1">
+              <ul className="text-sm text-gray-600 space-y-1">
                 <li>• Natural lighting works best</li>
                 <li>• Shoot at a 45° angle for depth</li>
                 <li>• Include the whole dish + context</li>
@@ -283,13 +283,13 @@ export default function CreatorUpload() {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">Dish Details & Tags</h2>
-              <p className="text-gray-400">More tags = better visibility + higher payouts</p>
+              <p className="text-gray-600">More tags = better visibility + higher payouts</p>
             </div>
 
             <div className="space-y-4">
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Title (optional)</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Title (optional)</label>
                 <input
                   type="text"
                   placeholder="e.g., Truffle Mushroom Burger"
@@ -301,7 +301,7 @@ export default function CreatorUpload() {
 
               {/* Dish Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Dish Name *</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Dish Name *</label>
                 <input
                   type="text"
                   placeholder="e.g., Truffle Mushroom Burger"
@@ -313,7 +313,7 @@ export default function CreatorUpload() {
 
               {/* Restaurant */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Restaurant Name *</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Restaurant Name *</label>
                 <input
                   type="text"
                   placeholder="e.g., The Burger Joint"
@@ -325,7 +325,7 @@ export default function CreatorUpload() {
 
               {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Location</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Location</label>
                 <input
                   type="text"
                   placeholder="e.g., Delmar Loop, St. Louis"
@@ -337,7 +337,7 @@ export default function CreatorUpload() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Description</label>
                 <textarea
                   placeholder="Describe the dish, what makes it special..."
                   value={formData.description}
@@ -349,7 +349,7 @@ export default function CreatorUpload() {
 
               {/* Food Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Food Tags *</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Food Tags *</label>
                 <div className="flex flex-wrap gap-2">
                   {FOOD_TAGS.map(tag => (
                     <button
@@ -358,7 +358,7 @@ export default function CreatorUpload() {
                       className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
                         formData.tags.includes(tag)
                           ? 'bg-[#FF5722] text-white'
-                          : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                          : 'bg-white/10 text-gray-600 hover:bg-white/20'
                       }`}
                     >
                       {tag}
@@ -369,7 +369,7 @@ export default function CreatorUpload() {
 
               {/* Cuisine Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Cuisine Type *</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Cuisine Type *</label>
                 <div className="flex flex-wrap gap-2">
                   {CUISINE_TAGS.map(tag => (
                     <button
@@ -378,7 +378,7 @@ export default function CreatorUpload() {
                       className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
                         formData.cuisineTags.includes(tag)
                           ? 'bg-[#FF5722] text-white'
-                          : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                          : 'bg-white/10 text-gray-600 hover:bg-white/20'
                       }`}
                     >
                       {tag}
@@ -389,7 +389,7 @@ export default function CreatorUpload() {
 
               {/* Dietary Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Dietary Tags</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Dietary Tags</label>
                 <div className="flex flex-wrap gap-2">
                   {DIETARY_TAGS.map(tag => (
                     <button
@@ -398,7 +398,7 @@ export default function CreatorUpload() {
                       className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
                         formData.dietaryTags.includes(tag)
                           ? 'bg-[#10B981] text-white'
-                          : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                          : 'bg-white/10 text-gray-600 hover:bg-white/20'
                       }`}
                     >
                       {tag}
@@ -411,7 +411,7 @@ export default function CreatorUpload() {
             <div className="flex gap-3">
               <button
                 onClick={() => setStep(1)}
-                className="flex-1 py-4 bg-white/5 border border-white/10 text-gray-400 rounded-2xl font-bold hover:bg-white/10 transition"
+                className="flex-1 py-4 bg-white/5 border border-white/10 text-gray-600 rounded-2xl font-bold hover:bg-white/10 transition"
               >
                 Back
               </button>
@@ -431,7 +431,7 @@ export default function CreatorUpload() {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">Nutrition & Details</h2>
-              <p className="text-gray-400">Fill in more = climb the rankings!</p>
+              <p className="text-gray-600">Fill in more = climb the rankings!</p>
             </div>
 
             {/* Completeness Score (Live) */}
@@ -455,7 +455,7 @@ export default function CreatorUpload() {
             <div className="space-y-4">
               {/* Calories */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Calories</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Calories</label>
                 <input
                   type="number"
                   placeholder="e.g., 650"
@@ -468,7 +468,7 @@ export default function CreatorUpload() {
               {/* Macros */}
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Protein (g)</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Protein (g)</label>
                   <input
                     type="number"
                     placeholder="e.g., 32"
@@ -478,7 +478,7 @@ export default function CreatorUpload() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Carbs (g)</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Carbs (g)</label>
                   <input
                     type="number"
                     placeholder="e.g., 45"
@@ -488,7 +488,7 @@ export default function CreatorUpload() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Fat (g)</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Fat (g)</label>
                   <input
                     type="number"
                     placeholder="e.g., 28"
@@ -501,7 +501,7 @@ export default function CreatorUpload() {
 
               {/* Spice Level */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Spice Level</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Spice Level</label>
                 <div className="flex gap-2">
                   {SPICE_LEVELS.map(level => (
                     <button
@@ -510,7 +510,7 @@ export default function CreatorUpload() {
                       className={`flex-1 py-2 rounded-xl text-xs font-medium transition ${
                         formData.spiceLevel === level.value
                           ? 'bg-[#FF5722] text-white'
-                          : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                          : 'bg-white/10 text-gray-600 hover:bg-white/20'
                       }`}
                     >
                       {level.label}
@@ -521,7 +521,7 @@ export default function CreatorUpload() {
 
               {/* Portion Size */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Portion Size</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Portion Size</label>
                 <div className="flex gap-2">
                   {['light', 'regular', 'large', 'shareable'].map(size => (
                     <button
@@ -530,7 +530,7 @@ export default function CreatorUpload() {
                       className={`flex-1 py-3 rounded-xl text-sm font-medium capitalize transition ${
                         formData.portionSize === size
                           ? 'bg-[#FFD700] text-[#0D0D0D]'
-                          : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                          : 'bg-white/10 text-gray-600 hover:bg-white/20'
                       }`}
                     >
                       {size}
@@ -541,7 +541,7 @@ export default function CreatorUpload() {
 
               {/* Dietary Options */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Dietary Options</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Dietary Options</label>
                 <div className="flex gap-3">
                   {[
                     { key: 'vegetarianOption', label: '🥗 Vegetarian' },
@@ -554,7 +554,7 @@ export default function CreatorUpload() {
                       className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${
                         formData[opt.key as keyof typeof formData]
                           ? 'bg-[#10B981] text-white'
-                          : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                          : 'bg-white/10 text-gray-600 hover:bg-white/20'
                       }`}
                     >
                       {opt.label}
@@ -565,7 +565,7 @@ export default function CreatorUpload() {
 
               {/* Health Category */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Health Category</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Health Category</label>
                 <div className="flex flex-wrap gap-2">
                   {HEALTH_CATEGORIES.map(cat => (
                     <button
@@ -574,7 +574,7 @@ export default function CreatorUpload() {
                       className={`px-3 py-2 rounded-xl text-sm font-medium capitalize transition ${
                         formData.healthCategory === cat
                           ? 'bg-[#8B5CF6] text-white'
-                          : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                          : 'bg-white/10 text-gray-600 hover:bg-white/20'
                       }`}
                     >
                       {cat}
@@ -585,7 +585,7 @@ export default function CreatorUpload() {
 
               {/* Price */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Price ($)</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Price ($)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -598,7 +598,7 @@ export default function CreatorUpload() {
 
               {/* Ingredient Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-gray-600 mb-1">
                   Ingredient Tags (max 3)
                 </label>
                 <div className="flex gap-2 mb-2">
@@ -613,7 +613,7 @@ export default function CreatorUpload() {
                   <button
                     onClick={addCustomIngredient}
                     disabled={formData.ingredientTags.length >= 3}
-                    className="px-4 py-2 bg-white/10 text-gray-400 rounded-lg text-sm hover:bg-white/20 disabled:opacity-50"
+                    className="px-4 py-2 bg-white/10 text-gray-600 rounded-lg text-sm hover:bg-white/20 disabled:opacity-50"
                   >
                     Add
                   </button>
@@ -631,7 +631,7 @@ export default function CreatorUpload() {
             <div className="flex gap-3">
               <button
                 onClick={() => setStep(2)}
-                className="flex-1 py-4 bg-white/5 border border-white/10 text-gray-400 rounded-2xl font-bold hover:bg-white/10 transition"
+                className="flex-1 py-4 bg-white/5 border border-white/10 text-gray-600 rounded-2xl font-bold hover:bg-white/10 transition"
               >
                 Back
               </button>
@@ -650,14 +650,14 @@ export default function CreatorUpload() {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">Commission Preview</h2>
-              <p className="text-gray-400">Set your rate and see your potential earnings</p>
+              <p className="text-gray-600">Set your rate and see your potential earnings</p>
             </div>
 
             {/* Tier Status */}
             <div className={`${tierBadge.bgColor} rounded-2xl p-6 border text-center`} style={{ borderColor: tierBadge.color + '40' }}>
               <div className="text-4xl mb-2">{tierBadge.label.includes('Top') ? '<Star size={22} />' : tierBadge.label.includes('Enhanced') ? '<Sparkle size={22} />' : ''}</div>
               <div className="text-2xl font-bold mb-1" style={{ color: tierBadge.color }}>{completenessResult.score}/100</div>
-              <div className="text-gray-400 text-sm">{payoutTier.description}</div>
+              <div className="text-gray-600 text-sm">{payoutTier.description}</div>
             </div>
 
             {/* Earnings Comparison */}
@@ -665,27 +665,27 @@ export default function CreatorUpload() {
               <h3 className="font-bold text-white mb-4"><Dollar size={22} /> Per-Order Earnings Preview</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Order Price</span>
+                  <span className="text-gray-600">Order Price</span>
                   <span className="font-bold text-white">${basePrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Commission (10%)</span>
+                  <span className="text-gray-600">Commission (10%)</span>
                   <span className="font-bold text-white">${(basePrice * 0.10).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Platform Fee (10%)</span>
+                  <span className="text-gray-600">Platform Fee (10%)</span>
                   <span className="font-bold text-white">${(basePrice * 0.10 * 0.10).toFixed(2)}</span>
                 </div>
                 <hr className="border-white/10" />
                 <div className="flex justify-between">
-                  <span className="text-gray-400">You Earn (Current Tier)</span>
+                  <span className="text-gray-600">You Earn (Current Tier)</span>
                   <span className="font-bold text-xl" style={{ color: payoutTier.color }}>
                     ${earningsPreview.current.toFixed(2)}
                   </span>
                 </div>
                 {earningsPreview.boost > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Potential (Top Tier)</span>
+                    <span className="text-gray-600">Potential (Top Tier)</span>
                     <span className="font-bold text-[#FFD700]">${earningsPreview.potential.toFixed(2)}</span>
                   </div>
                 )}
@@ -698,7 +698,7 @@ export default function CreatorUpload() {
                 <h3 className="font-bold text-white mb-4">📝 Missing Items ({completenessResult.missingItems.length})</h3>
                 <ul className="space-y-2">
                   {completenessResult.missingItems.slice(0, 5).map(item => (
-                    <li key={item} className="flex items-center gap-2 text-sm text-gray-400">
+                    <li key={item} className="flex items-center gap-2 text-sm text-gray-600">
                       <span className="w-2 h-2 rounded-full bg-[#FF5722]" />
                       {item}
                     </li>
@@ -722,7 +722,7 @@ export default function CreatorUpload() {
             <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
               <div className="text-center mb-4">
                 <div className="text-5xl font-bold text-[#FFD700] mb-2">{formData.commissionRate}%</div>
-                <p className="text-gray-400">per order commission rate</p>
+                <p className="text-gray-600">per order commission rate</p>
               </div>
 
               <input
@@ -746,27 +746,27 @@ export default function CreatorUpload() {
               <h3 className="font-bold text-white mb-4">Summary</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Dish</span>
+                  <span className="text-gray-600">Dish</span>
                   <span className="font-medium text-white">{formData.dishName || '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Restaurant</span>
+                  <span className="text-gray-600">Restaurant</span>
                   <span className="font-medium text-white">{formData.restaurantName || '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Tags</span>
+                  <span className="text-gray-600">Tags</span>
                   <span className="font-medium text-white">{formData.tags.length + formData.dietaryTags.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Calories</span>
+                  <span className="text-gray-600">Calories</span>
                   <span className="font-medium text-white">{formData.calories || '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Your Commission</span>
+                  <span className="text-gray-600">Your Commission</span>
                   <span className="font-bold text-[#10B981]">{formData.commissionRate}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Payout Tier</span>
+                  <span className="text-gray-600">Payout Tier</span>
                   <span className="font-bold" style={{ color: payoutTier.color }}>{payoutTier.tierLabel}</span>
                 </div>
               </div>
@@ -775,7 +775,7 @@ export default function CreatorUpload() {
             <div className="flex gap-3">
               <button
                 onClick={() => setStep(3)}
-                className="flex-1 py-4 bg-white/5 border border-white/10 text-gray-400 rounded-2xl font-bold hover:bg-white/10 transition"
+                className="flex-1 py-4 bg-white/5 border border-white/10 text-gray-600 rounded-2xl font-bold hover:bg-white/10 transition"
               >
                 Back
               </button>

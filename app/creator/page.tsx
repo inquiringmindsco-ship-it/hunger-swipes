@@ -111,18 +111,14 @@ const MOCK_PHOTOS: Photo[] = [
   },
 ]
 
-const MOCK_EARNINGS: EarningsBreakdown = {
-  orders: 2031.00,
-  tips: 127.50,
-  recipes: 456.00,
-  total: 2614.50
+const EARNINGS_PLACEHOLDER: EarningsBreakdown = {
+  orders: 0,
+  tips: 0,
+  recipes: 0,
+  total: 0
 }
 
-const MOCK_TIPS = [
-  { id: '1', sender: '@foodielover', amount: 5.00, message: 'Proud to pay for this!', createdAt: new Date(Date.now() - 86400000).toISOString() },
-  { id: '2', sender: '@hungry_sarah', amount: 3.00, message: 'Support!', createdAt: new Date(Date.now() - 172800000).toISOString() },
-  { id: '3', sender: '@stlfoodie', amount: 10.00, message: 'Best tacos ever!', createdAt: new Date(Date.now() - 259200000).toISOString() },
-]
+
 
 const OPTIMIZATION_TIPS: Record<string, { tip: string, points: number }> = {
   calories: { tip: 'Add calorie info → +10 points', points: 10 },
@@ -225,7 +221,7 @@ export default function CreatorDashboard() {
           {/* Earnings Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-white/10 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold text-[#FFD700]">{formatCurrency(MOCK_EARNINGS.total)}</div>
+              <div className="text-2xl font-bold text-[#FFD700]">{formatCurrency(EARNINGS_PLACEHOLDER.total)}</div>
               <div className="text-xs text-gray-300">Total Earnings</div>
             </div>
             <div className="bg-white/10 rounded-xl p-3 text-center">
@@ -290,18 +286,18 @@ export default function CreatorDashboard() {
               <h2 className="text-lg font-bold text-[#1A1A2E] mb-4">This Month</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-[#F7F7F7] rounded-xl">
-                  <div className="text-2xl font-bold text-[#1A1A2E]">{formatCurrency(MOCK_EARNINGS.orders)}</div>
+                  <div className="text-2xl font-bold text-[#1A1A2E]">{formatCurrency(EARNINGS_PLACEHOLDER.orders)}</div>
                   <div className="text-sm text-[#6B7280]">Orders</div>
                 </div>
                 {roleInfo.canTips && (
                   <div className="text-center p-4 bg-[#F7F7F7] rounded-xl">
-                    <div className="text-2xl font-bold text-[#1A1A2E]">{formatCurrency(MOCK_EARNINGS.tips)}</div>
+                    <div className="text-2xl font-bold text-[#1A1A2E]">{formatCurrency(EARNINGS_PLACEHOLDER.tips)}</div>
                     <div className="text-sm text-[#6B7280]">Tips</div>
                   </div>
                 )}
                 {roleInfo.canRecipes && (
                   <div className="text-center p-4 bg-[#F7F7F7] rounded-xl">
-                    <div className="text-2xl font-bold text-[#1A1A2E]">{formatCurrency(MOCK_EARNINGS.recipes)}</div>
+                    <div className="text-2xl font-bold text-[#1A1A2E]">{formatCurrency(EARNINGS_PLACEHOLDER.recipes)}</div>
                     <div className="text-sm text-[#6B7280]">Recipes</div>
                   </div>
                 )}
@@ -463,9 +459,9 @@ export default function CreatorDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-lg font-bold">Available for Payout</h2>
-                  <p className="text-gray-400 text-sm">Next payout: April 15, 2026</p>
+                  <p className="text-gray-400 text-sm">Rewards and partnerships coming soon</p>
                 </div>
-                <div className="text-4xl font-bold text-[#FFD700]">{formatCurrency(MOCK_EARNINGS.total * 0.7)}</div>
+                <div className="text-4xl font-bold text-[#FFD700]">{formatCurrency(EARNINGS_PLACEHOLDER.total * 0.7)}</div>
               </div>
               <button className="w-full py-3 bg-[#10B981] text-white rounded-xl font-bold hover:bg-[#059669] transition">
                 Request Payout
@@ -481,11 +477,11 @@ export default function CreatorDashboard() {
                     <div className="w-10 h-10 bg-[#FF5722]/20 rounded-full flex items-center justify-center"><Fork size={20} /></div>
                     <div>
                       <div className="font-medium text-[#1A1A2E]">Order Commission</div>
-                      <div className="text-xs text-[#6B7280]">{MOCK_EARNINGS.orders > 0 ? '85-95% payout rate' : 'No orders yet'}</div>
+                      <div className="text-xs text-[#6B7280]">{EARNINGS_PLACEHOLDER.orders > 0 ? 'Rewards coming soon' : 'No orders yet'}</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-[#1A1A2E]">{formatCurrency(MOCK_EARNINGS.orders)}</div>
+                    <div className="font-bold text-[#1A1A2E]">{formatCurrency(EARNINGS_PLACEHOLDER.orders)}</div>
                   </div>
                 </div>
 
@@ -499,7 +495,7 @@ export default function CreatorDashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-[#1A1A2E]">{formatCurrency(MOCK_EARNINGS.tips)}</div>
+                      <div className="font-bold text-[#1A1A2E]">{formatCurrency(EARNINGS_PLACEHOLDER.tips)}</div>
                     </div>
                   </div>
                 )}
@@ -510,37 +506,18 @@ export default function CreatorDashboard() {
                       <div className="w-10 h-10 bg-[#10B981]/20 rounded-full flex items-center justify-center">📖</div>
                       <div>
                         <div className="font-medium text-[#1A1A2E]">Recipe Sales</div>
-                        <div className="text-xs text-[#6B7280]">80-90% payout rate</div>
+                        <div className="text-xs text-[#6B7280]">Rewards coming soon</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-[#1A1A2E]">{formatCurrency(MOCK_EARNINGS.recipes)}</div>
+                      <div className="font-bold text-[#1A1A2E]">{formatCurrency(EARNINGS_PLACEHOLDER.recipes)}</div>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Tips Received (if applicable) */}
-            {roleInfo.canTips && MOCK_TIPS.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-[#1A1A2E] mb-4">💝 Recent Tips</h2>
-                <div className="space-y-3">
-                  {MOCK_TIPS.map(tip => (
-                    <div key={tip.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                      <div>
-                        <span className="font-medium text-[#1A1A2E]">{tip.sender}</span>
-                        <p className="text-xs text-[#6B7280]">{tip.message || 'Support!'}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-[#10B981]">+{formatCurrency(tip.amount)}</div>
-                        <div className="text-xs text-[#6B7280]">{formatTime(tip.createdAt)}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            
 
             {/* Payout Tiers */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
@@ -551,21 +528,21 @@ export default function CreatorDashboard() {
                     <div className="w-3 h-3 rounded-full bg-gray-400" />
                     <span className="font-medium text-[#1A1A2E]">Basic (0-30 completeness)</span>
                   </div>
-                  <span className="font-bold text-[#6B7280]">85% payout</span>
+                  <span className="font-bold text-[#6B7280]">Coming soon</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-[#F7F7F7] rounded-xl">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-[#10B981]" />
                     <span className="font-medium text-[#1A1A2E]">Enhanced (31-70 completeness)</span>
                   </div>
-                  <span className="font-bold text-[#10B981]">90% payout</span>
+                  <span className="font-bold text-[#10B981]">Coming soon</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-[#FFD700]/20 rounded-xl">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-[#FFD700]" />
                     <span className="font-medium text-[#1A1A2E]">Top Earning (71-100 completeness)</span>
                   </div>
-                  <span className="font-bold text-[#FFD700]">95% payout</span>
+                  <span className="font-bold text-[#FFD700]">Coming soon</span>
                 </div>
               </div>
             </div>

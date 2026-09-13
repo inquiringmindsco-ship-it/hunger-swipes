@@ -97,7 +97,7 @@ export default function LeaderboardPage() {
             </div>
             <div className="bg-gray-200 text-gray-700 font-bold px-3 py-1 rounded-full text-sm mb-1">2nd</div>
             <p className="font-bold text-[#1A1A2E] text-sm">{MOCK_LEADERBOARD[1].username}</p>
-            <p className="text-[#6B7280] text-xs">${MOCK_LEADERBOARD[1].monthlyEarnings.toLocaleString()}/mo</p>
+            <p className="text-gray-600 text-xs">${MOCK_LEADERBOARD[1].monthlyEarnings.toLocaleString()}/mo</p>
           </div>
 
           {/* 1st Place */}
@@ -117,7 +117,7 @@ export default function LeaderboardPage() {
             </div>
             <div className="bg-amber-600 text-white font-bold px-3 py-1 rounded-full text-sm mb-1">3rd</div>
             <p className="font-bold text-[#1A1A2E] text-sm">{MOCK_LEADERBOARD[2].username}</p>
-            <p className="text-[#6B7280] text-xs">${MOCK_LEADERBOARD[2].monthlyEarnings.toLocaleString()}/mo</p>
+            <p className="text-gray-600 text-xs">${MOCK_LEADERBOARD[2].monthlyEarnings.toLocaleString()}/mo</p>
           </div>
         </div>
 
@@ -128,17 +128,17 @@ export default function LeaderboardPage() {
           </div>
           {MOCK_LEADERBOARD.map((creator, index) => (
             <div key={creator.rank} className="flex items-center gap-4 px-6 py-4 border-b last:border-0 hover:bg-gray-50 transition">
-              <div className="w-8 text-center font-bold text-[#6B7280]">#{creator.rank}</div>
+              <div className="w-8 text-center font-bold text-gray-600">#{creator.rank}</div>
               <div className="w-12 h-12 rounded-full overflow-hidden">
                 <img src={creator.avatar} alt={creator.username} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1">
                 <p className="font-bold text-[#1A1A2E]">{creator.username}</p>
-                <p className="text-sm text-[#6B7280]">{creator.totalOrders.toLocaleString()} orders · {creator.topPhoto}</p>
+                <p className="text-sm text-gray-600">{creator.totalOrders.toLocaleString()} orders · {creator.topPhoto}</p>
               </div>
               <div className="text-right">
                 <p className="font-bold text-[#10B981]">${creator.monthlyEarnings.toLocaleString()}</p>
-                <p className="text-xs text-[#6B7280]">this month</p>
+                <p className="text-xs text-gray-600">this month</p>
               </div>
               <div className="bg-[#FFD700]/20 px-2 py-1 rounded-full">
                 <span className="text-xs font-bold text-[#1A1A2E]">{creator.hungerScore}</span>
@@ -149,7 +149,7 @@ export default function LeaderboardPage() {
 
         {/* CTA */}
         <div className="mt-8 text-center">
-          <p className="text-[#6B7280] mb-4">Think you can make the leaderboard?</p>
+          <p className="text-gray-600 mb-4">Think you can make the leaderboard?</p>
           <Link href="/auth" className="inline-block px-8 py-4 bg-[#FF5722] text-white rounded-full font-bold hover:bg-[#e64a19] transition">
             Start Earning Today
           </Link>

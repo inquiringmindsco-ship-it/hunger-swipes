@@ -6,7 +6,7 @@ import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES, SPICE_LEVELS } from '@/l
 import { getTierBadge } from '@/lib/metadata-scoring'
 import { ForkFlame, ForkFlameLarge, Flame, Camera, Heart, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, Gear, CheckLine, Close, CloseSolid, OrderMark, Filter, Leaf, Globe, Veggie, Light, Rising, SuperSwipe, DollarLine, CheckBold } from '@/app/components/HwIcon'
 
-interface FoodPhoto {
+interface FoodDish {
   id: string
   imageUrl: string
   restaurant: string
@@ -15,10 +15,10 @@ interface FoodPhoto {
   cuisine: string
   cuisineTags?: string[]
   priceRange: string
+  price: number
   photographer: string
   commissionRate: number
   hungerScore: number
-  // Metadata
   title?: string
   description?: string
   tags?: string[]
@@ -35,16 +35,12 @@ interface FoodPhoto {
   healthCategory?: string
   completenessScore?: number
   metadataQualityStatus?: string
-  // Vendor / discount
-  hasDiscount?: boolean
-  discountOffer?: string
-  discountCode?: string
-  vendor?: { id: string; name: string; location_text: string }
+  seller?: { id: string; business_name: string; location_text: string; phone?: string; ordering_method?: string; ordering_url?: string }
 }
 
-const FALLBACK_PHOTOS: FoodPhoto[] = [
+const FALLBACK_DISHES: FoodDish[] = [
   {
-    id: '1',
+    id: 'mock-1',
     imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=800&fit=crop',
     restaurant: 'Pizzeria Locale',
     location: 'St. Louis, MO',
@@ -52,6 +48,7 @@ const FALLBACK_PHOTOS: FoodPhoto[] = [
     cuisine: 'Italian',
     cuisineTags: ['Italian'],
     priceRange: '$$',
+    price: 18,
     photographer: '@stlfoodie',
     commissionRate: 0.10,
     hungerScore: 94,
@@ -73,7 +70,7 @@ const FALLBACK_PHOTOS: FoodPhoto[] = [
     metadataQualityStatus: 'top-tier',
   },
   {
-    id: '2',
+    id: 'mock-2',
     imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=800&fit=crop',
     restaurant: 'Green Bowl',
     location: 'St. Louis, MO',
@@ -81,6 +78,7 @@ const FALLBACK_PHOTOS: FoodPhoto[] = [
     cuisine: 'Healthy',
     cuisineTags: ['American', 'Healthy'],
     priceRange: '$$',
+    price: 14,
     photographer: '@healthyeats_sarah',
     commissionRate: 0.12,
     hungerScore: 89,
@@ -102,21 +100,7 @@ const FALLBACK_PHOTOS: FoodPhoto[] = [
     metadataQualityStatus: 'top-tier',
   },
   {
-    id: '3',
-    imageUrl: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=600&h=800&fit=crop',
-    restaurant: 'Stacked Pancakes',
-    location: 'St. Louis, MO',
-    dish: 'Blueberry Stack',
-    cuisine: 'Breakfast',
-    priceRange: '$',
-    photographer: '@brunch_king',
-    commissionRate: 0.08,
-    hungerScore: 91,
-    completenessScore: 30,
-    metadataQualityStatus: 'basic',
-  },
-  {
-    id: '4',
+    id: 'mock-4',
     imageUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&h=800&fit=crop',
     restaurant: 'Smoke & Fire BBQ',
     location: 'St. Louis, MO',
@@ -124,6 +108,7 @@ const FALLBACK_PHOTOS: FoodPhoto[] = [
     cuisine: 'BBQ',
     cuisineTags: ['American', 'BBQ'],
     priceRange: '$$$',
+    price: 28,
     photographer: '@meatlovers_mike',
     commissionRate: 0.10,
     hungerScore: 97,
@@ -144,48 +129,34 @@ const FALLBACK_PHOTOS: FoodPhoto[] = [
     completenessScore: 65,
     metadataQualityStatus: 'enhanced',
   },
-  {
-    id: '5',
-    imageUrl: 'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=600&h=800&fit=crop',
-    restaurant: 'Sakura Sushi',
-    location: 'St. Louis, MO',
-    dish: 'Dragon Roll',
-    cuisine: 'Japanese',
-    priceRange: '$$$',
-    photographer: '@sushi_sensei',
-    commissionRate: 0.15,
-    hungerScore: 96,
-    completenessScore: 45,
-    metadataQualityStatus: 'enhanced',
-  },
-  {
-    id: '6',
-    imageUrl: 'https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=800&fit=crop',
-    restaurant: 'Taco Loco',
-    location: 'St. Louis, MO',
-    dish: 'Carnitas Tacos',
-    cuisine: 'Mexican',
-    priceRange: '$',
-    photographer: '@taco_tuesday',
-    commissionRate: 0.10,
-    hungerScore: 93,
-    completenessScore: 20,
-    metadataQualityStatus: 'basic',
-  },
 ]
 
+function priceToRange(price?: number): string {
+  if (!price && price !== 0) return '$'
+  if (price < 12) return '$'
+  if (price < 24) return '$$'
+  return '$$$'
+}
+
 export default function SwipePage() {
-  const [photos, setPhotos] = useState<FoodPhoto[]>(FALLBACK_PHOTOS)
+  const [dishes, setDishes] = useState<FoodDish[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [lastSwipe, setLastSwipe] = useState<'left' | 'right' | 'up' | null>(null)
-  const [matches, setMatches] = useState<FoodPhoto[]>([])
+  const getStoredMatches = (): FoodDish[] => {
+    if (typeof window === 'undefined') return []
+    try {
+      const stored = localStorage.getItem('hungerswipes_matches')
+      return stored ? JSON.parse(stored) : []
+    } catch {
+      return []
+    }
+  }
+  const [matches, setMatches] = useState<FoodDish[]>(getStoredMatches)
   const [showMatch, setShowMatch] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  
-  // Filters
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
     cuisine: '',
@@ -194,6 +165,7 @@ export default function SwipePage() {
     priceRange: '',
     spiceLevel: 0,
   })
+  const [feedTab, setFeedTab] = useState<'for-you' | 'nearby' | 'trending'>('for-you')
 
   useEffect(() => {
     const storedUser = localStorage.getItem('hungerswipes_user')
@@ -207,75 +179,85 @@ export default function SwipePage() {
       setMatches(JSON.parse(storedMatches))
     }
 
-    fetchPhotos()
+    fetchDishes()
   }, [])
 
-  const fetchPhotos = async () => {
+  const mapDish = (d: any): FoodDish => ({
+    id: d.id,
+    imageUrl: d.photo_url || d.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=800&fit=crop',
+    restaurant: d.seller?.business_name || d.restaurant_name || 'Unknown',
+    location: d.seller?.location_text || d.location_text || d.restaurant_location || 'St. Louis, MO',
+    dish: d.name || d.dish_name || 'Mystery Dish',
+    cuisine: d.category || d.cuisine_type || '',
+    cuisineTags: d.tags || d.cuisine_tags || [],
+    priceRange: priceToRange(typeof d.price === 'number' ? d.price : undefined),
+    price: typeof d.price === 'number' ? d.price : 0,
+    photographer: '@stlfoodie',
+    commissionRate: 0.10,
+    hungerScore: d.right_swipes && d.impressions ? Math.round((d.right_swipes / Math.max(1, d.impressions)) * 100) : 90,
+    title: d.name,
+    description: d.description,
+    tags: d.tags || [],
+    dietaryTags: d.dietary_tags || [],
+    calories: d.calories,
+    proteinGrams: d.protein_grams,
+    carbsGrams: d.carbs_grams,
+    fatGrams: d.fat_grams,
+    spiceLevel: d.spice_level,
+    portionSize: d.portion_size,
+    vegetarianOption: d.vegetarian_option,
+    veganOption: d.vegan_option,
+    glutenFreeOption: d.gluten_free_option,
+    healthCategory: d.health_category,
+    completenessScore: d.completeness_score,
+    metadataQualityStatus: d.metadata_quality_status,
+    seller: d.seller,
+  })
+
+  const fetchDishes = async () => {
     try {
       const params = new URLSearchParams()
+      params.set('limit', '20')
+      if (user?.id) params.set('eaterId', user.id)
       if (filters.cuisine) params.set('cuisineTag', filters.cuisine)
-      if (filters.dietary) params.set(filters.dietary, 'true')
+      if (filters.dietary) params.set('dietaryTag', filters.dietary)
       if (filters.health) params.set('healthCategory', filters.health)
       if (filters.priceRange) params.set('priceRange', filters.priceRange)
-      if (filters.spiceLevel > 0) params.set('spiceLevel', filters.spiceLevel.toString())
-      
+
       const query = params.toString() ? `?${params.toString()}` : ''
-      const res = await fetch(`/api/photos${query}`)
+      const res = await fetch(`/api/dishes${query}`)
       const data = await res.json()
-      if (data.photos && data.photos.length > 0) {
-        setPhotos(data.photos.map((p: any) => ({
-          id: p.id,
-          imageUrl: p.image_url,
-          restaurant: p.restaurant_name,
-          location: p.restaurant_location || '',
-          dish: p.dish_name,
-          cuisine: p.cuisine_type || '',
-          cuisineTags: p.cuisine_tags,
-          priceRange: p.price_range || '$',
-          photographer: p.creator?.username || '@foodie',
-          commissionRate: p.commission_rate || 0.10,
-          hungerScore: p.hunger_score || 0,
-          title: p.title,
-          description: p.description,
-          tags: p.tags,
-          dietaryTags: p.dietary_tags,
-          calories: p.calories,
-          proteinGrams: p.protein_grams,
-          carbsGrams: p.carbs_grams,
-          fatGrams: p.fat_grams,
-          spiceLevel: p.spice_level,
-          portionSize: p.portion_size,
-          vegetarianOption: p.vegetarian_option,
-          veganOption: p.vegan_option,
-          glutenFreeOption: p.gluten_free_option,
-          healthCategory: p.health_category,
-          completenessScore: p.completeness_score,
-          metadataQualityStatus: p.metadata_quality_status,
-        })))
+      if (data.dishes && data.dishes.length > 0) {
+        setDishes(data.dishes.map(mapDish))
+      } else if (data.photos && data.photos.length > 0) {
+        setDishes(data.photos.map(mapDish))
+      } else {
+        setDishes(FALLBACK_DISHES)
       }
     } catch (err) {
-      console.log('Using fallback photos')
+      console.log('Dishes feed unavailable, using fallback')
+      setDishes(FALLBACK_DISHES)
     }
   }
 
   const applyFilters = () => {
     setShowFilters(false)
-    fetchPhotos()
+    fetchDishes()
   }
 
-  const saveMatches = (newMatches: FoodPhoto[]) => {
+  const saveMatches = (newMatches: FoodDish[]) => {
     setMatches(newMatches)
     localStorage.setItem('hungerswipes_matches', JSON.stringify(newMatches))
   }
 
-  const recordSwipe = async (photoId: string, direction: string) => {
+  const recordSwipe = async (dishId: string, direction: string) => {
     if (user?.id) {
       try {
         await fetch('/api/swipe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            photoId,
+            dishId,
             direction,
             eaterId: user.id
           })
@@ -287,26 +269,26 @@ export default function SwipePage() {
   }
 
   const handleSwipe = useCallback((direction: 'left' | 'right' | 'up') => {
-    if (!photos[currentIndex]) return
+    if (!dishes[currentIndex]) return
 
-    const currentPhoto = photos[currentIndex]
+    const currentDish = dishes[currentIndex]
     setLastSwipe(direction)
 
     if (direction === 'right' || direction === 'up') {
-      const newMatches = [...matches, currentPhoto]
+      const newMatches = [...matches, currentDish]
       saveMatches(newMatches)
       setShowMatch(true)
       setTimeout(() => setShowMatch(false), 1500)
     }
 
-    recordSwipe(currentPhoto.id, direction)
+    recordSwipe(currentDish.id, direction)
 
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1)
       setLastSwipe(null)
       setDragOffset({ x: 0, y: 0 })
     }, 300)
-  }, [currentIndex, photos, matches])
+  }, [currentIndex, dishes, matches])
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault()
@@ -325,7 +307,7 @@ export default function SwipePage() {
 
     const handleEnd = (endEvent: MouseEvent | TouchEvent) => {
       setIsDragging(false)
-      const deltaX = 'changedTouches' in endEvent 
+      const deltaX = 'changedTouches' in endEvent
         ? endEvent.changedTouches[0].clientX - startX
         : (endEvent as MouseEvent).clientX - startX
 
@@ -365,13 +347,28 @@ export default function SwipePage() {
     )
   }
 
-  if (currentIndex >= photos.length) {
+  if (dishes.length === 0) {
     return (
       <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
         <div className="text-center px-4">
           <div className="text-8xl mb-6"><ForkFlame size={72} /></div>
-          <h1 className="text-3xl font-bold text-white mb-4">You&apos;re all caught up!</h1>
-          <p className="text-gray-400 mb-8">Check back later for more delicious photos.</p>
+          <h1 className="text-3xl font-bold text-white mb-4">No plates yet</h1>
+          <p className="text-gray-600 mb-8">Be the first to post a plate.</p>
+          <Link href="/vendor-intake" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
+            List Your Food
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentIndex >= dishes.length) {
+    return (
+      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
+        <div className="text-center px-4">
+          <div className="text-8xl mb-6"><ForkFlame size={72} /></div>
+          <h1 className="text-3xl font-bold text-white mb-4">You're all caught up!</h1>
+          <p className="text-gray-600 mb-8">Check back later for more delicious photos.</p>
           <Link href="/matches" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
             View Your Matches ({matches.length})
           </Link>
@@ -380,9 +377,9 @@ export default function SwipePage() {
     )
   }
 
-  const currentPhoto = photos[currentIndex]
-  const nextPhoto = photos[currentIndex + 1]
-  const tierBadge = getTierBadge(currentPhoto?.completenessScore || 0)
+  const currentDish = dishes[currentIndex]
+  const nextDish = dishes[currentIndex + 1]
+  const tierBadge = getTierBadge(currentDish?.completenessScore || 0)
 
   return (
     <div className="min-h-screen bg-[#0D0D0D]">
@@ -398,7 +395,7 @@ export default function SwipePage() {
             <Link href="/vendor" className="hidden sm:block text-sm text-[#FF5722] font-semibold">
               For Restaurants
             </Link>
-            <Link href="/vendor-intake" className="hidden sm:block text-sm text-white/60 hover:text-white font-semibold">
+            <Link href="/join" className="hidden sm:block text-sm text-white/60 hover:text-white font-semibold">
               + List Food
             </Link>
             <Link href="/matches" className="relative">
@@ -460,16 +457,15 @@ export default function SwipePage() {
       {showFilters && (
         <div className="bg-[#1A1A1A] border-b border-white/5 px-4 py-4">
           <div className="max-w-lg mx-auto space-y-4">
-            {/* Cuisine Filter */}
             <div>
-              <label className="text-xs text-gray-400 mb-2 block">Cuisine</label>
+              <label className="text-xs text-gray-600 mb-2 block">Cuisine</label>
               <div className="flex flex-wrap gap-1">
                 {CUISINE_TAGS.slice(0, 10).map(c => (
                   <button
                     key={c}
                     onClick={() => setFilters({...filters, cuisine: c})}
                     className={`px-2 py-1 rounded text-xs ${
-                      filters.cuisine === c ? 'bg-[#FF5722] text-white' : 'bg-white/10 text-gray-400'
+                      filters.cuisine === c ? 'bg-[#FF5722] text-white' : 'bg-white/10 text-gray-600'
                     }`}
                   >
                     {c}
@@ -477,16 +473,15 @@ export default function SwipePage() {
                 ))}
               </div>
             </div>
-            {/* Dietary Filter */}
             <div>
-              <label className="text-xs text-gray-400 mb-2 block">Dietary</label>
+              <label className="text-xs text-gray-600 mb-2 block">Dietary</label>
               <div className="flex flex-wrap gap-1">
                 {['vegetarian', 'vegan', 'gluten-free', 'keto'].map(d => (
                   <button
                     key={d}
                     onClick={() => setFilters({...filters, dietary: d})}
                     className={`px-2 py-1 rounded text-xs ${
-                      filters.dietary === d ? 'bg-[#10B981] text-white' : 'bg-white/10 text-gray-400'
+                      filters.dietary === d ? 'bg-[#10B981] text-white' : 'bg-white/10 text-gray-600'
                     }`}
                   >
                     {d}
@@ -494,16 +489,15 @@ export default function SwipePage() {
                 ))}
               </div>
             </div>
-            {/* Health Filter */}
             <div>
-              <label className="text-xs text-gray-400 mb-2 block">Health</label>
+              <label className="text-xs text-gray-600 mb-2 block">Health</label>
               <div className="flex flex-wrap gap-1">
                 {HEALTH_CATEGORIES.map(h => (
                   <button
                     key={h}
                     onClick={() => setFilters({...filters, health: h})}
                     className={`px-2 py-1 rounded text-xs ${
-                      filters.health === h ? 'bg-[#8B5CF6] text-white' : 'bg-white/10 text-gray-400'
+                      filters.health === h ? 'bg-[#8B5CF6] text-white' : 'bg-white/10 text-gray-600'
                     }`}
                   >
                     {h}
@@ -525,33 +519,40 @@ export default function SwipePage() {
       <main className="max-w-lg mx-auto px-4 py-4">
         {/* Mode Tabs */}
         <div className="flex gap-2 mb-4 bg-white/5 rounded-full p-1">
-          {['For You', 'Nearby', 'Trending'].map((tab, i) => (
+          {[
+            { key: 'for-you' as const, label: 'For You' },
+            { key: 'nearby' as const, label: 'Nearby' },
+            { key: 'trending' as const, label: 'Trending' },
+          ].map(({ key, label }) => (
             <button
-              key={tab}
+              key={key}
+              onClick={() => {
+                setFeedTab(key)
+                setFilters({ ...filters, cuisine: '' })
+                applyFilters()
+              }}
               className={`flex-1 py-2 rounded-full font-medium text-sm transition ${
-                i === 0 ? 'bg-[#FF5722] text-white' : 'text-gray-400 hover:text-white'
+                feedTab === key ? 'bg-[#FF5722] text-white' : 'text-gray-600 hover:text-white'
               }`}
             >
-              {tab}
+              {label}
             </button>
           ))}
         </div>
 
         {/* Card Stack */}
         <div className="relative h-[65vh] max-h-[520px]">
-          {/* Next Card (behind) */}
-          {nextPhoto && (
+          {nextDish && (
             <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-lg scale-95 opacity-50">
               <img
-                src={nextPhoto.imageUrl}
-                alt={nextPhoto.dish}
+                src={nextDish.imageUrl}
+                alt={nextDish.dish}
                 className="w-full h-full object-cover"
               />
             </div>
           )}
 
-          {/* Current Card */}
-          {currentPhoto && (
+          {currentDish && (
             <div
               className="absolute inset-0 rounded-3xl overflow-hidden shadow-xl bg-[#1A1A1A] cursor-grab active:cursor-grabbing"
               style={getCardStyle()}
@@ -559,12 +560,11 @@ export default function SwipePage() {
               onTouchStart={handleDragStart}
             >
               <img
-                src={currentPhoto.imageUrl}
-                alt={currentPhoto.dish}
+                src={currentDish.imageUrl}
+                alt={currentDish.dish}
                 className="w-full h-full object-cover"
               />
 
-              {/* Drag Overlays */}
               {lastSwipe === 'right' && (
                 <div className="absolute inset-0 bg-[#10B981]/40 flex items-center justify-center">
                   <div className="bg-[#10B981] text-white text-4xl font-bold px-8 py-4 rounded-2xl rotate-[-15deg] shadow-lg">
@@ -582,68 +582,53 @@ export default function SwipePage() {
               {lastSwipe === 'up' && (
                 <div className="absolute inset-0 bg-[#FFD700]/50 flex items-center justify-center">
                   <div className="bg-[#FFD700] text-[#0D0D0D] text-4xl font-bold px-8 py-4 rounded-2xl shadow-lg">
-                    <Flame size={14} /> SUPER HUNGER!
+                    <ForkFlameLarge size={72} /> SUPER HUNGER!
                   </div>
                 </div>
               )}
 
-              {/* Metadata Badges */}
               <div className="absolute top-4 left-4 right-4 flex flex-wrap gap-2">
-                {/* Tier Badge */}
-                {currentPhoto.completenessScore !== undefined && (
+                {currentDish.completenessScore !== undefined && (
                   <span className={`px-2 py-1 rounded-full text-xs font-bold ${tierBadge.bgColor}`} style={{ color: tierBadge.color }}>
                     {tierBadge.label}
                   </span>
                 )}
-                {/* Dietary Badges */}
-                {currentPhoto.vegetarianOption && (
+                {currentDish.vegetarianOption && (
                   <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><Leaf size={10} /> Veg</span>
                 )}
-                {currentPhoto.veganOption && (
+                {currentDish.veganOption && (
                   <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><Veggie size={10} /> Vegan</span>
                 )}
-                {currentPhoto.glutenFreeOption && (
+                {currentDish.glutenFreeOption && (
                   <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><Globe size={10} /> GF</span>
                 )}
-                {/* Calories Badge */}
-                {currentPhoto.calories && (
+                {currentDish.calories && (
                   <span className="px-2 py-1 rounded-full text-xs font-bold bg-white/80 text-gray-800">
-                    {currentPhoto.calories} cal
+                    {currentDish.calories} cal
                   </span>
                 )}
-                {/* Health Category */}
-                {currentPhoto.healthCategory && (
+                {currentDish.healthCategory && (
                   <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#8B5CF6]/80 text-white capitalize">
-                    {currentPhoto.healthCategory}
-                  </span>
-                )}
-                {/* Discount Badge */}
-                {(currentPhoto as any).hasDiscount && (
-                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#FFD500] text-[#0D0D0D] flex items-center gap-1">
-                    <Dollar size={10} /> {(currentPhoto as any).discountOffer?.split(' ').slice(0, 3).join(' ')}
+                    {currentDish.healthCategory}
                   </span>
                 )}
               </div>
 
-              {/* Card Info */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h2 className="text-white text-2xl font-bold mb-1">{currentPhoto.dish}</h2>
+                    <h2 className="text-white text-2xl font-bold mb-1">{currentDish.dish}</h2>
                     <p className="text-white/70 text-lg mb-2">
-                      {currentPhoto.restaurant} · {currentPhoto.location}
+                      {currentDish.restaurant} · {currentDish.location}
                     </p>
                     <div className="flex items-center gap-3 text-sm text-white/60">
-                      <span>{currentPhoto.cuisine}</span>
+                      <span>{currentDish.cuisine}</span>
                       <span>•</span>
-                      <span className="font-semibold text-[#FFD700]">{currentPhoto.priceRange}</span>
-                      <span>•</span>
-                      <span><Camera size={14} /> {currentPhoto.photographer}</span>
+                      <span className="font-semibold text-[#FFD700]">${currentDish.price.toFixed(2)}</span>
                     </div>
-                    {/* Metadata Tags */}
-                    {currentPhoto.tags && currentPhoto.tags.length > 0 && (
+                    {currentDish.tags && currentDish.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {currentPhoto.tags.slice(0, 4).map(tag => (
+                        {currentDish.tags.slice(0, 4).map(tag => (
                           <span key={tag} className="px-2 py-0.5 bg-white/20 rounded-full text-xs text-white/80">
                             {tag}
                           </span>
@@ -653,13 +638,12 @@ export default function SwipePage() {
                   </div>
                   <div className="text-right">
                     <div className="bg-[#FFD700] text-[#0D0D0D] text-xs font-bold px-2 py-1 rounded-full">
-                      {currentPhoto.hungerScore}+
+                      {currentDish.hungerScore}
                     </div>
                     <p className="text-xs text-white/50 mt-1">HungerScore™</p>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex justify-center gap-5 mt-6">
                   <button
                     onClick={() => handleSwipe('left')}
@@ -685,7 +669,6 @@ export default function SwipePage() {
           )}
         </div>
 
-        {/* Swipe Hints */}
         <div className="flex justify-center gap-8 mt-6 text-gray-500 text-sm">
           <div className="flex items-center gap-2">
             <SwipeLeft size={16} />
@@ -702,32 +685,24 @@ export default function SwipePage() {
         </div>
       </main>
 
-      {/* Match Popup */}
-      {showMatch && currentPhoto && (
+      {showMatch && currentDish && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-[#1A1A1A] rounded-3xl p-8 text-center border border-white/10 animate-bounce">
             <div className="mb-4"><ForkFlameLarge size={64} /></div>
             <h2 className="text-2xl font-bold text-white mb-2">Match!</h2>
-            <p className="text-gray-400 mb-4">Added to your matches</p>
-            <p className="text-lg font-semibold text-white">{currentPhoto.dish}</p>
-            <p className="text-gray-400">{currentPhoto.restaurant}</p>
-            {currentPhoto.photographer && (
-              <p className="text-sm text-[#FFD700] mt-2"><Camera size={14} /> {currentPhoto.photographer}</p>
+            <p className="text-gray-600 mb-4">Added to your matches</p>
+            <p className="text-lg font-semibold text-white">{currentDish.dish}</p>
+            <p className="text-gray-600">{currentDish.restaurant}</p>
+            {currentDish.seller?.phone && (
+              <a href={`tel:${currentDish.seller.phone}`} className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#10B981] text-white rounded-full text-sm font-semibold">
+                📞 Call to order
+              </a>
             )}
-            {(currentPhoto as any).hasDiscount && (currentPhoto as any).discountCode && (
-              <div className="mt-3 bg-[#FFD700]/20 border border-[#FFD700]/40 rounded-xl px-4 py-2">
-                <p className="text-xs text-[#FFD700] font-semibold">{(currentPhoto as any).discountOffer}</p>
-                <p className="text-[#FFD700] font-mono font-bold text-sm mt-1">
-                  Code: {(currentPhoto as any).discountCode}
-                </p>
-              </div>
+            {currentDish.seller?.ordering_url && (
+              <a href={currentDish.seller.ordering_url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-[#FFD700] text-[#0D0D0D] rounded-full text-sm font-semibold">
+                🌐 Order online
+              </a>
             )}
-            <Link
-              href={`/visits?photoId=${currentPhoto.id}`}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#FFD700] text-[#0D0D0D] rounded-full text-sm font-semibold hover:bg-[#FFC000] transition"
-            >
-              Been here? Verify your visit →
-            </Link>
           </div>
         </div>
       )}

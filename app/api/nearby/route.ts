@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 // Haversine: distance between two lat/lng points in miles
 function haversineMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 3958.8 // Earth radius in miles

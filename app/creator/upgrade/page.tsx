@@ -98,7 +98,7 @@ export default function CreatorUpgradePage() {
         <div className="text-center px-4 max-w-md">
           <div className="text-7xl mb-6"><CheckBold size={24} /></div>
           <h1 className="text-3xl font-bold text-white mb-4">Application Submitted!</h1>
-          <p className="text-gray-400 mb-8">
+          <p className="text-gray-600 mb-8">
             We&apos;ll review your application and get back to you within 3-5 business days.
           </p>
           <Link 
@@ -117,7 +117,7 @@ export default function CreatorUpgradePage() {
       {/* Header */}
       <header className="bg-[#0D0D0D] border-b border-white/5 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <Link href="/creator" className="text-gray-400 font-medium">
+          <Link href="/creator" className="text-gray-600 font-medium">
             ← Cancel
           </Link>
           <h1 className="font-bold text-white">Start Selling Food</h1>
@@ -144,7 +144,7 @@ export default function CreatorUpgradePage() {
             <div className="text-center">
               <div className="text-6xl mb-4">🚀</div>
               <h2 className="text-2xl font-bold text-white mb-2">Ready to Level Up?</h2>
-              <p className="text-gray-400">You have what it takes to sell food legally</p>
+              <p className="text-gray-600">You have what it takes to sell food legally</p>
             </div>
 
             {/* Your Stats */}
@@ -153,19 +153,19 @@ export default function CreatorUpgradePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-white/5 rounded-xl">
                   <div className="text-2xl font-bold text-[#FFD700]">{metrics.followers}</div>
-                  <div className="text-xs text-gray-400">Followers</div>
+                  <div className="text-xs text-gray-600">Followers</div>
                 </div>
                 <div className="text-center p-3 bg-white/5 rounded-xl">
                   <div className="text-2xl font-bold text-[#10B981]">{metrics.engagement}</div>
-                  <div className="text-xs text-gray-400">Engagement</div>
+                  <div className="text-xs text-gray-600">Engagement</div>
                 </div>
                 <div className="text-center p-3 bg-white/5 rounded-xl">
                   <div className="text-2xl font-bold text-white">{metrics.posts}</div>
-                  <div className="text-xs text-gray-400">Posts</div>
+                  <div className="text-xs text-gray-600">Posts</div>
                 </div>
                 <div className="text-center p-3 bg-white/5 rounded-xl">
                   <div className="text-2xl font-bold text-[#FF5722]">${metrics.earnings.toFixed(0)}</div>
-                  <div className="text-xs text-gray-400">Earned</div>
+                  <div className="text-xs text-gray-600">Earned</div>
                 </div>
               </div>
             </div>
@@ -200,12 +200,12 @@ export default function CreatorUpgradePage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">Your Kitchen Setup</h2>
-              <p className="text-gray-400">Tell us about where you&apos;ll be cooking</p>
+              <p className="text-gray-600">Tell us about where you&apos;ll be cooking</p>
             </div>
 
             {/* Kitchen Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">Kitchen Type *</label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Kitchen Type *</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { value: 'home', label: '🏠 Home Kitchen', desc: 'Cottage food laws apply' },
@@ -219,7 +219,7 @@ export default function CreatorUpgradePage() {
                     className={`p-4 rounded-xl text-left transition ${
                       state.kitchenType === type.value
                         ? 'bg-[#FF5722] text-white'
-                        : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                        : 'bg-white/10 text-gray-600 hover:bg-white/20'
                     }`}
                   >
                     <div className="font-semibold">{type.label}</div>
@@ -233,14 +233,14 @@ export default function CreatorUpgradePage() {
 
             {/* Has Kitchen */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">Do you have a kitchen space?</label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Do you have a kitchen space?</label>
               <div className="flex gap-2">
                 <button
                   onClick={() => setState({ ...state, hasKitchen: true })}
                   className={`flex-1 py-3 rounded-xl font-medium transition ${
                     state.hasKitchen
                       ? 'bg-[#10B981] text-white'
-                      : 'bg-white/10 text-gray-400'
+                      : 'bg-white/10 text-gray-600'
                   }`}
                 >
                   Yes, I have a kitchen
@@ -250,7 +250,7 @@ export default function CreatorUpgradePage() {
                   className={`flex-1 py-3 rounded-xl font-medium transition ${
                     !state.hasKitchen
                       ? 'bg-[#FF5722] text-white'
-                      : 'bg-white/10 text-gray-400'
+                      : 'bg-white/10 text-gray-600'
                   }`}
                 >
                   No, I need one
@@ -261,7 +261,7 @@ export default function CreatorUpgradePage() {
             {/* Kitchen Address (if has kitchen) */}
             {state.hasKitchen && (
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Kitchen Address</label>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Kitchen Address</label>
                 <input
                   type="text"
                   placeholder="123 Main St, St. Louis, MO"
@@ -283,7 +283,7 @@ export default function CreatorUpgradePage() {
 
             {/* Business Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">Business Name *</label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Business Name *</label>
               <input
                 type="text"
                 placeholder="e.g., Mike's BBQ, Sarah's Sweets"
@@ -296,7 +296,7 @@ export default function CreatorUpgradePage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setState({ ...state, step: 1 })}
-                className="flex-1 py-4 bg-white/5 border border-white/10 text-gray-400 rounded-2xl font-bold hover:bg-white/10 transition"
+                className="flex-1 py-4 bg-white/5 border border-white/10 text-gray-600 rounded-2xl font-bold hover:bg-white/10 transition"
               >
                 Back
               </button>
@@ -316,13 +316,13 @@ export default function CreatorUpgradePage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">Final Step</h2>
-              <p className="text-gray-400">Agree to our terms and submit</p>
+              <p className="text-gray-600">Agree to our terms and submit</p>
             </div>
 
             {/* Terms */}
             <div className="bg-white/5 rounded-2xl p-6 border border-white/10 max-h-60 overflow-y-auto">
               <h3 className="font-bold text-white mb-4">Creator Terms & Compliance</h3>
-              <div className="text-sm text-gray-400 space-y-3">
+              <div className="text-sm text-gray-600 space-y-3">
                 <p>By submitting this application, you agree to:</p>
                 <ul className="list-disc ml-4 space-y-2">
                   <li>Comply with all local food safety laws and regulations</li>
@@ -358,20 +358,20 @@ export default function CreatorUpgradePage() {
               <h3 className="font-bold text-white mb-4">Application Summary</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Business</span>
+                  <span className="text-gray-600">Business</span>
                   <span className="text-white">{state.businessName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Kitchen Type</span>
+                  <span className="text-gray-600">Kitchen Type</span>
                   <span className="text-white capitalize">{state.kitchenType}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Has Kitchen</span>
+                  <span className="text-gray-600">Has Kitchen</span>
                   <span className="text-white">{state.hasKitchen ? 'Yes' : 'No'}</span>
                 </div>
                 {state.kitchenAddress && (
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Address</span>
+                    <span className="text-gray-600">Address</span>
                     <span className="text-white">{state.kitchenAddress}</span>
                   </div>
                 )}
@@ -381,7 +381,7 @@ export default function CreatorUpgradePage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setState({ ...state, step: 2 })}
-                className="flex-1 py-4 bg-white/5 border border-white/10 text-gray-400 rounded-2xl font-bold hover:bg-white/10 transition"
+                className="flex-1 py-4 bg-white/5 border border-white/10 text-gray-600 rounded-2xl font-bold hover:bg-white/10 transition"
               >
                 Back
               </button>

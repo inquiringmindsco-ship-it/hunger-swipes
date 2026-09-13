@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle, MapPin, Clock, Phone, ArrowRight, Star, Users, TrendingUp } from 'lucide-react'
+import { CheckCircle, MapPin, Clock, Phone, ArrowRight, Star, Users, TrendingUp, ChevronDown } from 'lucide-react'
 
 const BENEFITS = [
   { icon: Users, title: 'More Customers', desc: 'Get discovered by hungry people in your area who are actively looking for food like yours.' },
@@ -31,6 +31,7 @@ export default function VendorPage() {
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -150,10 +151,20 @@ export default function VendorPage() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-black text-center mb-10 text-gray-900">Questions</h2>
           <div className="space-y-4">
-            {FAQ.map(item => (
-              <div key={item.q} className="border border-gray-200 rounded-xl p-5">
-                <h3 className="font-bold text-gray-900 mb-2">{item.q}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{item.a}</p>
+            {FAQ.map((item, i) => (
+              <div key={item.q} className="border border-gray-200 rounded-xl">
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full flex items-center justify-between p-5 text-left"
+                >
+                  <h3 className="font-bold text-gray-900 pr-4">{item.q}</h3>
+                  <ChevronDown size={18} className={`text-gray-400 flex-shrink-0 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} />
+                </button>
+                {openFaq === i && (
+                  <div className="px-5 pb-5">
+                    <p className="text-gray-500 text-sm leading-relaxed">{item.a}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
