@@ -1,14 +1,12 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 
-function AuthForm() {
+export default function AuthPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const requestedNext = searchParams?.get('next')
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -16,6 +14,15 @@ function AuthForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [next, setNext] = useState('/swipe')
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const requestedNext = params.get('next')
+    if (requestedNext?.startsWith('/') && !requestedNext.startsWith('//')) {
+      setNext(requestedNext)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,15 +37,14 @@ function AuthForm() {
       if (!appUrl) {
         throw new Error('NEXT_PUBLIC_APP_URL is not configured')
       }
-      const safeNext = requestedNext?.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/swipe'
-      const emailRedirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(safeNext)}`
+      const emailRedirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(next)}`
 
       if (mode === 'signup') {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { full_name: fullName, role: safeNext.startsWith('/join') ? 'seller' : 'eater' },
+            data: { full_name: fullName, role: next.startsWith('/join') ? 'seller' : 'eater' },
             emailRedirectTo,
           },
         })
@@ -46,12 +52,12 @@ function AuthForm() {
         if (!data.session) {
           setMessage('Check your email to confirm your account, then sign in to continue.')
         } else {
-          router.push(safeNext)
+          router.push(next)
         }
       } else {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
         if (signInError) throw signInError
-        router.push(safeNext)
+        router.push(next)
       }
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.')
@@ -169,17 +175,5 @@ function AuthForm() {
         </div>
       </main>
     </div>
-  )
-}
-
-export default function AuthPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center text-white">
-        <p className="text-gray-500">Loading...</p>
-      </div>
-    }>
-      <AuthForm />
-    </Suspense>
   )
 }
