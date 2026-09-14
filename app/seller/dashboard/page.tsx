@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { QRCodeSVG } from 'qrcode.react'
 import { Ban, CheckCircle2, Clock3, ExternalLink, LogOut, MapPin, Phone, Plus, Timer, ToggleLeft, ToggleRight } from 'lucide-react'
@@ -11,19 +11,21 @@ import { BrandMark, SellerTypeIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
 
-function DashboardContent() {
-  const params = useSearchParams()
+export default function SellerDashboardPage() {
   const router = useRouter()
-  const sellerId = params.get('id')
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'
-
+  const [sellerId, setSellerId] = useState<string | null>(null)
   const [seller, setSeller] = useState<any>(null)
   const [dishes, setDishes] = useState<any[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setSellerId(params.get('id'))
+  }, [])
+
+  useEffect(() => {
+    if (sellerId === null && typeof window !== 'undefined') return
     loadData()
   }, [sellerId])
 
@@ -38,6 +40,7 @@ function DashboardContent() {
       }
       if (!sellerData.seller) {
         setSeller(null)
+        setLoading(false)
         return
       }
       const ownedSellerId = sellerData.seller.id
@@ -67,17 +70,35 @@ function DashboardContent() {
     loadData()
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
-  if (!seller) return <div className="min-h-screen flex items-center justify-center">No seller profile found. <Link href="/join" className="ml-2 text-[#FF5722]">Create one</Link></div>
-
-  const joinUrl = `${appUrl}/join`
-
   const logout = async () => {
     await getSupabase()?.auth.signOut()
-    localStorage.removeItem('hungerswipes_user')
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('hungerswipes_user')
+    }
     router.replace('/auth?next=%2Fseller%2Fdashboard')
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    )
+  }
+
+  if (!seller) {
+    return (
+      <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col items-center justify-center p-4">
+        <p className="text-gray-400 mb-4">No seller profile found.</p>
+        <Link href="/join" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-bold">
+          Create one
+        </Link>
+      </div>
+    )
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hunger-swipes-theta.vercel.app'
+  const joinUrl = `${appUrl}/join`
   const StatusIcon = seller.status === 'active' ? CheckCircle2 : seller.status === 'suspended' ? Ban : Timer
 
   return (
@@ -98,7 +119,6 @@ function DashboardContent() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
-        {/* Status */}
         <div className={`rounded-2xl p-4 flex items-center justify-between border ${
           seller.status === 'active' ? 'bg-[#10B981]/10 border-[#10B981]/20' : 'bg-amber-500/10 border-amber-500/20'
         }`}>
@@ -112,11 +132,12 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Seller card */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-black inline-flex items-center gap-2"><SellerTypeIcon type={seller.seller_type} size={24} className="text-[#FF5722]" /> {seller.business_name}</h1>
+              <h1 className="text-2xl font-black inline-flex items-center gap-2">
+                <SellerTypeIcon type={seller.seller_type} size={24} className="text-[#FF5722]" /> {seller.business_name}
+              </h1>
               <p className="text-sm text-gray-400 capitalize mt-1">{seller.seller_type.replace('_', ' ')}</p>
               {seller.description && <p className="text-sm text-gray-400 mt-2">{seller.description}</p>}
             </div>
@@ -129,7 +150,6 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Stats */}
         {stats && (
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
             <h2 className="font-bold mb-3">Performance</h2>
@@ -150,7 +170,6 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* Dishes */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold">Your Dishes</h2>
@@ -200,7 +219,6 @@ function DashboardContent() {
           )}
         </div>
 
-        {/* QR */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 text-center">
           <h2 className="font-bold mb-3">Your Join QR</h2>
           <div className="bg-white p-3 rounded-xl inline-block">
@@ -211,13 +229,5 @@ function DashboardContent() {
       </main>
       <MobileNav />
     </div>
-  )
-}
-
-export default function SellerDashboardPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-white">Loading...</div>}>
-      <DashboardContent />
-    </Suspense>
   )
 }
