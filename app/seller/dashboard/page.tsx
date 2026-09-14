@@ -13,7 +13,7 @@ import MobileNav from '@/app/components/MobileNav'
 
 export default function SellerDashboardPage() {
   const router = useRouter()
-  const [sellerId, setSellerId] = useState<string | null>(null)
+  const [sellerId, setSellerId] = useState<string | null | undefined>(undefined)
   const [seller, setSeller] = useState<any>(null)
   const [dishes, setDishes] = useState<any[]>([])
   const [stats, setStats] = useState<any>(null)
@@ -26,7 +26,7 @@ export default function SellerDashboardPage() {
   }, [])
 
   useEffect(() => {
-    if (sellerId === null && typeof window !== 'undefined') return
+    if (sellerId === undefined) return
     loadData()
   }, [sellerId])
 
