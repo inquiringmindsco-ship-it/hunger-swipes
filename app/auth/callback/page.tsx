@@ -1,19 +1,24 @@
 'use client'
 
-import { useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, Suspense, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 
 function CallbackContent() {
   const router = useRouter()
-  const params = useSearchParams()
+  const [started, setStarted] = useState(false)
 
   useEffect(() => {
-    const code = params.get('code')
-    const next = params.get('next') || '/swipe'
+    if (started) return
+    setStarted(true)
 
     const finish = async () => {
       try {
+        if (typeof window === 'undefined') return
+        const params = new URLSearchParams(window.location.search)
+        const code = params.get('code')
+        const next = params.get('next') || '/swipe'
+
         const supabase = getSupabase()
         if (!supabase) {
           router.replace('/auth?error=auth_not_configured')
@@ -32,6 +37,21 @@ function CallbackContent() {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
           localStorage.setItem('hungerswipes_user', JSON.stringify(session.user))
+
+          // Record referral signup conversion if next URL has a ref
+          const nextParams = new URLSearchParams(next.split('?')[1])
+          const refSellerId = nextParams.get('ref')
+          if (refSellerId) {
+            try {
+              await fetch('/api/referrals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ seller_id: refSellerId, event_type: 'signup' }),
+              })
+            } catch {
+              // Non-blocking
+            }
+          }
         }
 
         router.replace(next)
@@ -42,7 +62,7 @@ function CallbackContent() {
     }
 
     finish()
-  }, [params, router])
+  }, [started, router])
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center">
