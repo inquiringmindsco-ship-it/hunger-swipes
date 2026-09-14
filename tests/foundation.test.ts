@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { boundedLimit, isHttpsUrl, normalizeContentKind } from '../lib/food.ts'
+import { boundedLimit, formatOptionalFoodPrice, isHttpsUrl, normalizeContentKind } from '../lib/food.ts'
 import { hasValidImageSignature, MAX_IMAGE_BYTES, validateImageMetadata } from '../lib/upload-validation.ts'
 import { mapOsmElement } from '../lib/openstreetmap-places.ts'
 import { findDuplicate } from '../lib/place-dedup.ts'
@@ -17,6 +17,13 @@ test('limits remain bounded and valid', () => {
   assert.equal(boundedLimit('0'), 1)
   assert.equal(boundedLimit('999'), 100)
   assert.equal(boundedLimit('invalid'), 20)
+})
+
+test('food prices are hidden when unknown or zero', () => {
+  assert.equal(formatOptionalFoodPrice(null), null)
+  assert.equal(formatOptionalFoodPrice(undefined), null)
+  assert.equal(formatOptionalFoodPrice(0), null)
+  assert.equal(formatOptionalFoodPrice(12.5), '$12.50')
 })
 
 test('public links require HTTPS', () => {

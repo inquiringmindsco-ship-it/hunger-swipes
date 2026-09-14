@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES, SPICE_LEVELS } from '@/lib/tags'
-import { getTierBadge } from '@/lib/metadata-scoring'
-import { Bookmark, Leaf, Settings, SlidersHorizontal, Sprout, WheatOff } from 'lucide-react'
+import { Bookmark, Settings, SlidersHorizontal } from 'lucide-react'
 import { BrandMark, PassIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
@@ -23,7 +22,7 @@ interface FoodDish {
   cuisine: string
   cuisineTags?: string[]
   priceRange: string
-  price: number
+  price: number | null
   hungerScore?: number
   title?: string
   description?: string
@@ -90,7 +89,7 @@ export default function SwipePage() {
     cuisine: d.category || '',
     cuisineTags: d.tags || [],
     priceRange: priceToRange(typeof d.price === 'number' ? d.price : undefined),
-    price: typeof d.price === 'number' ? d.price : 0,
+    price: typeof d.price === 'number' && d.price > 0 ? d.price : null,
     hungerScore: d.impressions > 0 ? Math.round((d.right_swipes / d.impressions) * 100) : undefined,
     title: d.name,
     description: d.description,
@@ -298,7 +297,6 @@ export default function SwipePage() {
 
   const currentDish = dishes[currentIndex]
   const nextDish = dishes[currentIndex + 1]
-  const tierBadge = getTierBadge(currentDish?.completenessScore || 0)
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] pb-20">
@@ -503,62 +501,12 @@ export default function SwipePage() {
                 <span className={`px-2 py-1 rounded-full text-xs font-bold ${currentDish.contentKind === 'official' ? 'bg-[#FFD700] text-black' : 'bg-sky-500 text-white'}`}>
                   {currentDish.contentKind === 'official' ? 'Official dish' : 'Community post'}
                 </span>
-                {currentDish.completenessScore !== undefined && (
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${tierBadge.bgColor}`} style={{ color: tierBadge.color }}>
-                    {tierBadge.label}
-                  </span>
-                )}
-                {currentDish.vegetarianOption && (
-                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><Leaf size={11} aria-hidden="true" /> Veg</span>
-                )}
-                {currentDish.veganOption && (
-                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><Sprout size={11} aria-hidden="true" /> Vegan</span>
-                )}
-                {currentDish.glutenFreeOption && (
-                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#10B981]/80 text-white flex items-center gap-1"><WheatOff size={11} aria-hidden="true" /> GF</span>
-                )}
-                {currentDish.calories && (
-                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-white/80 text-gray-800">
-                    {currentDish.calories} cal
-                  </span>
-                )}
-                {currentDish.healthCategory && (
-                  <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#8B5CF6]/80 text-white capitalize">
-                    {currentDish.healthCategory}
-                  </span>
-                )}
               </div>
 
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h2 className="text-white text-2xl font-bold mb-1">{currentDish.dish}</h2>
-                    <p className="text-white/70 text-lg mb-2">
-                      {currentDish.restaurant}{currentDish.location ? ` · ${currentDish.location}` : ''}
-                    </p>
-                    <div className="flex items-center gap-3 text-sm text-white/60">
-                      <span>{currentDish.cuisine}</span>
-                      <span>•</span>
-                      <span className="font-semibold text-[#FFD700]">${currentDish.price.toFixed(2)}</span>
-                    </div>
-                    {currentDish.tags && currentDish.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {currentDish.tags.slice(0, 4).map(tag => (
-                          <span key={tag} className="px-2 py-0.5 bg-white/20 rounded-full text-xs text-white/80">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {currentDish.hungerScore !== undefined && (
-                    <div className="text-right">
-                      <div className="bg-[#FFD700] text-[#0D0D0D] text-xs font-bold px-2 py-1 rounded-full">
-                        {currentDish.hungerScore}
-                      </div>
-                      <p className="text-xs text-white/50 mt-1">HungerScore™</p>
-                    </div>
-                  )}
+                <div>
+                  <h2 className="text-white text-2xl font-bold mb-1">{currentDish.dish}</h2>
+                  <p className="text-white/75 text-lg">{currentDish.restaurant}</p>
                 </div>
 
                 <div className="flex justify-center gap-6 mt-6">

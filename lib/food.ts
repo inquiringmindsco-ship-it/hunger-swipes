@@ -12,6 +12,11 @@ export function boundedLimit(value: string | null, fallback = 20, maximum = 100)
   return Number.isFinite(parsed) ? Math.max(1, Math.min(parsed, maximum)) : fallback
 }
 
+export function formatOptionalFoodPrice(value: unknown) {
+  const price = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(price) && price > 0 ? `$${price.toFixed(2)}` : null
+}
+
 export function isHttpsUrl(value: unknown) {
   if (typeof value !== 'string') return false
   try {

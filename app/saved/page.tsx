@@ -10,6 +10,7 @@ import MobileNav from '@/app/components/MobileNav'
 import PlaceActions from '@/app/components/PlaceActions'
 import { useAuth } from '@/lib/auth'
 import { authFetch } from '@/lib/auth-fetch'
+import { formatOptionalFoodPrice } from '@/lib/food'
 
 interface SavedItem {
   id: string
@@ -19,7 +20,7 @@ interface SavedItem {
     name: string
     description: string
     photo_url: string
-    price: number
+    price: number | null
     category?: string
     seller: {
       id: string
@@ -105,6 +106,7 @@ export default function SavedPage() {
             {saved.map((item) => {
               const dish = item.dish
               const seller = dish.seller
+              const displayPrice = formatOptionalFoodPrice(dish.price)
               return (
                 <div key={item.id} className="bg-white rounded-2xl overflow-hidden shadow-sm">
                   <img src={dish.photo_url || '/placeholder-dish.png'} alt={dish.name} className="w-full h-56 object-cover" />
@@ -115,7 +117,7 @@ export default function SavedPage() {
                         <p className="text-sm text-gray-600">{seller.business_name}</p>
                         <p className="mt-1 text-xs font-semibold text-sky-600">{item.content_kind === 'official' ? 'Official dish' : 'Community post'}</p>
                       </div>
-                      <p className="text-lg font-bold text-[#FF5722]">${Number(dish.price).toFixed(2)}</p>
+                      {displayPrice && <p className="text-lg font-bold text-[#FF5722]">{displayPrice}</p>}
                     </div>
 
                     {dish.description && <p className="text-sm text-gray-600 mt-2">{dish.description}</p>}
