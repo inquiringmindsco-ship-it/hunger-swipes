@@ -21,6 +21,7 @@ export default function AuthPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
+    if (params.get('mode') === 'signup') setMode('signup')
     const requestedNext = params.get('next')
     if (requestedNext?.startsWith('/') && !requestedNext.startsWith('//')) {
       setNext(requestedNext)
@@ -103,7 +104,7 @@ export default function AuthPage() {
             </h1>
             <p className="text-gray-500 text-sm">
               {mode === 'login'
-                ? 'Sign in to swipe, save dishes, and manage your food listing.'
+                ? 'Sign in to save food and manage your food listing.'
                 : 'One account to swipe through food and list your own.'}
             </p>
           </div>

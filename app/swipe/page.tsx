@@ -170,21 +170,23 @@ export default function SwipePage() {
 
   const handleSwipe = useCallback((direction: 'left' | 'right') => {
     if (!dishes[currentIndex]) return
-    if (!user) {
-      router.push('/auth?next=/swipe')
+    if (!user && direction === 'right') {
+      router.push('/auth?mode=signup&next=/swipe')
       return
     }
 
     const currentDish = dishes[currentIndex]
     setLastSwipe(direction)
 
-    void recordSwipe(currentDish, direction).then((saved) => {
-      if (saved && direction === 'right') {
-        setSavedCount((count) => count + 1)
-        setShowMatch(true)
-        setTimeout(() => setShowMatch(false), 1500)
-      }
-    })
+    if (user) {
+      void recordSwipe(currentDish, direction).then((saved) => {
+        if (saved && direction === 'right') {
+          setSavedCount((count) => count + 1)
+          setShowMatch(true)
+          setTimeout(() => setShowMatch(false), 1500)
+        }
+      })
+    }
 
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1)
