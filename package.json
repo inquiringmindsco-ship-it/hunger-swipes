@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "tsc --noEmit",
     "test": "node --test --experimental-strip-types tests/*.test.ts",
-    "test:security": "node --env-file=.env.local scripts/seller-security-audit.mjs"
+    "test:security": "node --env-file=.env.local scripts/seller-security-audit.mjs",
+    "places:import": "node --env-file=.env.local scripts/import-places.mjs"
   },
   "dependencies": {
     "@stripe/stripe-js": "^9.0.1",

@@ -1,0 +1,16 @@
+'use client'
+import { FormEvent, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { authFetch } from '@/lib/auth-fetch'
+import { useAuth } from '@/lib/auth'
+
+export default function ClaimPage() {
+  const router = useRouter(); const { user, loading } = useAuth()
+  const [placeId, setPlaceId] = useState(''); const [place, setPlace] = useState<any>(null)
+  const [email, setEmail] = useState(''); const [phone, setPhone] = useState(''); const [note, setNote] = useState(''); const [message, setMessage] = useState(''); const [busy, setBusy] = useState(false)
+  useEffect(() => { const id = new URLSearchParams(window.location.search).get('place') || ''; setPlaceId(id); if (id) fetch(`/api/places?id=${encodeURIComponent(id)}`).then(r=>r.json()).then(d=>setPlace(d.places?.[0] || null)) }, [])
+  useEffect(() => { if (!loading && !user) router.replace(`/auth?next=${encodeURIComponent(`/claim?place=${placeId}`)}`) }, [loading, user, router, placeId])
+  async function submit(event: FormEvent) { event.preventDefault(); setBusy(true); setMessage(''); try { const response = await authFetch('/api/place-claims',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({place_id:placeId,business_email:email,business_phone:phone,evidence_note:note})}); const data=await response.json(); if(!response.ok) throw new Error(data.error); setMessage('Claim submitted for review. Ownership was not changed.') } catch(error:any){setMessage(error.message||'Claim failed')} finally{setBusy(false)} }
+  return <div className="min-h-screen bg-[#0D0D0D] px-4 py-10 text-white"><main className="mx-auto max-w-md"><Link href="/nearby" className="text-sm text-[#FF5722]">← Nearby food</Link><h1 className="mt-6 text-3xl font-black">Claim this Place</h1><p className="mt-2 text-gray-400">{place ? `${place.name} · ${place.address || place.location_text}` : 'Select a valid Place from Nearby.'}</p><p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-300">Claims require review. Submitting this form does not make the Place official or transfer ownership.</p>{message && <p role="status" className="mt-4 rounded-xl bg-white/5 p-3 text-sm">{message}</p>}<form onSubmit={submit} className="mt-6 space-y-4"><div><label htmlFor="email" className="mb-1 block text-sm font-bold">Business email</label><input id="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3" /></div><div><label htmlFor="phone" className="mb-1 block text-sm font-bold">Business phone</label><input id="phone" type="tel" value={phone} onChange={e=>setPhone(e.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3" /></div><div><label htmlFor="note" className="mb-1 block text-sm font-bold">How can we verify you?</label><textarea id="note" value={note} onChange={e=>setNote(e.target.value)} maxLength={1500} rows={4} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3" placeholder="Your role and supporting details" /></div><button disabled={busy||!placeId} className="w-full rounded-xl bg-[#FF5722] py-4 font-black disabled:opacity-50">{busy?'Submitting…':'Submit claim for review'}</button></form></main></div>
+}
