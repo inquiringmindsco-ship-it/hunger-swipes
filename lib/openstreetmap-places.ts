@@ -96,7 +96,6 @@ export async function fetchOsmFoodPlaces(latitude: number, longitude: number, ra
     : [
         'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
         'https://overpass.private.coffee/api/interpreter',
-        'https://overpass-api.de/api/interpreter',
       ]
   // A bounding-box query is substantially cheaper for shared Overpass instances;
   // the final filter below restores the requested circular radius precisely.
