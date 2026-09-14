@@ -1,0 +1,5 @@
+import Link from 'next/link'
+
+export default function TermsPage() {
+  return <main className="mx-auto min-h-screen max-w-2xl bg-white px-6 py-12 text-gray-900"><Link href="/" className="text-[#FF5722]">← HungerSwipes</Link><h1 className="mt-6 text-3xl font-black">Terms of Use</h1><p className="mt-4">HungerSwipes helps people discover food through community food posts, official seller dishes, and a directory of real Places. An unclaimed Place is not a partner, verified seller, or endorsement.</p><p className="mt-4">Users may upload only food images they own or are authorized to share. Place imagery supplied by an external provider remains that provider’s content and is never treated as a HungerSwipes food post.</p><p className="mt-4">When Google Maps Platform content is displayed, your use is also subject to the <a className="text-[#FF5722] underline" href="https://maps.google.com/help/terms_maps/" target="_blank" rel="noreferrer">Google Maps/Google Earth Additional Terms</a>.</p><p className="mt-4">Place directory data may include OpenStreetMap data © OpenStreetMap contributors under ODbL.</p></main>
+}

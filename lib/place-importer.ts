@@ -38,6 +38,18 @@ function toDatabasePlace(place: ProviderPlace, areaLabel: string) {
   }
 }
 
+async function loadAllPlaces(admin: NonNullable<ReturnType<typeof getSupabaseAdmin>>) {
+  const rows: any[] = []
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await admin.from('places').select('*').order('id').range(from, from + pageSize - 1)
+    if (error) throw new Error(error.message)
+    rows.push(...(data || []))
+    if (!data || data.length < pageSize) break
+  }
+  return rows
+}
+
 export async function runPlaceImport(input: ImportInput) {
   const admin = getSupabaseAdmin()
   if (!admin) throw new Error('Database not configured')
@@ -48,20 +60,21 @@ export async function runPlaceImport(input: ImportInput) {
   if (runError) throw new Error(runError.message)
   try {
     const providerPlaces = await fetchOsmFoodPlaces(input.latitude, input.longitude, input.radiusMeters)
-    const { data: existing, error: existingError } = await admin.from('places').select('*')
-    if (existingError) throw new Error(existingError.message)
-    let newCount = 0, updatedCount = 0, duplicateCount = 0, claimedSkippedCount = 0
+    const existing = await loadAllPlaces(admin)
+    let newCount = 0, updatedCount = 0, unchangedCount = 0, duplicateCount = 0, claimedSkippedCount = 0
     const errors: string[] = []
     const preview: Array<ProviderPlace & { action: string; existingId?: string }> = []
     for (const place of providerPlaces) {
-      const duplicate = findDuplicate(existing || [], place)
+      const duplicate = findDuplicate(existing, place)
       const record = toDatabasePlace(place, input.areaLabel)
+      if (duplicate && !place.address && !place.city && !place.state) record.location_text = duplicate.location_text
       const claimed = duplicate && (duplicate.claimed_status !== 'unclaimed' || duplicate.claimed_seller_id)
       const sameProviderPlace = duplicate && duplicate.external_source === place.externalSource && duplicate.external_source_id === place.externalSourceId
-      const action = claimed ? 'claimed_skip' : duplicate ? (sameProviderPlace && hasProviderChanges(duplicate, record) ? 'update' : 'duplicate') : 'new'
+      const action = claimed ? 'claimed_skip' : duplicate ? (sameProviderPlace ? (hasProviderChanges(duplicate, record) ? 'update' : 'unchanged') : 'duplicate') : 'new'
       preview.push({ ...place, action, ...(duplicate ? { existingId: duplicate.id } : {}) })
       if (input.mode === 'preview') continue
       if (claimed) { claimedSkippedCount++; continue }
+      if (action === 'unchanged') { unchangedCount++; continue }
       if (action === 'duplicate') { duplicateCount++; continue }
       if (duplicate) {
         const updates = Object.fromEntries(Object.entries(record).filter(([, value]) => value !== null && value !== ''))
@@ -70,11 +83,11 @@ export async function runPlaceImport(input: ImportInput) {
       } else {
         const { data, error } = await admin.from('places').insert(record).select().single()
         if (error) errors.push(`${place.externalSourceId}: ${error.message}`)
-        else { newCount++; (existing || []).push(data) }
+        else { newCount++; existing.push(data) }
       }
     }
-    const summary = { found: providerPlaces.length, new: newCount, updated: updatedCount, duplicatesSkipped: duplicateCount, claimedSkipped: claimedSkippedCount, errors }
-    await admin.from('place_import_runs').update({ status: errors.length ? 'failed' : 'completed', found_count: summary.found, new_count: newCount, updated_count: updatedCount, duplicate_count: duplicateCount, claimed_skipped_count: claimedSkippedCount, error_count: errors.length, errors, completed_at: new Date().toISOString() }).eq('id', run.id)
+    const summary = { found: providerPlaces.length, new: newCount, updated: updatedCount, unchanged: unchangedCount, duplicatesSkipped: duplicateCount, claimedSkipped: claimedSkippedCount, errors }
+    await admin.from('place_import_runs').update({ status: errors.length ? 'failed' : 'completed', found_count: summary.found, new_count: newCount, updated_count: updatedCount, unchanged_count: unchangedCount, duplicate_count: duplicateCount, claimed_skipped_count: claimedSkippedCount, error_count: errors.length, errors, completed_at: new Date().toISOString() }).eq('id', run.id)
     return { runId: run.id, source: OSM_SOURCE, area: input.areaLabel, mode: input.mode, summary, places: preview }
   } catch (error: any) {
     await admin.from('place_import_runs').update({ status: 'failed', error_count: 1, errors: [error.message], completed_at: new Date().toISOString() }).eq('id', run.id)

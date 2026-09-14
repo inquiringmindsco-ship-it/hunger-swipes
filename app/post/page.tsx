@@ -43,7 +43,8 @@ export default function CommunityPostPage() {
         if (requestedPlaceId && !query.trim()) params.set('id', requestedPlaceId)
         if (query.trim()) params.set('q', query.trim())
         if (coordinates) { params.set('lat', String(coordinates.lat)); params.set('lng', String(coordinates.lng)) }
-        const response = await fetch(`/api/places?${params}`)
+        const endpoint = coordinates && !query.trim() && !requestedPlaceId ? `/api/nearby?lat=${coordinates.lat}&lng=${coordinates.lng}&radius=15` : `/api/places?${params}`
+        const response = await fetch(endpoint)
         const data = await response.json()
         setPlaces(data.places || [])
       } catch { setPlaces([]) } finally { setSearching(false) }

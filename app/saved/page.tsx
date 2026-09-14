@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Clock3, ExternalLink, MapPin, Phone, Trash2 } from 'lucide-react'
-import { BrandMark, GetItIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
+import { ArrowLeft, Clock3, MapPin, Phone, Trash2 } from 'lucide-react'
+import { BrandMark, WantItIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
+import PlaceActions from '@/app/components/PlaceActions'
 import { useAuth } from '@/lib/auth'
 import { authFetch } from '@/lib/auth-fetch'
 
@@ -30,6 +31,13 @@ interface SavedItem {
       delivery_available?: boolean
       ordering_method?: string
       ordering_url?: string
+      address?: string
+      city?: string
+      state?: string
+      latitude?: number
+      longitude?: number
+      website?: string
+      order_url?: string
     }
   }
 }
@@ -118,28 +126,8 @@ export default function SavedPage() {
                       {seller.phone && <div className="flex items-center gap-1"><Phone size={14} className="text-[#FF5722]" /> {seller.phone}</div>}
                     </div>
 
-                    <div className="flex gap-2 mt-4">
-                      {seller.ordering_url ? (
-                        <a
-                          href={seller.ordering_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-1 py-3 bg-[#FF5722] text-white rounded-xl font-bold text-center flex items-center justify-center gap-1"
-                        >
-                          <GetItIcon size={17} /> Get it <ExternalLink size={14} aria-hidden="true" />
-                        </a>
-                      ) : seller.phone ? (
-                        <a
-                          href={`tel:${seller.phone}`}
-                          className="flex-1 py-3 bg-[#FF5722] text-white rounded-xl font-bold text-center flex items-center justify-center gap-1"
-                        >
-                          <Phone size={16} /> Call
-                        </a>
-                      ) : (
-                        <div className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-semibold text-center">
-                          Contact seller in person
-                        </div>
-                      )}
+                    <div className="mt-4 flex items-center gap-2 text-white">
+                      <div className="flex-1"><PlaceActions place={{ ...seller, name: seller.business_name, order_url: seller.order_url || seller.ordering_url }} compact /></div>
                       <IconButton
                         label={`Remove ${dish.name} from saved dishes`}
                         onClick={() => removeSaved(dish.id, item.content_kind)}

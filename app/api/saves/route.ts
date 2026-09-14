@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const communityIds = (rows || []).filter((r: any) => r.content_kind === 'community').map((r: any) => r.content_id)
     const [officialResult, communityResult] = await Promise.all([
       officialIds.length ? admin.from('dishes').select(`*,seller:sellers!inner(id,business_name,seller_type,location_text,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status)`).in('id', officialIds).eq('status', 'active').eq('sellers.status', 'active') : Promise.resolve({ data: [], error: null }),
-      communityIds.length ? admin.from('community_food_posts').select(`*,place:places!inner(id,name,location_text,status)`).in('id', communityIds).eq('status', 'active').eq('places.status', 'active') : Promise.resolve({ data: [], error: null }),
+      communityIds.length ? admin.from('community_food_posts').select(`*,place:places!inner(id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,status)`).in('id', communityIds).eq('status', 'active').eq('places.status', 'active') : Promise.resolve({ data: [], error: null }),
     ])
     if (officialResult.error || communityResult.error) return NextResponse.json({ error: officialResult.error?.message || communityResult.error?.message }, { status: 500 })
     const content = new Map<string, any>()

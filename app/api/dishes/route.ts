@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       else if (priceRange === '$$$') officialQuery = officialQuery.gte('price', 24)
     }
 
-    let communityQuery = admin.from('community_food_posts').select(`*, place:places!inner(id,name,location_text,status)`)
+    let communityQuery = admin.from('community_food_posts').select(`*, place:places!inner(id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,status)`)
       .eq('status', 'active').eq('places.status', 'active').order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false }).limit(limit * 2)
     if (cuisineTag) communityQuery = communityQuery.contains('tags', [cuisineTag])
     if (dietaryTag) communityQuery = communityQuery.contains('tags', [dietaryTag])

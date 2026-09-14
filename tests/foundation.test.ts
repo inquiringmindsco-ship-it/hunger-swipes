@@ -4,6 +4,8 @@ import { boundedLimit, isHttpsUrl, normalizeContentKind } from '../lib/food.ts'
 import { hasValidImageSignature, MAX_IMAGE_BYTES, validateImageMetadata } from '../lib/upload-validation.ts'
 import { mapOsmElement } from '../lib/openstreetmap-places.ts'
 import { findDuplicate } from '../lib/place-dedup.ts'
+import { formatPhone, getAppleMapsUrl, getCallUrl, getGoogleMapsUrl } from '../lib/place-actions.ts'
+import { scoreGoogleCandidate } from '../lib/google-places.ts'
 
 test('content kinds reject arbitrary table selectors', () => {
   assert.equal(normalizeContentKind('official'), 'official')
@@ -43,4 +45,21 @@ test('place deduplication prefers provider ID and falls back to name/address', (
   const provider = mapOsmElement({ type: 'node', id: 123, lat: 38.74, lon: -90.3, tags: { name: 'Local Cafe', amenity: 'cafe', 'addr:housenumber': '10', 'addr:street': 'Main St' } })!
   assert.equal(findDuplicate([{ id: 'a', external_source: 'openstreetmap', external_source_id: 'node/123' }], provider)?.id, 'a')
   assert.equal(findDuplicate([{ id: 'b', name: 'LOCAL CAFE', address: '10 Main St', latitude: 0, longitude: 0 }], provider)?.id, 'b')
+})
+
+test('place actions preserve exact chain locations and normalize US phone numbers', () => {
+  const north = { name: "Domino's", address: '10486 West Florissant Avenue', latitude: 38.758, longitude: -90.28, phone: '+1 314-555-0101' }
+  const south = { name: "Domino's", address: '9432 Natural Bridge Road', latitude: 38.71, longitude: -90.36, phone: '314.555.0202' }
+  assert.notEqual(getGoogleMapsUrl(north), getGoogleMapsUrl(south))
+  assert.notEqual(getAppleMapsUrl(north), getAppleMapsUrl(south))
+  assert.equal(getCallUrl(north), 'tel:+13145550101')
+  assert.equal(getCallUrl(south), 'tel:3145550202')
+  assert.equal(formatPhone(north.phone), '(314) 555-0101')
+  assert.equal(getCallUrl({ name: 'No Phone' }), null)
+})
+
+test('Google matching requires exact normalized name and close coordinates', () => {
+  const place = { name: 'Local Cafe', address: '10 Main Street', latitude: 38.74, longitude: -90.3 }
+  assert.ok(scoreGoogleCandidate(place, { id: 'good', displayName: { text: 'Local Cafe' }, formattedAddress: '10 Main Street, Ferguson, MO', location: { latitude: 38.7401, longitude: -90.3001 } }) >= 0.85)
+  assert.equal(scoreGoogleCandidate(place, { id: 'wrong', displayName: { text: 'Other Cafe' }, formattedAddress: '10 Main Street', location: { latitude: 38.7401, longitude: -90.3001 } }), 0)
 })

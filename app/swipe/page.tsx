@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES, SPICE_LEVELS } from '@/lib/tags'
 import { getTierBadge } from '@/lib/metadata-scoring'
-import { Bookmark, ExternalLink, Leaf, Phone, Settings, SlidersHorizontal, Sprout, WheatOff } from 'lucide-react'
-import { BrandMark, GetItIcon, PassIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
+import { Bookmark, Leaf, Settings, SlidersHorizontal, Sprout, WheatOff } from 'lucide-react'
+import { BrandMark, PassIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
+import PlaceActions from '@/app/components/PlaceActions'
 import { useAuth } from '@/lib/auth'
 import { authFetch, optionalAuthFetch } from '@/lib/auth-fetch'
 
@@ -40,7 +41,7 @@ interface FoodDish {
   healthCategory?: string
   completenessScore?: number
   metadataQualityStatus?: string
-  seller: { id: string; business_name: string; location_text?: string; phone?: string; ordering_method?: string; ordering_url?: string }
+  seller: { id: string; business_name: string; location_text?: string; address?: string; city?: string; state?: string; latitude?: number; longitude?: number; phone?: string; website?: string; order_url?: string; ordering_method?: string; ordering_url?: string }
 }
 
 function priceToRange(price?: number): string {
@@ -601,16 +602,7 @@ export default function SwipePage() {
             <p className="text-gray-600 mb-4">Added to your matches</p>
             <p className="text-lg font-semibold text-white">{currentDish.dish}</p>
             <p className="text-gray-600">{currentDish.restaurant}</p>
-            {currentDish.seller?.phone && (
-              <a href={`tel:${currentDish.seller.phone}`} className="mt-4 inline-flex min-h-11 items-center gap-2 px-4 py-2 bg-[#10B981] text-white rounded-full text-sm font-semibold">
-                <Phone size={17} aria-hidden="true" /> Call to order
-              </a>
-            )}
-            {currentDish.seller?.ordering_url && (
-              <a href={currentDish.seller.ordering_url} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center gap-2 px-4 py-2 bg-[#FFD700] text-[#0D0D0D] rounded-full text-sm font-semibold">
-                <GetItIcon size={17} /> Get it online <ExternalLink size={14} aria-hidden="true" />
-              </a>
-            )}
+            <div className="mt-4 flex justify-center"><PlaceActions place={{ ...currentDish.seller, name: currentDish.seller.business_name, order_url: currentDish.seller.order_url || currentDish.seller.ordering_url }} /></div>
           </div>
         </div>
       )}
