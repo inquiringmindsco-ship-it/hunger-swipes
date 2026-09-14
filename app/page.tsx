@@ -9,7 +9,7 @@ import {
 } from '@/app/components/HwIcon'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import { Monitor, Smartphone } from 'lucide-react'
-import { getEaterId } from '@/lib/eater-id'
+import { authFetch } from '@/lib/auth-fetch'
 
 // ============================================================
 // SPLASH SCREEN — animated logo on load
@@ -102,10 +102,10 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
 // ============================================================
 function HomeTab() {
   const stats = [
-    { val: '$847K', label: 'Paid to Creators', color: '#FFD500' },
-    { val: '156K', label: 'Orders Driven', color: '#FF6A00' },
-    { val: '12K+', label: 'Photos', color: '#FF6A00' },
-    { val: '4.9★', label: 'Rating', color: '#10B981' },
+    { val: 'Real', label: 'Food photos', color: '#FFD500' },
+    { val: 'Local', label: 'Places', color: '#FF6A00' },
+    { val: 'Clear', label: 'Community labels', color: '#FF6A00' },
+    { val: 'Free', label: 'To discover', color: '#10B981' },
   ]
 
   return (
@@ -128,7 +128,7 @@ function HomeTab() {
         <div className="h-32 bg-gradient-to-br from-[#FF6A00]/30 to-[#FFD500]/10 flex items-center px-5">
           <div className="flex-1">
             <p className="text-white/60 text-xs font-medium uppercase tracking-wider mb-1">Your next meal</p>
-            <h2 className="text-2xl font-black text-white leading-tight">Swipe. Order.<br/>Earn forever.</h2>
+            <h2 className="text-2xl font-black text-white leading-tight">Swipe food.<br/>Find your next meal.</h2>
           </div>
           <div className="text-5xl"><ForkFlame size={64} /></div>
         </div>
@@ -160,7 +160,7 @@ function HomeTab() {
         {[
           { icon: <Camera size={18} />, label: 'Browse Food', desc: 'Discover dishes to order', href: '/swipe', color: '#FF6A00' },
           { icon: <ForkFlame size={18} />, label: 'Nearby Vendors', desc: 'Find discounts near you', href: '/nearby', color: '#FFD500' },
-          { icon: <Dollar size={18} />, label: 'Earn as Creator', desc: 'Get paid for your photos', href: '/auth', color: '#10B981' },
+          { icon: <Dollar size={18} />, label: 'Post What You Ate', desc: 'Share a real community food photo', href: '/post', color: '#10B981' },
         ].map(item => (
           <Link
             key={item.label}
@@ -197,8 +197,8 @@ function DiscoverTab() {
           { label: 'Swipe on Food', desc: 'Tinder for food. Find what to eat.', icon: <ForkFlame size={20} />, href: '/swipe', color: '#FF6A00' },
           { label: 'Nearby Vendors', desc: 'Vendors near you with discount codes', icon: <MapPin size={20} />, href: '/nearby', color: '#FFD500' },
           { label: 'All Vendors', desc: 'Browse all restaurants & food stalls', icon: <Plate size={20} />, href: '/vendors', color: '#FF6A00' },
-          { label: 'Top Creators', desc: 'See who\'s earning the most', icon: <Trophy size={20} />, href: '/leaderboard', color: '#FFD500' },
-          { label: 'Social Moods', desc: 'See what people are craving', icon: <Sparkle size={20} />, href: '/social', color: '#10B981' },
+          { label: 'Trending Food', desc: 'See food people want most', icon: <Trophy size={20} />, href: '/leaderboard', color: '#FFD500' },
+          { label: 'Community Posts', desc: 'Real people posting what they ate', icon: <Sparkle size={20} />, href: '/post', color: '#10B981' },
         ].map(item => (
           <Link
             key={item.label}
@@ -227,49 +227,38 @@ function UploadTab() {
   return (
     <div className="pb-24">
       <div className="px-4 pt-3 pb-4">
-        <h1 className="text-2xl font-black">Post & Earn</h1>
-        <p className="text-gray-500 text-sm">Turn your food photos into income</p>
+        <h1 className="text-2xl font-black">Post Food</h1>
+        <p className="text-gray-500 text-sm">Share what you actually ate</p>
       </div>
       <div className="px-4 space-y-3">
         <div className="bg-gradient-to-br from-[#FFD500]/20 to-transparent rounded-3xl p-6 border border-[#FFD500]/20">
           <div className="flex items-center gap-2 mb-3">
-            <Dollar size={24} style={{ color: '#FFD500' }} />
-            <span className="font-black text-[#FFD500] text-lg">Earn per order</span>
+            <Camera size={24} style={{ color: '#FFD500' }} />
+            <span className="font-black text-[#FFD500] text-lg">Community food posts</span>
           </div>
           <p className="text-gray-600 text-sm leading-relaxed mb-4">
-            Upload a food photo. Set your commission rate. Every time someone orders from it, you earn — forever.
+            Post a real photo, name the food, and connect it to the real place where you found it. Posts are labeled as community content.
           </p>
-          <div className="flex gap-3 text-center">
-            {[
-              { label: '5%', sub: 'Basic' },
-              { label: '10%', sub: 'Standard' },
-              { label: '20%', sub: 'Max' },
-            ].map(tier => (
-              <div key={tier.label} className="flex-1 bg-black/30 rounded-xl py-2">
-                <div className="text-[#FFD500] font-black text-lg">{tier.label}</div>
-                <div className="text-gray-500 text-[10px]">{tier.sub}</div>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs font-semibold text-[#FFD500]">Real food · Real places · Real people</p>
         </div>
 
         <Link
-          href="/auth"
+          href="/post"
           className="flex items-center gap-3 bg-[#FF6A00] rounded-2xl p-4 font-bold text-white justify-center hover:bg-[#E05A00] transition"
         >
           <Upload size={20} /> Start Posting
         </Link>
 
         <Link
-          href="/creator"
+          href="/account"
           className="flex items-center gap-3 bg-[#111] rounded-2xl p-4 border border-white/5 hover:bg-[#141414] transition"
         >
           <div className="w-10 h-10 rounded-xl bg-[#FF6A00]/20 flex items-center justify-center" style={{ color: '#FF6A00' }}>
             <Camera size={18} />
           </div>
           <div className="flex-1">
-            <p className="font-bold text-sm text-white">Creator Dashboard</p>
-            <p className="text-xs text-gray-500">View your stats & earnings</p>
+            <p className="font-bold text-sm text-white">Your Account</p>
+            <p className="text-xs text-gray-500">Manage your identity and seller listing</p>
           </div>
           <ArrowRight size={16} style={{ color: '#555' }} />
         </Link>
@@ -287,8 +276,7 @@ function MatchesTab() {
   useEffect(() => {
     const loadMatches = async () => {
       try {
-        const eaterId = getEaterId()
-        const res = await fetch(`/api/saves?eaterId=${encodeURIComponent(eaterId)}`)
+        const res = await authFetch('/api/saves')
         const data = await res.json()
         if (!res.ok) return
         setMatches((data.saved || []).map((item: any) => ({
@@ -363,7 +351,7 @@ function ProfileTab() {
             <ForkFlame size={40} />
           </div>
           <p className="text-white font-bold text-lg">Hungry Eater</p>
-          <p className="text-gray-500 text-sm mb-4">Join to start earning</p>
+          <p className="text-gray-500 text-sm mb-4">Sign in to save and post real food</p>
           <Link href="/auth" className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#FF6A00] text-white rounded-full font-bold text-sm hover:bg-[#E05A00] transition">
             Sign Up Free
           </Link>
@@ -371,9 +359,9 @@ function ProfileTab() {
 
         {[
           { icon: <Star size={18} />, label: 'Leaderboard', href: '/leaderboard', color: '#FFD500' },
-          { icon: <Note size={18} />, label: 'My Visits', href: '/visits', color: '#10B981' },
+          { icon: <Note size={18} />, label: 'Post Food', href: '/post', color: '#10B981' },
           { icon: <Heart size={18} />, label: 'Preferences', href: '/preferences', color: '#FF6A00' },
-          { icon: <Grid size={18} />, label: 'Social Moods', href: '/social', color: '#FF6A00' },
+          { icon: <Grid size={18} />, label: 'Account', href: '/account', color: '#FF6A00' },
         ].map(item => (
           <Link
             key={item.label}

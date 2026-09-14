@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
+import { hasValidImageSignature, validateImageMetadata } from '@/lib/upload-validation'
 
 const BUCKET = 'dish-photos'
 
@@ -12,6 +13,8 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null
     const folder = (formData.get('folder') as string) || 'uploads'
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    const validation = validateImageMetadata(file.type, file.size)
+    if (!validation.ok) return NextResponse.json({ error: validation.error }, { status: 400 })
 
     const admin = getSupabaseAdmin()
     if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
@@ -23,7 +26,10 @@ export async function POST(request: NextRequest) {
     }
 
     const bytes = await file.arrayBuffer()
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    if (!hasValidImageSignature(file.type, new Uint8Array(bytes))) {
+      return NextResponse.json({ error: 'The file content does not match its image type' }, { status: 400 })
+    }
+    const ext = validation.extension
     const safeFolder = folder === 'seller-logos' ? 'seller-logos' : 'dish-photos'
     const path = `${user.id}/${safeFolder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 

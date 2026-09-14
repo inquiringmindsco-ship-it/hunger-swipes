@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
+import { authFetch } from '@/lib/auth-fetch'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -32,7 +33,7 @@ export default function AuthPage() {
 
   const recordReferral = async (eventType: 'signup', sellerId: string) => {
     try {
-      await fetch('/api/referrals', {
+      await authFetch('/api/referrals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ seller_id: sellerId, event_type: eventType }),

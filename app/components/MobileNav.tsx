@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth, getAuthToken } from '@/lib/auth'
 import { useEffect, useState } from 'react'
-import { Heart, User, Store, Flame } from 'lucide-react'
+import { Heart, User, Store, Flame, Camera } from 'lucide-react'
 
 function SellerLink() {
+  const pathname = usePathname() || ''
   const { user, loading } = useAuth()
   const [sellerId, setSellerId] = useState<string | null>(null)
   const [checking, setChecking] = useState(true)
@@ -40,9 +41,10 @@ function SellerLink() {
 
   const label = sellerId ? 'Dashboard' : 'Sell'
   const href = sellerId ? `/seller/dashboard?id=${sellerId}` : '/join'
+  const active = pathname.startsWith('/seller/dashboard') || pathname === '/join'
 
   return (
-    <Link href={href} className="flex flex-col items-center gap-0.5 px-3 py-1 text-gray-500 hover:text-white transition">
+    <Link href={href} className={`flex flex-col items-center gap-0.5 px-3 py-1 transition ${active ? 'text-[#FF5722]' : 'text-gray-500 hover:text-white'}`}>
       <Store size={22} />
       <span className="text-[10px] font-semibold">{label}</span>
     </Link>
@@ -55,6 +57,7 @@ export default function MobileNav() {
   const navItems = [
     { href: '/swipe', label: 'Swipe', icon: Flame },
     { href: '/saved', label: 'Saved', icon: Heart },
+    { href: '/post', label: 'Post', icon: Camera },
   ]
 
   return (

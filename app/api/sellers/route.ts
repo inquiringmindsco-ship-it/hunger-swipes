@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
+import { isHttpsUrl } from '@/lib/food'
 
 const PUBLIC_SELLER_FIELDS = 'id,business_name,seller_type,description,logo_url,location_text,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status'
 
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
     if (!business_name || !seller_type) {
       return NextResponse.json({ error: 'business_name and seller_type are required' }, { status: 400 })
     }
+    if (ordering_url && !isHttpsUrl(ordering_url)) return NextResponse.json({ error: 'Ordering URL must use HTTPS' }, { status: 400 })
 
     const admin = getSupabaseAdmin()
     if (!admin) {
@@ -163,6 +165,7 @@ export async function PUT(request: NextRequest) {
     if (Object.keys(update).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }
+    if (update.ordering_url && !isHttpsUrl(update.ordering_url)) return NextResponse.json({ error: 'Ordering URL must use HTTPS' }, { status: 400 })
 
     const { data, error } = await admin
       .from('sellers')

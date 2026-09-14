@@ -15,8 +15,7 @@ const admin = createClient(supabaseUrl, serviceKey, {
 })
 const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const password = `Audit-${runId}-Aa1!`
-const eaterId = `audit-eater-${runId}`
-const created = { users: [], sellers: [], dishes: [] }
+const created = { users: [], sellers: [], dishes: [], storage: [] }
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -55,13 +54,13 @@ async function createUser(label) {
 }
 
 async function cleanup() {
-  await admin.from('saved_dishes').delete().eq('eater_id', eaterId)
-  await admin.from('swipes').delete().eq('eater_id', eaterId)
   if (created.sellers.length > 0) {
     await admin.from('admin_actions').delete().in('target_id', created.sellers)
   }
   for (const id of created.dishes) await admin.from('dishes').delete().eq('id', id)
+  if (created.sellers.length) await admin.from('places').delete().in('legacy_seller_id', created.sellers)
   for (const id of created.sellers) await admin.from('sellers').delete().eq('id', id)
+  if (created.storage.length) await admin.storage.from('dish-photos').remove(created.storage)
   for (const id of created.users) await admin.auth.admin.deleteUser(id)
 }
 
@@ -80,6 +79,13 @@ try {
   assert(sellerA.owner_user_id === userA.id, 'A seller was not bound to User A')
   assert(sellerA.status === 'pending_review', 'A seller bypassed pending review')
 
+  const photoPath = `${userA.id}/dish-photos/security-${runId}.png`
+  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'))
+  const { error: uploadError } = await admin.storage.from('dish-photos').upload(photoPath, png, { contentType: 'image/png' })
+  if (uploadError) throw uploadError
+  created.storage.push(photoPath)
+  const photoUrl = admin.storage.from('dish-photos').getPublicUrl(photoPath).data.publicUrl
+
   const dishAResponse = await request('/api/dishes', {
     token: userA.token,
     method: 'POST',
@@ -87,7 +93,7 @@ try {
       seller_id: sellerA.id,
       name: `Audit Dish A ${runId}`,
       price: 12.34,
-      photo_url: 'https://hunger-swipes-theta.vercel.app/placeholder-dish.png',
+      photo_url: photoUrl,
       availability: 'available',
       status: 'active',
     },
@@ -155,16 +161,20 @@ try {
   assert(approve.status === 200 && suspend.status === 200 && restore.status === 200, 'Admin moderation action failed')
   console.log('TEST E — PASS: Admin approved, suspended, and restored Seller A')
 
-  const feed = await request(`/api/dishes?eaterId=${encodeURIComponent(eaterId)}`)
+  const feed = await request('/api/dishes')
   assert(feed.status === 200 && feed.payload.dishes.some((dish) => dish.id === dishA.id), 'Public feed did not return active Dish A')
   assert(!('owner_user_id' in feed.payload.dishes.find((dish) => dish.id === dishA.id).seller), 'Public feed exposed seller ownership')
   const swipe = await request('/api/swipe', {
+    token: userB.token,
     method: 'POST',
-    body: { eaterId, dishId: dishA.id, direction: 'right' },
+    body: { eaterId: userA.id, contentId: dishA.id, contentKind: 'official', direction: 'right' },
   })
-  const saves = await request(`/api/saves?eaterId=${encodeURIComponent(eaterId)}`)
-  assert(swipe.status === 200 && saves.status === 200 && saves.payload.saved.some((saved) => saved.dish.id === dishA.id), 'Anonymous swipe/save regression')
-  console.log('TEST F — PASS: Anonymous consumer viewed, swiped, and saved Dish A')
+  const saves = await request('/api/saves', { token: userB.token })
+  const anonymousSwipe = await request('/api/swipe', { method: 'POST', body: { contentId: dishA.id, contentKind: 'official', direction: 'right' } })
+  const { data: recordedSwipe } = await admin.from('food_swipes').select('actor_id').eq('content_id', dishA.id).single()
+  assert(swipe.status === 200 && saves.status === 200 && saves.payload.saved.some((saved) => saved.dish.id === dishA.id), 'Authenticated swipe/save regression')
+  assert(anonymousSwipe.status === 401 && recordedSwipe.actor_id === userB.id, 'Client-controlled identity was accepted')
+  console.log('TEST F — PASS: Swipe/save uses the authenticated account and rejects anonymous identity spoofing')
 
   await userA.client.auth.signOut()
   const { data: signedOut } = await userA.client.auth.getSession()
@@ -181,8 +191,8 @@ try {
     .from('dishes').update({ price: 0.03 }).eq('id', dishA.id).select('id')
   assert(directDishError || directDishUpdate.length === 0, 'RLS allowed direct cross-dish update')
   const { error: directSwipeError } = await userB.client
-    .from('swipes').insert({ eater_id: eaterId, dish_id: dishA.id, direction: 'left' })
-  assert(directSwipeError, 'RLS allowed direct swipe-table mutation')
+    .from('food_swipes').insert({ actor_id: userB.id, content_kind: 'official', content_id: dishA.id, direction: 'left' })
+  assert(directSwipeError, 'RLS allowed direct food_swipes mutation')
   console.log('RLS — PASS: direct seller, dish, and swipe mutations were blocked')
 } finally {
   await cleanup()

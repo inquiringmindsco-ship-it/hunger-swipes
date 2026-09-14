@@ -3,6 +3,7 @@
 import { useEffect, Suspense, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
+import { authFetch } from '@/lib/auth-fetch'
 
 function CallbackContent() {
   const router = useRouter()
@@ -36,14 +37,12 @@ function CallbackContent() {
 
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
-          localStorage.setItem('hungerswipes_user', JSON.stringify(session.user))
-
           // Record referral signup conversion if next URL has a ref
           const nextParams = new URLSearchParams(next.split('?')[1])
           const refSellerId = nextParams.get('ref')
           if (refSellerId) {
             try {
-              await fetch('/api/referrals', {
+              await authFetch('/api/referrals', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ seller_id: refSellerId, event_type: 'signup' }),

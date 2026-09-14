@@ -2,17 +2,19 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES, SPICE_LEVELS } from '@/lib/tags'
 import { getTierBadge } from '@/lib/metadata-scoring'
-import { getEaterId } from '@/lib/eater-id'
 import { Bookmark, ExternalLink, Leaf, Phone, Settings, SlidersHorizontal, Sprout, WheatOff } from 'lucide-react'
 import { BrandMark, GetItIcon, PassIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
 import { useAuth } from '@/lib/auth'
+import { authFetch, optionalAuthFetch } from '@/lib/auth-fetch'
 
 interface FoodDish {
   id: string
+  contentKind: 'official' | 'community'
   imageUrl: string
   restaurant: string
   location: string
@@ -49,6 +51,7 @@ function priceToRange(price?: number): string {
 }
 
 export default function SwipePage() {
+  const router = useRouter()
   const [dishes, setDishes] = useState<FoodDish[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [lastSwipe, setLastSwipe] = useState<'left' | 'right' | null>(null)
@@ -56,7 +59,6 @@ export default function SwipePage() {
   const [showMatch, setShowMatch] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [eaterId, setEaterId] = useState('')
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
@@ -67,18 +69,19 @@ export default function SwipePage() {
     spiceLevel: 0,
   })
   const [feedTab, setFeedTab] = useState<'for-you' | 'nearby' | 'trending'>('for-you')
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   useEffect(() => {
     localStorage.removeItem('hungerswipes_matches')
-    const id = getEaterId()
-    setEaterId(id)
-    fetchDishes(id)
-    loadSavedCount(id)
-  }, [])
+    if (authLoading) return
+    fetchDishes()
+    if (user) loadSavedCount()
+    else setSavedCount(0)
+  }, [authLoading, user?.id])
 
   const mapDish = (d: any): FoodDish => ({
     id: d.id,
+    contentKind: d.content_kind || 'official',
     imageUrl: d.photo_url,
     restaurant: d.seller.business_name,
     location: d.seller.location_text || '',
@@ -107,19 +110,19 @@ export default function SwipePage() {
     seller: d.seller,
   })
 
-  const fetchDishes = async (requestedEaterId = eaterId) => {
+  const fetchDishes = async (nextFilters = filters, nextMode = feedTab) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       params.set('limit', '20')
-      if (requestedEaterId) params.set('eaterId', requestedEaterId)
-      if (filters.cuisine) params.set('cuisineTag', filters.cuisine)
-      if (filters.dietary) params.set('dietaryTag', filters.dietary)
-      if (filters.health) params.set('healthCategory', filters.health)
-      if (filters.priceRange) params.set('priceRange', filters.priceRange)
+      params.set('mode', nextMode)
+      if (nextFilters.cuisine) params.set('cuisineTag', nextFilters.cuisine)
+      if (nextFilters.dietary) params.set('dietaryTag', nextFilters.dietary)
+      if (nextFilters.health) params.set('healthCategory', nextFilters.health)
+      if (nextFilters.priceRange) params.set('priceRange', nextFilters.priceRange)
 
       const query = params.toString() ? `?${params.toString()}` : ''
-      const res = await fetch(`/api/dishes${query}`)
+      const res = await optionalAuthFetch(`/api/dishes${query}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Dish feed unavailable')
       setDishes((data.dishes || []).map(mapDish))
@@ -132,10 +135,9 @@ export default function SwipePage() {
     }
   }
 
-  const loadSavedCount = async (id = eaterId) => {
-    if (!id) return
+  const loadSavedCount = async () => {
     try {
-      const res = await fetch(`/api/saves?eaterId=${encodeURIComponent(id)}`)
+      const res = await authFetch('/api/saves')
       const data = await res.json()
       setSavedCount(res.ok && Array.isArray(data.saved) ? data.saved.length : 0)
     } catch {
@@ -145,19 +147,18 @@ export default function SwipePage() {
 
   const applyFilters = () => {
     setShowFilters(false)
-    fetchDishes()
+    fetchDishes(filters, feedTab)
   }
 
-  const recordSwipe = async (dishId: string, direction: 'left' | 'right') => {
-    if (!eaterId) return false
+  const recordSwipe = async (dish: FoodDish, direction: 'left' | 'right') => {
     try {
-      const res = await fetch('/api/swipe', {
+      const res = await authFetch('/api/swipe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            dishId,
+            contentId: dish.id,
+            contentKind: dish.contentKind,
             direction,
-            eaterId,
           })
       })
       return res.ok
@@ -169,11 +170,15 @@ export default function SwipePage() {
 
   const handleSwipe = useCallback((direction: 'left' | 'right') => {
     if (!dishes[currentIndex]) return
+    if (!user) {
+      router.push('/auth?next=/swipe')
+      return
+    }
 
     const currentDish = dishes[currentIndex]
     setLastSwipe(direction)
 
-    void recordSwipe(currentDish.id, direction).then((saved) => {
+    void recordSwipe(currentDish, direction).then((saved) => {
       if (saved && direction === 'right') {
         setSavedCount((count) => count + 1)
         setShowMatch(true)
@@ -186,7 +191,16 @@ export default function SwipePage() {
       setLastSwipe(null)
       setDragOffset({ x: 0, y: 0 })
     }, 300)
-  }, [currentIndex, dishes, eaterId])
+  }, [currentIndex, dishes, user, router])
+
+  useEffect(() => {
+    const dish = dishes[currentIndex]
+    if (!dish || !user) return
+    void authFetch('/api/impressions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contentId: dish.id, contentKind: dish.contentKind }),
+    })
+  }, [currentIndex, dishes, user?.id])
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault()
@@ -252,7 +266,7 @@ export default function SwipePage() {
           <h1 className="text-3xl font-bold text-white mb-4">No dishes are live yet.</h1>
           <p className="text-gray-400 mb-8">Check back soon, or invite a food seller to publish the first dish.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button onClick={() => fetchDishes()} className="min-h-11 px-6 py-3 bg-white/10 text-white rounded-full font-semibold hover:bg-white/20 transition">
+            <button onClick={() => fetchDishes(filters, feedTab)} className="min-h-11 px-6 py-3 bg-white/10 text-white rounded-full font-semibold hover:bg-white/20 transition">
               Refresh
             </button>
             <Link href="/join" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
@@ -333,7 +347,7 @@ export default function SwipePage() {
             <SlidersHorizontal size={18} aria-hidden="true" /> Filters
           </button>
           <button
-            onClick={() => { setFilters({...filters, cuisine: ''}); applyFilters() }}
+            onClick={() => { const next = {...filters, cuisine: ''}; setFilters(next); fetchDishes(next, feedTab) }}
             className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
               filters.cuisine ? 'bg-[#FF5722] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
             }`}
@@ -341,7 +355,7 @@ export default function SwipePage() {
             {filters.cuisine || 'Cuisine'}
           </button>
           <button
-            onClick={() => { setFilters({...filters, dietary: ''}); applyFilters() }}
+            onClick={() => { const next = {...filters, dietary: ''}; setFilters(next); fetchDishes(next, feedTab) }}
             className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
               filters.dietary ? 'bg-[#10B981] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
             }`}
@@ -349,7 +363,7 @@ export default function SwipePage() {
             {filters.dietary || 'Dietary'}
           </button>
           <button
-            onClick={() => { setFilters({...filters, health: ''}); applyFilters() }}
+            onClick={() => { const next = {...filters, health: ''}; setFilters(next); fetchDishes(next, feedTab) }}
             className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
               filters.health ? 'bg-[#8B5CF6] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
             }`}
@@ -434,8 +448,7 @@ export default function SwipePage() {
               key={key}
               onClick={() => {
                 setFeedTab(key)
-                setFilters({ ...filters, cuisine: '' })
-                applyFilters()
+                fetchDishes(filters, key)
               }}
               className={`flex-1 min-h-11 py-2 rounded-full font-medium text-sm transition ${
                 feedTab === key ? 'bg-[#FF5722] text-white' : 'text-gray-600 hover:text-white'
@@ -486,6 +499,9 @@ export default function SwipePage() {
                 </div>
               )}
               <div className="absolute top-4 left-4 right-4 flex flex-wrap gap-2">
+                <span className={`px-2 py-1 rounded-full text-xs font-bold ${currentDish.contentKind === 'official' ? 'bg-[#FFD700] text-black' : 'bg-sky-500 text-white'}`}>
+                  {currentDish.contentKind === 'official' ? 'Official dish' : 'Community post'}
+                </span>
                 {currentDish.completenessScore !== undefined && (
                   <span className={`px-2 py-1 rounded-full text-xs font-bold ${tierBadge.bgColor}`} style={{ color: tierBadge.color }}>
                     {tierBadge.label}

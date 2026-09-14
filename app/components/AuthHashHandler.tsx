@@ -15,10 +15,7 @@ export default function AuthHashHandler() {
     const supabase = getSupabase()
     if (!supabase) return
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        localStorage.setItem('hungerswipes_user', JSON.stringify(session.user))
-      }
+    supabase.auth.getSession().then(() => {
       // Remove tokens from URL
       const url = new URL(window.location.href)
       url.hash = ''

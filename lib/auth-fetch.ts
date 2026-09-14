@@ -13,3 +13,13 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
   headers.set('Authorization', `Bearer ${session.access_token}`)
   return fetch(input, { ...init, headers })
 }
+
+export async function optionalAuthFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const supabase = getSupabase()
+  const headers = new Headers(init.headers)
+  if (supabase) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) headers.set('Authorization', `Bearer ${session.access_token}`)
+  }
+  return fetch(input, { ...init, headers })
+}

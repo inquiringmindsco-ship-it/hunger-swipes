@@ -2,14 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, Clock3, ExternalLink, MapPin, Phone, Trash2 } from 'lucide-react'
-import { getEaterId } from '@/lib/eater-id'
 import { BrandMark, GetItIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
+import { useAuth } from '@/lib/auth'
+import { authFetch } from '@/lib/auth-fetch'
 
 interface SavedItem {
   id: string
+  content_kind: 'official' | 'community'
   dish: {
     id: string
     name: string
@@ -32,17 +35,24 @@ interface SavedItem {
 }
 
 export default function SavedPage() {
+  const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [saved, setSaved] = useState<SavedItem[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/auth?next=/saved')
+      return
+    }
     loadSaved()
-  }, [])
+  }, [authLoading, user?.id, router])
 
   const loadSaved = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/saves?eaterId=${getEaterId()}`)
+      const res = await authFetch('/api/saves')
       const data = await res.json()
       setSaved(data.saved || [])
     } catch (e) {
@@ -51,8 +61,8 @@ export default function SavedPage() {
     setLoading(false)
   }
 
-  const removeSaved = async (dishId: string) => {
-    await fetch(`/api/saves?eaterId=${getEaterId()}&dishId=${dishId}`, { method: 'DELETE' })
+  const removeSaved = async (dishId: string, contentKind: SavedItem['content_kind']) => {
+    await authFetch(`/api/saves?contentKind=${contentKind}&contentId=${encodeURIComponent(dishId)}`, { method: 'DELETE' })
     loadSaved()
   }
 
@@ -95,6 +105,7 @@ export default function SavedPage() {
                       <div>
                         <h3 className="text-xl font-bold text-[#1A1A2E]">{dish.name}</h3>
                         <p className="text-sm text-gray-600">{seller.business_name}</p>
+                        <p className="mt-1 text-xs font-semibold text-sky-600">{item.content_kind === 'official' ? 'Official dish' : 'Community post'}</p>
                       </div>
                       <p className="text-lg font-bold text-[#FF5722]">${Number(dish.price).toFixed(2)}</p>
                     </div>
@@ -131,7 +142,7 @@ export default function SavedPage() {
                       )}
                       <IconButton
                         label={`Remove ${dish.name} from saved dishes`}
-                        onClick={() => removeSaved(dish.id)}
+                        onClick={() => removeSaved(dish.id, item.content_kind)}
                         className="rounded-xl bg-gray-100 text-gray-500 hover:text-red-600"
                       >
                         <Trash2 size={18} aria-hidden="true" />
