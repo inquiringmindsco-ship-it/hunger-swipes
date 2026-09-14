@@ -34,6 +34,17 @@ export function isManagedPhotoUrl(value: unknown) {
   }
 }
 
+export function isOwnedManagedPhotoUrl(value: unknown, userId: string) {
+  if (!isManagedPhotoUrl(value)) return false
+  try {
+    const url = new URL(value as string)
+    const prefix = `/storage/v1/object/public/dish-photos/${encodeURIComponent(userId)}/`
+    return url.pathname.startsWith(prefix)
+  } catch {
+    return false
+  }
+}
+
 export function mapCommunityPost(post: any) {
   return {
     id: post.id,

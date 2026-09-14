@@ -15,7 +15,7 @@ const admin = createClient(supabaseUrl, serviceKey, {
 })
 const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const password = `Audit-${runId}-Aa1!`
-const created = { users: [], sellers: [], dishes: [], storage: [] }
+const created = { users: [], sellers: [], dishes: [], places: [], communityPosts: [], storage: [] }
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -58,6 +58,8 @@ async function cleanup() {
     await admin.from('admin_actions').delete().in('target_id', created.sellers)
   }
   for (const id of created.dishes) await admin.from('dishes').delete().eq('id', id)
+  for (const id of created.communityPosts) await admin.from('community_food_posts').delete().eq('id', id)
+  for (const id of created.places) await admin.from('places').delete().eq('id', id)
   if (created.sellers.length) await admin.from('places').delete().in('legacy_seller_id', created.sellers)
   for (const id of created.sellers) await admin.from('sellers').delete().eq('id', id)
   if (created.storage.length) await admin.storage.from('dish-photos').remove(created.storage)
@@ -108,6 +110,22 @@ try {
   })
   assert(editA.status === 200 && Number(editA.payload.dish.price) === 13.45, 'A could not edit Dish A')
   console.log('TEST A — PASS: User A created Seller A, created Dish A, and edited Dish A')
+
+  const placeResponse = await request('/api/places', {
+    token: userA.token,
+    method: 'POST',
+    body: { name: `Audit Community Place ${runId}`, location_text: 'Audit City' },
+  })
+  assert(placeResponse.status === 201, `Community place create returned ${placeResponse.status}`)
+  created.places.push(placeResponse.payload.place.id)
+  const communityResponse = await request('/api/community-posts', {
+    token: userA.token,
+    method: 'POST',
+    body: { place_id: placeResponse.payload.place.id, dish_name: `Audit Community Dish ${runId}`, photo_url: photoUrl },
+  })
+  assert(communityResponse.status === 201 && communityResponse.payload.post.content_kind === 'community', 'Community post was not clearly classified')
+  created.communityPosts.push(communityResponse.payload.post.id)
+  console.log('COMMUNITY — PASS: authenticated Place and clearly labeled community post creation')
 
   const sellerBResponse = await request('/api/sellers', {
     token: userB.token,

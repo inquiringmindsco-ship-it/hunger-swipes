@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
-import { boundedLimit, isManagedPhotoUrl, mapCommunityPost, mapOfficialDish } from '@/lib/food'
+import { boundedLimit, isOwnedManagedPhotoUrl, mapCommunityPost, mapOfficialDish } from '@/lib/food'
 
 export async function GET(request: NextRequest) {
   try {
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     if ((status || 'active') === 'active' && !photo_url?.trim()) {
       return NextResponse.json({ error: 'A real dish photo is required before publishing' }, { status: 400 })
     }
-    if (photo_url && !isManagedPhotoUrl(photo_url)) return NextResponse.json({ error: 'Dish photo must be a verified HungerSwipes upload' }, { status: 400 })
+    if (photo_url && !isOwnedManagedPhotoUrl(photo_url, user.id)) return NextResponse.json({ error: 'Dish photo must be one of your verified HungerSwipes uploads' }, { status: 400 })
     if (status && !['draft', 'active'].includes(status)) {
       return NextResponse.json({ error: 'Invalid seller-managed dish status' }, { status: 400 })
     }
@@ -191,7 +191,7 @@ export async function PUT(request: NextRequest) {
     if (update.status === 'active' && !(update.photo_url || existing.photo_url)?.trim()) {
       return NextResponse.json({ error: 'A real dish photo is required before publishing' }, { status: 400 })
     }
-    if (update.photo_url && !isManagedPhotoUrl(update.photo_url)) return NextResponse.json({ error: 'Dish photo must be a verified HungerSwipes upload' }, { status: 400 })
+    if (update.photo_url && !isOwnedManagedPhotoUrl(update.photo_url, user.id)) return NextResponse.json({ error: 'Dish photo must be one of your verified HungerSwipes uploads' }, { status: 400 })
 
     const { data, error } = await admin
       .from('dishes')

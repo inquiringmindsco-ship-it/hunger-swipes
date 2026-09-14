@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
-import { boundedLimit, isManagedPhotoUrl, mapCommunityPost } from '@/lib/food'
+import { boundedLimit, isOwnedManagedPhotoUrl, mapCommunityPost } from '@/lib/food'
 
 export async function GET(request: NextRequest) {
   const params = new URL(request.url).searchParams
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
   const body = await request.json().catch(() => ({}))
   const dishName = typeof body.dish_name === 'string' ? body.dish_name.trim() : ''
-  if (!body.place_id || dishName.length < 2 || dishName.length > 160 || !isManagedPhotoUrl(body.photo_url)) return NextResponse.json({ error: 'Place, food name, and a verified HungerSwipes upload are required' }, { status: 400 })
+  if (!body.place_id || dishName.length < 2 || dishName.length > 160 || !isOwnedManagedPhotoUrl(body.photo_url, user.id)) return NextResponse.json({ error: 'Place, food name, and one of your verified HungerSwipes uploads are required' }, { status: 400 })
   const admin = getSupabaseAdmin()
   if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   const { data: place } = await admin.from('places').select('id').eq('id', body.place_id).eq('status', 'active').maybeSingle()
