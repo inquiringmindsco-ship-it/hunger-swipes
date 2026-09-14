@@ -17,6 +17,7 @@ export default function SellerDashboardPage() {
   const [seller, setSeller] = useState<any>(null)
   const [dishes, setDishes] = useState<any[]>([])
   const [stats, setStats] = useState<any>(null)
+  const [referrals, setReferrals] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -44,15 +45,18 @@ export default function SellerDashboardPage() {
         return
       }
       const ownedSellerId = sellerData.seller.id
-      const [dishesRes, statsRes] = await Promise.all([
+      const [dishesRes, statsRes, refRes] = await Promise.all([
         authFetch(`/api/sellers/${ownedSellerId}/dishes`),
         authFetch(`/api/sellers/${ownedSellerId}/stats`),
+        authFetch(`/api/sellers/${ownedSellerId}/referrals`),
       ])
       const dishesData = await dishesRes.json()
       const statsData = await statsRes.json()
+      const refData = await refRes.json()
       setSeller(sellerData.seller)
       if (dishesData.dishes) setDishes(dishesData.dishes)
       if (statsData.stats) setStats(statsData.stats)
+      if (refData.stats) setReferrals(refData.stats)
     } catch {
       router.replace('/auth?next=%2Fseller%2Fdashboard')
     } finally {
@@ -98,7 +102,7 @@ export default function SellerDashboardPage() {
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hunger-swipes-theta.vercel.app'
-  const joinUrl = `${appUrl}/join`
+  const joinUrl = seller ? `${appUrl}/join?ref=${seller.id}` : `${appUrl}/join`
   const StatusIcon = seller.status === 'active' ? CheckCircle2 : seller.status === 'suspended' ? Ban : Timer
 
   return (
@@ -221,6 +225,22 @@ export default function SellerDashboardPage() {
 
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 text-center">
           <h2 className="font-bold mb-3">Your Join QR</h2>
+          {referrals && (
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="bg-white/[0.02] rounded-xl p-2">
+                <div className="text-lg font-black">{referrals.scans}</div>
+                <div className="text-[10px] text-gray-400 uppercase">Scans</div>
+              </div>
+              <div className="bg-white/[0.02] rounded-xl p-2">
+                <div className="text-lg font-black">{referrals.signups}</div>
+                <div className="text-[10px] text-gray-400 uppercase">Signups</div>
+              </div>
+              <div className="bg-white/[0.02] rounded-xl p-2">
+                <div className="text-lg font-black">{referrals.sellers_created}</div>
+                <div className="text-[10px] text-gray-400 uppercase">Joined</div>
+              </div>
+            </div>
+          )}
           <div className="bg-white p-3 rounded-xl inline-block">
             <QRCodeSVG value={joinUrl} size={160} />
           </div>

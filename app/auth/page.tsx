@@ -15,14 +15,32 @@ export default function AuthPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [next, setNext] = useState('/swipe')
+  const [refSellerId, setRefSellerId] = useState<string | null>(null)
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     const requestedNext = params.get('next')
     if (requestedNext?.startsWith('/') && !requestedNext.startsWith('//')) {
       setNext(requestedNext)
+      const ref = new URLSearchParams(requestedNext.split('?')[1]).get('ref')
+      if (ref) setRefSellerId(ref)
     }
+    const directRef = params.get('ref')
+    if (directRef) setRefSellerId(directRef)
   }, [])
+
+  const recordReferral = async (eventType: 'signup', sellerId: string) => {
+    try {
+      await fetch('/api/referrals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller_id: sellerId, event_type: eventType }),
+      })
+    } catch {
+      // Non-blocking
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,11 +70,13 @@ export default function AuthPage() {
         if (!data.session) {
           setMessage('Check your email to confirm your account, then sign in to continue.')
         } else {
+          if (refSellerId) await recordReferral('signup', refSellerId)
           router.push(next)
         }
       } else {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
         if (signInError) throw signInError
+        if (refSellerId) await recordReferral('signup', refSellerId)
         router.push(next)
       }
     } catch (err: any) {

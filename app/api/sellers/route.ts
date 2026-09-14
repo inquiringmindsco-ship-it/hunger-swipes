@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
       ordering_method,
       ordering_url,
       logo_url,
+      referred_by,
     } = body
 
     if (!business_name || !seller_type) {
@@ -119,6 +120,16 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Record seller conversion from referral QR
+    if (referred_by && typeof referred_by === 'string') {
+      await admin.from('seller_referrals').insert({
+        seller_id: referred_by,
+        event_type: 'seller_created',
+        metadata: { converted_seller_id: data.id },
+      })
+    }
+
     return NextResponse.json({ seller: data }, { status: 201 })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
