@@ -50,9 +50,9 @@ def main():
     draw.text((text_x, text_y + 95), "Swipe Food. Find Your Next Meal.", font=tag_font, fill=(200, 200, 200, 255))
 
     # URL
-    bbox = draw.textbbox((0, 0), "hunger-swipes-theta.vercel.app", font=url_font)
+    bbox = draw.textbbox((0, 0), "hungerswipes.com", font=url_font)
     url_w = bbox[2] - bbox[0]
-    draw.text(((1200 - url_w) // 2, 565), "hunger-swipes-theta.vercel.app", font=url_font, fill=ACCENT + (255,))
+    draw.text(((1200 - url_w) // 2, 565), "hungerswipes.com", font=url_font, fill=ACCENT + (255,))
 
     canvas.save(OUT, "PNG", optimize=True)
     print(f"Social card saved: {OUT} ({OUT.stat().st_size} bytes)")

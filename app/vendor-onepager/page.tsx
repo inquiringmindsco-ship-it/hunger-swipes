@@ -139,7 +139,7 @@ export default function VendorOnePagerPage() {
           <Link href="/vendor-intake" className="inline-flex px-8 py-4 bg-[#FF5722] text-white rounded-xl font-black text-lg hover:bg-[#e64a19] transition items-center gap-2" style={{ fontFamily: 'system-ui, sans-serif' }}>
             Get Listed Now <ArrowRight size={19} aria-hidden="true" />
           </Link>
-          <p className="text-gray-400 text-xs mt-2">hungerswipes.vercel.app/vendor-intake</p>
+          <p className="text-gray-400 text-xs mt-2">hungerswipes.com/vendor-intake</p>
         </div>
       </div>
 

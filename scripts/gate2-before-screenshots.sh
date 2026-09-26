@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-URL="https://hunger-swipes-theta.vercel.app/swipe"
+URL="https://hungerswipes.com/swipe"
 OUT_DIR="/Users/sentinel/Documents/hunger-swipes/screenshots/gate2-before"
 mkdir -p "$OUT_DIR"
 

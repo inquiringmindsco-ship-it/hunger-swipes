@@ -37,7 +37,7 @@ export default function JoinPage() {
   const [authChecking, setAuthChecking] = useState(true)
   const [seller, setSeller] = useState<any>(null)
   const [logoPreview, setLogoPreview] = useState('')
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hunger-swipes-theta.vercel.app'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hungerswipes.com'
 
   const [form, setForm] = useState({
     business_name: '',

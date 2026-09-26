@@ -131,7 +131,7 @@ export default function SellerDashboardPage() {
     )
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hunger-swipes-theta.vercel.app'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hungerswipes.com'
   const joinUrl = seller ? `${appUrl}/join?ref=${seller.id}` : `${appUrl}/join`
   const StatusIcon = seller.status === 'active' ? CheckCircle2 : seller.status === 'suspended' ? Ban : Timer
 

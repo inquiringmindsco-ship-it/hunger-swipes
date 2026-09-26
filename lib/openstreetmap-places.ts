@@ -109,7 +109,7 @@ export async function fetchOsmFoodPlaces(latitude: number, longitude: number, ra
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'User-Agent': 'HungerSwipes/1.0 (+https://hunger-swipes-theta.vercel.app)' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'User-Agent': 'HungerSwipes/1.0 (+https://hungerswipes.com)' },
         body: new URLSearchParams({ data: query }), signal: AbortSignal.timeout(50000), cache: 'no-store',
       })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)

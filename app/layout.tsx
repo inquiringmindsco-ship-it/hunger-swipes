@@ -9,7 +9,7 @@ const ICON_VERSION = 'v2-20260914'
 export const metadata: Metadata = {
   title: 'HungerSwipes — Swipe Food. Find Your Next Meal.',
   description: 'Discover real food from real places through official dishes and clearly labeled community food posts.',
-  metadataBase: new URL('https://hunger-swipes-theta.vercel.app'),
+  metadataBase: new URL('https://hungerswipes.com'),
   applicationName: 'Hunger Swipes',
   manifest: `/manifest.webmanifest?v=${ICON_VERSION}`,
   icons: {
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    url: 'https://hunger-swipes-theta.vercel.app',
+    url: 'https://hungerswipes.com/swipe',
     siteName: 'Hunger Swipes',
     title: 'HungerSwipes — Swipe Food. Find Your Next Meal.',
     description: 'Discover real food from real places through official dishes and clearly labeled community food posts.',
