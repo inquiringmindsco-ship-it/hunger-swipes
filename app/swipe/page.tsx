@@ -222,7 +222,7 @@ export default function SwipePage() {
     setActionState('persisting')
     const result = await persistSwipe(() => authFetch('/api/swipe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contentId: dish.id, contentKind: dish.contentKind, direction }) }))
     if (result.ok) {
-      setActionState('exiting'); window.setTimeout(() => finishAdvance(dish, direction, result.saved), 220); return
+      setActionState('exiting'); window.setTimeout(() => finishAdvance(dish, direction, result.saved), 350); return
     }
     setActionState('failed'); setSwipeFailure(result); setDragX(0); setGestureProgress(0); setLastSwipe(null); actionLock.current = false
   }, [finishAdvance])
@@ -230,11 +230,19 @@ export default function SwipePage() {
   const commitSwipe = useCallback((direction: SwipeDirection) => {
     const dish = dishes[currentIndex]
     if (!dish || actionLock.current) return
-    if (!user && direction === 'right') { router.push('/auth?mode=signup&next=/swipe'); return }
+    if (!user && direction === 'right') {
+      // Keep the card exit visually consistent with the button/gesture path before
+      // sending an unauthenticated user to sign up.
+      actionLock.current = true
+      setPendingSwipe({ dish, direction }); setSwipeFailure(null); setLastSwipe(direction); setActionState('exiting')
+      setDragX(Math.max(window.innerWidth, 480))
+      window.setTimeout(() => router.push('/auth?mode=signup&next=/swipe'), 350)
+      return
+    }
     actionLock.current = true
     setPendingSwipe({ dish, direction }); setSwipeFailure(null); setLastSwipe(direction); setActionState('exiting')
     setDragX((direction === 'right' ? 1 : -1) * Math.max(window.innerWidth, 480))
-    if (!user) { window.setTimeout(() => finishAdvance(dish, direction, false), 260); return }
+    if (!user) { window.setTimeout(() => finishAdvance(dish, direction, false), 350); return }
     void persistAndAdvance(dish, direction)
   }, [currentIndex, dishes, finishAdvance, persistAndAdvance, router, user])
 
@@ -289,8 +297,8 @@ export default function SwipePage() {
         {!online && <div role="status" className="mb-2 rounded-xl bg-hs-red/10 px-3 py-2 text-center text-xs text-hs-red">Offline — authenticated choices stay on the card until saved.</div>}
         {swipeFailure && <div role="alert" className="mb-2 flex items-center gap-2 rounded-xl border border-hs-red/30 bg-hs-red/10 px-3 py-2 text-xs text-hs-cream"><span className="flex-1">{swipeFailure.message}</span>{swipeFailure.retryable ? <button onClick={retrySwipe} className="min-h-9 rounded-lg bg-hs-gold px-3 font-bold text-hs-black">Retry</button> : swipeFailure.kind === 'auth' ? <Link href="/auth?next=/swipe" className="font-bold text-hs-gold">Sign in</Link> : <button onClick={() => { setSwipeFailure(null); setPendingSwipe(null); setActionState('idle') }} className="font-bold text-hs-gold">Dismiss</button>}</div>}
         <div className="relative h-[calc(100dvh-188px)] max-h-[720px] w-full mx-auto shrink-0">
-          {nextDish && <div className="absolute inset-x-[2%] top-[2%] bottom-[4%] rounded-[1.75rem] overflow-hidden bg-hs-graphite shadow-card scale-[0.97] opacity-40"><DishImage src={nextDish.imageUrl} alt="" sizes="(max-width: 480px) 92vw, 430px" quality={72} className="w-full h-full object-cover dish-image" /></div>}
-          <article className={`absolute inset-0 rounded-[1.75rem] overflow-hidden shadow-card-lg bg-hs-graphite select-none outline-none focus-visible:ring-2 focus-visible:ring-hs-gold ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`} style={{ transform: `translate3d(${dragX}px, 0, 0) rotate(${rotation}deg)`, transitionProperty: isDragging ? 'none' : 'transform, opacity', transitionDuration: '300ms', touchAction: 'pan-y' }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={(event) => finishPointer(event)} onPointerCancel={(event) => finishPointer(event, true)} onKeyDown={(event) => { if (event.key === 'ArrowLeft') commitSwipe('left'); if (event.key === 'ArrowRight') commitSwipe('right') }} tabIndex={0} aria-label={`${currentDish.dish} from ${currentDish.restaurant}. Use left arrow to pass or right arrow to want.`} aria-busy={actionState === 'persisting'} data-testid="swipe-card">
+          {nextDish && <div key={`preview-${nextDish.id}`} className="absolute inset-x-[2%] top-[2%] bottom-[4%] rounded-[1.75rem] overflow-hidden bg-hs-graphite shadow-card scale-[0.97] opacity-40"><DishImage src={nextDish.imageUrl} alt="" sizes="(max-width: 480px) 92vw, 430px" quality={72} className="w-full h-full object-cover dish-image" /></div>}
+          <article key={`current-${currentDish.id}`} className={`absolute inset-0 rounded-[1.75rem] overflow-hidden shadow-card-lg bg-hs-graphite select-none outline-none focus-visible:ring-2 focus-visible:ring-hs-gold ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`} style={{ transform: `translate3d(${dragX}px, 0, 0) rotate(${rotation}deg)`, transitionProperty: isDragging ? 'none' : 'transform, opacity', transitionDuration: '300ms', touchAction: 'pan-y' }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={(event) => finishPointer(event)} onPointerCancel={(event) => finishPointer(event, true)} onKeyDown={(event) => { if (event.key === 'ArrowLeft') commitSwipe('left'); if (event.key === 'ArrowRight') commitSwipe('right') }} tabIndex={0} aria-label={`${currentDish.dish} from ${currentDish.restaurant}. Use left arrow to pass or right arrow to want.`} aria-busy={actionState === 'persisting'} data-testid="swipe-card">
             <DishImage src={currentDish.imageUrl} alt={currentDish.dish} sizes="(max-width: 480px) calc(100vw - 32px), 448px" preload quality={84} className="w-full h-full object-cover dish-image" />
             {dragX > 0 && <div className="absolute top-6 left-6 border-[3px] border-hs-gold text-hs-gold px-4 py-2 rounded-2xl font-black text-lg tracking-tight rotate-[-12deg] bg-hs-black/35 backdrop-blur-sm" style={{ opacity: gestureProgress }}>WANT IT</div>}
             {dragX < 0 && <div className="absolute top-6 right-6 border-[3px] border-hs-red text-hs-red px-4 py-2 rounded-2xl font-black text-lg tracking-tight rotate-[12deg] bg-hs-black/35 backdrop-blur-sm" style={{ opacity: gestureProgress }}>PASS</div>}

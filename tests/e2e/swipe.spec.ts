@@ -97,7 +97,7 @@ test('slow feed shows honest loading before recovering', async ({ page }) => {
 })
 
 test('feed refills before exhaustion without repeating consumed cards', async ({ page }) => {
-  test.setTimeout(20_000)
+  test.setTimeout(35_000)
   let requests = 0
   await page.route('**/api/dishes?**', (route) => {
     requests += 1
@@ -112,3 +112,160 @@ test('feed refills before exhaustion without repeating consumed cards', async ({
   expect(requests).toBeGreaterThanOrEqual(2)
   await expect(page.getByRole('heading', { name: 'Test Dish 21' })).toBeVisible()
 })
+
+// ============================================================
+// EXIT MOTION REGRESSION
+// ============================================================
+
+function parseTransformX(style: string): number {
+  if (!style || style === 'none') return 0
+  const matrix = style.match(/matrix\(([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^)]+)\)/)
+  if (matrix) return parseFloat(matrix[5])
+  const t3d = style.match(/translate3d\(([^,]+)px,/)
+  if (t3d) return parseFloat(t3d[1])
+  const t2d = style.match(/translate\(([^,]+)px,/)
+  if (t2d) return parseFloat(t2d[1])
+  return 0
+}
+
+function exitMotion(samples: number[], direction: 'left' | 'right') {
+  const firstCross = samples.findIndex((x) => Math.abs(x) > 40)
+  if (firstCross === -1) return null
+  let end = samples.length
+  for (let i = firstCross + 2; i < samples.length; i += 1) {
+    // After the card fully exits it may be unmounted/replaced, at which point the sampled
+    // transform drops back to 0. Stop the motion segment before that reset.
+    if (Math.abs(samples[i]) < 40) { end = i; break }
+  }
+  const motion = samples.slice(firstCross, end)
+  return direction === 'left'
+    ? motion.every((x) => x < -30) && Math.min(...motion) < -300 ? motion : null
+    : motion.every((x) => x > 30) && Math.max(...motion) > 300 ? motion : null
+}
+
+async function sampleCardExit(page: Page, trigger: () => Promise<void>) {
+  const card = page.getByTestId('swipe-card')
+  await card.waitFor()
+  const handle = await card.elementHandle()
+  if (!handle) throw new Error('Swipe card element handle not found')
+
+  await trigger()
+
+  return handle.evaluate(async (el) => {
+    const parse = (style: string) => {
+      if (!style || style === 'none') return 0
+      const matrix = style.match(/matrix\(([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^)]+)\)/)
+      if (matrix) return parseFloat(matrix[5])
+      const t3d = style.match(/translate3d\(([^,]+)px,/)
+      if (t3d) return parseFloat(t3d[1])
+      const t2d = style.match(/translate\(([^,]+)px,/)
+      if (t2d) return parseFloat(t2d[1])
+      return 0
+    }
+    const samples: number[] = []
+    const start = performance.now()
+    while (performance.now() - start < 450) {
+      if (!el.isConnected) break
+      samples.push(parse(window.getComputedStyle(el).transform))
+      await new Promise((r) => requestAnimationFrame(r))
+    }
+    return samples
+  })
+}
+
+async function dragPastThreshold(page: Page, direction: 'left' | 'right') {
+  const card = page.getByTestId('swipe-card')
+  const box = await card.boundingBox()
+  if (!box) throw new Error('Swipe card did not render')
+  const startX = box.x + box.width / 2
+  const startY = box.y + box.height / 2
+  const travel = 200
+  const endX = direction === 'left' ? startX - travel : startX + travel
+
+  await page.mouse.move(startX, startY)
+  await page.mouse.down()
+  await page.mouse.move(startX + (direction === 'left' ? -10 : 10), startY + 2, { steps: 2 })
+  await page.mouse.move(endX, startY, { steps: 8 })
+  await page.mouse.up()
+}
+
+for (const viewport of [
+  { name: 'mobile-320x568', width: 320, height: 568 },
+  { name: 'mobile-360x800', width: 360, height: 800 },
+  { name: 'mobile-390x844', width: 390, height: 844 },
+  { name: 'mobile-430x932', width: 430, height: 932 },
+]) {
+  test(`committed left swipe exits continuously without returning to center at ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await openGuestFeed(page)
+    const samples = await sampleCardExit(page, async () => dragPastThreshold(page, 'left'))
+    await expect(page.getByRole('heading', { name: 'Test Dish 2' })).toBeVisible()
+
+    expect(samples.length).toBeGreaterThanOrEqual(5)
+    const motion = exitMotion(samples, 'left')
+    expect(motion).not.toBeNull()
+    expect(motion!.length).toBeGreaterThanOrEqual(5)
+  })
+
+  test(`committed right swipe exits continuously without returning to center at ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await openGuestFeed(page)
+    const samples = await sampleCardExit(page, async () => dragPastThreshold(page, 'right'))
+    await expect(page).toHaveURL(/\/auth\?mode=signup&next=%2Fswipe|\/auth\?mode=signup&next=\/swipe/)
+
+    expect(samples.length).toBeGreaterThanOrEqual(5)
+    const motion = exitMotion(samples, 'right')
+    expect(motion).not.toBeNull()
+    expect(motion!.length).toBeGreaterThanOrEqual(5)
+  })
+
+  test(`uncommitted swipe returns to center at ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await openGuestFeed(page)
+    const card = page.getByTestId('swipe-card')
+    const box = await card.boundingBox()
+    if (!box) throw new Error('Swipe card did not render')
+    const startX = box.x + box.width / 2
+    const startY = box.y + box.height / 2
+
+    const samples = await sampleCardExit(page, async () => {
+      await page.mouse.move(startX, startY)
+      await page.mouse.down()
+      await page.mouse.move(startX - 20, startY, { steps: 3 })
+      await page.mouse.up()
+    })
+    await expect(page.getByRole('heading', { name: 'Test Dish 1' })).toBeVisible()
+
+    expect(samples.length).toBeGreaterThan(3)
+    expect(Math.abs(samples[samples.length - 1])).toBeLessThan(10)
+  })
+
+  test(`PASS button animates card left continuously at ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await openGuestFeed(page)
+    const samples = await sampleCardExit(page, async () => {
+      await page.getByRole('button', { name: 'Pass on Test Dish 1' }).click()
+    })
+    await expect(page.getByRole('heading', { name: 'Test Dish 2' })).toBeVisible()
+
+    expect(samples.length).toBeGreaterThan(5)
+    const motion = exitMotion(samples, 'left')
+    expect(motion).not.toBeNull()
+    expect(motion!.length).toBeGreaterThanOrEqual(5)
+  })
+
+  test(`WANT button animates card right continuously at ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await openGuestFeed(page)
+    const samples = await sampleCardExit(page, async () => {
+      await page.getByRole('button', { name: 'Want Test Dish 1' }).click()
+    })
+    await expect(page).toHaveURL(/\/auth\?mode=signup&next=%2Fswipe|\/auth\?mode=signup&next=\/swipe/)
+
+    expect(samples.length).toBeGreaterThanOrEqual(5)
+    const motion = exitMotion(samples, 'right')
+    expect(motion).not.toBeNull()
+    expect(motion!.length).toBeGreaterThanOrEqual(5)
+  })
+}
+

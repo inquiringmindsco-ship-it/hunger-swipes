@@ -1,7 +1,7 @@
 {
   "name": "Hunger Swipes",
   "short_name": "HungerSwipes",
-  "description": "Swipe to discover food near you.",
+  "description": "Discover real food from real local places. Swipe dishes, save what you want, and find where to get it.",
   "id": "/swipe",
   "start_url": "/swipe",
   "display": "standalone",

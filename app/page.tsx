@@ -111,13 +111,13 @@ function HomeTab() {
   return (
     <div className="pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center justify-between px-4 py-3 safe-top">
         <BrandMark size={36} aria-label="HungerSwipes" />
         <div className="flex items-center gap-3">
           <Link href="/leaderboard" aria-label="Open leaderboard" className="inline-flex min-h-11 min-w-11 items-center justify-center text-gray-600 hover:text-white transition">
             <Trophy size={20} aria-hidden="true" />
           </Link>
-          <Link href="/auth" className="px-4 py-1.5 bg-[#FF6A00] text-white rounded-full font-bold text-xs">
+          <Link href="/auth" className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] px-4 py-1.5 bg-[#FF6A00] text-white rounded-full font-bold text-xs">
             Sign In
           </Link>
         </div>
@@ -422,8 +422,8 @@ export default function AppShell() {
 
   return (
     <>
-      {/* Desktop toggle */}
-      <div className="fixed top-4 right-4 z-[60] flex items-center gap-2">
+      {/* Desktop toggle (hidden on narrow production mobile) */}
+      <div className="fixed top-4 right-4 z-[60] hidden sm:flex items-center gap-2">
         <button
           onClick={toggleView}
           className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur border border-white/15 rounded-full text-xs font-semibold text-gray-600 hover:text-white hover:bg-white/15 transition"
