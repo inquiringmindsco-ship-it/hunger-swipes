@@ -164,8 +164,13 @@ export default function SwipePage() {
         params.set('lat', String(coordinates.lat)); params.set('lng', String(coordinates.lng)); params.set('radius', String(radius))
       }
       const response = await optionalAuthFetch(`/api/dishes?${params}`)
+      const contentType = response.headers.get('content-type') || ''
+      if (!response.ok || !contentType.includes('application/json')) {
+        const text = await response.text().catch(() => '')
+        throw new Error(text || 'Dish feed unavailable')
+      }
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Dish feed unavailable')
+      if (data.error) throw new Error(data.error || 'Dish feed unavailable')
       if (generation !== requestGeneration.current) return
       const incoming = (data.dishes || []).map(mapDish).filter((dish: FoodDish) => !seenKeys.current.has(`${dish.contentKind}:${dish.id}`))
       for (const dish of incoming) seenKeys.current.add(`${dish.contentKind}:${dish.id}`)
