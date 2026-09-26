@@ -24,3 +24,5 @@ The committed Playwright suite uses an intercepted fixture feed, a fresh guest b
 ## Deployment gate
 
 A backend-connected Preview is safe only after the isolated project and Preview-scoped variables above exist. Until then, an environmentless Vercel Preview may demonstrate build/error states but must not be represented as a complete authenticated Preview.
+
+Gate 3 environmentless Preview: `https://hunger-swipes-2hz4lmgzp-inquiringmindsco-ship-its-projects.vercel.app` (deployment `dpl_DND2xQGwavEMd9tso1yvVnN8KvMR`). It is Vercel-protected, READY, and intentionally returns `Database not configured` from the feed API. It is not a Production deployment and has not been promoted.

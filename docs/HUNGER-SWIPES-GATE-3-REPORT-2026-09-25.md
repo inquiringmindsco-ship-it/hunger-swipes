@@ -99,7 +99,12 @@ Emulated Chrome passed. Physical mobile Safari and Chrome/Android were not avail
 
 ## Preview and remaining gates
 
-The code can be deployed only as a Vercel Preview, never Production. A complete backend-connected Preview remains contingent on the isolated Supabase resources and Preview-scoped variables in `docs/gate3/PREVIEW-ENVIRONMENT.md`. It is unsafe to point Preview at production merely to make authenticated tests work.
+Protected Vercel Preview: `https://hunger-swipes-2hz4lmgzp-inquiringmindsco-ship-its-projects.vercel.app`  
+Deployment: `dpl_DND2xQGwavEMd9tso1yvVnN8KvMR` (READY, Preview target; not Production)
+
+Vercel confirmed zero Preview-scoped environment variables. Through Vercel's authenticated protection bypass, `/swipe` returned 200, the manifest returned `id`/`start_url` `/swipe`, and `/sw.js` returned 200 with `no-cache, no-store, must-revalidate`. `/api/dishes?limit=1` returned the expected isolated 503 `Database not configured`. This is therefore a safe environmentless build/PWA/error-state Preview, not a production-data Preview.
+
+A complete backend-connected Preview remains contingent on the isolated Supabase resources and Preview-scoped variables in `docs/gate3/PREVIEW-ENVIRONMENT.md`. It is unsafe to point Preview at production merely to make authenticated tests work.
 
 Known remaining items:
 
