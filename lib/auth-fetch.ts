@@ -18,8 +18,12 @@ export async function optionalAuthFetch(input: RequestInfo | URL, init: RequestI
   const supabase = getSupabase()
   const headers = new Headers(init.headers)
   if (supabase) {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session) headers.set('Authorization', `Bearer ${session.access_token}`)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) headers.set('Authorization', `Bearer ${session.access_token}`)
+    } catch {
+      // Optional session lookup must never block anonymous public requests.
+    }
   }
   return fetch(input, { ...init, headers })
 }
