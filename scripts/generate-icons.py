@@ -24,15 +24,12 @@ OUT_DIR = ROOT / "public"
 BG = (10, 10, 10, 255)
 
 # How much of the target square the logo content should occupy.
-# Normal icons: aggressive fill so the logo dominates.
-# Maskable icon: leave extra safe-zone margin for Android adaptive masking.
-FILL_NORMAL = 0.80
-FILL_MASKABLE = 0.60
+# Normal icons: aggressive fill so the logo dominates the tile (~94%).
+# Maskable icon: leave extra safe-zone margin for Android adaptive masking (~76%).
+FILL_NORMAL = 0.94
+FILL_MASKABLE = 0.76
 
 SIZES = {
-    "icon-16": 16,
-    "icon-32": 32,
-    "icon-180": 180,
     "icon-192": 192,
     "icon-512": 512,
     "icon-1024": 1024,

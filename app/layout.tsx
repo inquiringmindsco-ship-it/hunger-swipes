@@ -4,7 +4,7 @@ import './globals.css'
 import AuthHashHandler from '@/app/components/AuthHashHandler'
 import PwaRegistration from '@/app/components/PwaRegistration'
 
-const ICON_VERSION = 'v3-20260926'
+const ICON_VERSION = 'v4-20260926'
 const SITE_TITLE = 'Hunger Swipes — Swipe food. Find your next meal.'
 const SITE_DESCRIPTION = 'Discover real food from real local places through official dishes and clearly labeled community food posts.'
 
