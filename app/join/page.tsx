@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, ExternalLink, Hand, MapPin, Phone, Search, Smartphone, Upload } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ExternalLink, Hand, MapPin, Phone, Search, Smartphone, Upload, ChevronRight, Utensils } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { authFetch } from '@/lib/auth-fetch'
 import { getSupabase } from '@/lib/supabase'
 import { BrandMark, GetItIcon, SellerTypeIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
+import { LoadingState } from '@/app/components/ui/LoadingState'
 
 const SELLER_TYPES = [
   { value: 'restaurant', label: 'Restaurant' },
@@ -152,158 +153,197 @@ export default function JoinPage() {
   const dashboardUrl = seller ? `${appUrl}/seller/dashboard?id=${seller.id}` : appUrl
 
   if (authChecking) {
-    return <div className="min-h-screen flex items-center justify-center">Checking your account...</div>
+    return (
+      <div className="min-h-screen bg-hs-ink pb-24">
+        <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
+          <div className="max-w-md mx-auto flex items-center gap-2">
+            <BrandMark size={28} />
+            <span className="font-bold text-base text-hs-cream tracking-tight">Sell on Hunger Swipes</span>
+          </div>
+        </header>
+        <main className="max-w-md mx-auto px-4 pt-8">
+          <LoadingState label="Checking your account…" />
+        </main>
+      </div>
+    )
   }
 
   if (submitted && seller) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] text-gray-900 pb-24">
-        <header className="bg-white border-b border-gray-200 px-4 py-4">
-          <div className="max-w-lg mx-auto flex items-center gap-2">
-            <BrandMark size={36} />
-            <span className="font-bold text-gray-900">HungerSwipes</span>
+      <div className="min-h-screen bg-hs-ink pb-24">
+        <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
+          <div className="max-w-md mx-auto flex items-center gap-2">
+            <BrandMark size={28} />
+            <span className="font-bold text-base text-hs-cream tracking-tight">Welcome to Hunger Swipes</span>
           </div>
         </header>
 
-        <div className="max-w-lg mx-auto px-4 py-8 text-center">
-          <div className="w-20 h-20 bg-[#10B981] rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 size={40} className="text-white" aria-hidden="true" />
+        <main className="max-w-md mx-auto px-4 py-8 text-center">
+          <div className="w-20 h-20 rounded-full bg-hs-gold/10 flex items-center justify-center mx-auto mb-5">
+            <CheckCircle2 size={40} className="text-hs-gold" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl font-black mb-2">You&apos;re on Hunger Swipes!</h1>
+          <h1 className="text-2xl font-black text-hs-cream mb-2">You&apos;re on Hunger Swipes!</h1>
+          <p className="text-hs-gray text-sm mb-6">{form.business_name} is ready to be discovered.</p>
+
           {seller.status === 'pending_review' && (
-            <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-2 mb-4">
-              Your seller profile is pending review. You can add dishes now, but they stay hidden until an admin approves your profile.
-            </p>
+            <div className="rounded-2xl border border-hs-gold/20 bg-hs-gold/10 p-4 mb-6 text-left">
+              <p className="text-sm text-hs-gold font-medium">
+                Your seller profile is pending review. You can add dishes now, but they stay hidden until an admin approves your profile.
+              </p>
+            </div>
           )}
 
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 text-left">
-            <h2 className="font-bold text-sm text-gray-600 uppercase tracking-wide mb-3">Your QR Code</h2>
+          <div className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-6 mb-6">
+            <h2 className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-4 text-left">Your QR Code</h2>
             <div className="flex justify-center mb-4">
-              <QRCodeSVG value={joinUrl} size={180} />
+              <QRCodeSVG value={joinUrl} size={180} bgColor="#141414" fgColor="#D4AF37" />
             </div>
-            <p className="text-xs text-gray-600 text-center mb-4">Scan to share your listing</p>
-            <div className="bg-gray-50 rounded-lg p-3 mb-3">
-              <p className="text-xs text-gray-600 mb-1">Your dashboard link:</p>
-              <p className="text-sm font-mono text-[#FF5722] break-all">{dashboardUrl}</p>
+            <p className="text-xs text-hs-gray text-center mb-4">Scan to share your listing</p>
+            <div className="bg-hs-soft rounded-xl p-3 text-left">
+              <p className="text-xs text-hs-gray mb-1">Your dashboard link:</p>
+              <p className="text-sm font-mono text-hs-gold break-all">{dashboardUrl}</p>
             </div>
           </div>
 
           <Link
             href={`/seller/dashboard?id=${seller.id}`}
-            className="block w-full py-4 bg-[#FF5722] text-white rounded-xl font-bold text-center hover:bg-[#e64a19] transition mb-3"
+            className="block w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold text-center hover:bg-hs-gold-light transition mb-3"
           >
-            <span className="inline-flex items-center gap-2">Add Your First Dish <ArrowRight size={18} aria-hidden="true" /></span>
+            <span className="inline-flex items-center gap-2 justify-center">
+              Add Your First Dish <ArrowRight size={18} aria-hidden="true" />
+            </span>
           </Link>
           <Link
             href="/swipe"
-            className="block w-full py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold text-center hover:bg-gray-50 transition"
+            className="block w-full py-3 border border-white/[0.08] text-hs-cream rounded-2xl font-semibold text-center hover:bg-hs-charcoal transition"
           >
             Preview the App
           </Link>
-        </div>
+        </main>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-gray-900 pb-24">
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
-        <div className="max-w-lg mx-auto flex items-center gap-2">
-          <BrandMark size={36} />
-          <span className="font-bold text-gray-900">Join Hunger Swipes</span>
+    <div className="min-h-screen bg-hs-ink pb-24">
+      <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
+        <div className="max-w-md mx-auto flex items-center gap-2">
+          <BrandMark size={28} />
+          <span className="font-bold text-base text-hs-cream tracking-tight">Sell on Hunger Swipes</span>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6">
-        <section aria-label="How Hunger Swipes works" className="grid grid-cols-4 gap-2 mb-6">
+      <main className="max-w-md mx-auto px-4 py-6">
+        <div className="flex items-center gap-2 mb-8">
           {[
-            { label: 'Post food', icon: Upload },
-            { label: 'Get discovered', icon: Search },
-            { label: 'People swipe', icon: WantItIcon },
-            { label: 'People get it', icon: GetItIcon },
+            { n: 1, label: 'Welcome' },
+            { n: 2, label: 'Business' },
+            { n: 3, label: 'Ordering' },
+          ].map(({ n, label }, i) => (
+            <div key={n} className="flex items-center gap-2">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition ${
+                step >= n ? 'bg-hs-gold text-hs-black' : 'bg-hs-soft text-hs-gray'
+              }`}>
+                {n}
+              </div>
+              <span className={`text-xs font-medium ${step >= n ? 'text-hs-cream' : 'text-hs-gray'}`}>{label}</span>
+              {i < 2 && <ChevronRight size={14} className="text-hs-soft" />}
+            </div>
+          ))}
+        </div>
+
+        <section aria-label="How Hunger Swipes works" className="grid grid-cols-4 gap-2 mb-8">
+          {[
+            { label: 'Post', icon: Upload },
+            { label: 'Get found', icon: Search },
+            { label: 'People want', icon: WantItIcon },
+            { label: 'They get it', icon: GetItIcon },
           ].map(({ label, icon: Icon }) => (
-            <div key={label} className="rounded-xl border border-gray-200 bg-white px-2 py-3 text-center shadow-sm">
-              <Icon size={21} className="mx-auto mb-1.5 text-[#FF5722]" aria-hidden="true" />
-              <p className="text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-600">{label}</p>
+            <div key={label} className="rounded-2xl border border-white/[0.06] bg-hs-charcoal px-2 py-4 text-center">
+              <Icon size={20} className="mx-auto mb-2 text-hs-gold" aria-hidden="true" />
+              <p className="text-[10px] font-bold uppercase leading-tight tracking-wide text-hs-gray">{label}</p>
             </div>
           ))}
         </section>
 
         {step === 1 ? (
-          <div className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold mb-2">Business / seller name *</label>
+          <div className="space-y-6">
+            <section>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Business / Seller Name *</label>
               <input
                 value={form.business_name}
                 onChange={(e) => setForm({ ...form, business_name: e.target.value })}
                 placeholder="Ex: Mama's Tacos"
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
+                className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
               />
-            </div>
+            </section>
 
-            <div>
-              <label className="block text-sm font-semibold mb-2">What kind of seller are you? *</label>
+            <section>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">What kind of seller are you? *</label>
               <div className="grid grid-cols-2 gap-2">
                 {SELLER_TYPES.map((t) => (
                   <button
                     key={t.value}
                     onClick={() => setForm({ ...form, seller_type: t.value })}
                     aria-pressed={form.seller_type === t.value}
-                    className={`min-h-16 p-3 rounded-xl border text-sm font-medium transition flex items-center gap-2 text-left ${
-                      form.seller_type === t.value ? 'border-[#FF5722] bg-[#FF5722]/10 text-[#FF5722]' : 'border-gray-200 bg-white'
+                    className={`min-h-[4.5rem] p-3 rounded-2xl border text-sm font-medium transition flex items-center gap-2 text-left ${
+                      form.seller_type === t.value
+                        ? 'border-hs-gold bg-hs-gold/10 text-hs-gold'
+                        : 'border-white/[0.06] bg-hs-charcoal text-hs-cream hover:bg-hs-soft'
                     }`}
                   >
-                    <SellerTypeIcon type={t.value} size={23} className="shrink-0" />
+                    <SellerTypeIcon type={t.value} size={22} className="shrink-0" />
                     <span>{t.label}</span>
                   </button>
                 ))}
               </div>
-            </div>
+            </section>
 
-            <div>
-              <label className="block text-sm font-semibold mb-2">Location / where to find you *</label>
+            <section>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Location / Where to find you *</label>
               <div className="relative">
-                <MapPin size={17} className="absolute left-3 top-3.5 text-gray-400" aria-hidden="true" />
+                <MapPin size={18} className="absolute left-4 top-4 text-hs-gray" aria-hidden="true" />
                 <input
                   value={form.location_text}
                   onChange={(e) => setForm({ ...form, location_text: e.target.value })}
                   placeholder="Ex: Delmar Loop, St. Louis"
-                  className="w-full pl-9 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
+                  className="w-full pl-11 pr-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
                 />
               </div>
-            </div>
+            </section>
 
-            <div>
-              <label className="block text-sm font-semibold mb-2">Phone number</label>
-              <input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="Ex: 314-555-0199"
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">Hours</label>
-              <input
-                value={form.hours_text}
-                onChange={(e) => setForm({ ...form, hours_text: e.target.value })}
-                placeholder="Ex: Mon–Sat 11am–9pm"
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
-              />
-            </div>
+            <section className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Phone</label>
+                <input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="314-555-0199"
+                  className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Hours</label>
+                <input
+                  value={form.hours_text}
+                  onChange={(e) => setForm({ ...form, hours_text: e.target.value })}
+                  placeholder="Mon–Sat 11am–9pm"
+                  className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
+                />
+              </div>
+            </section>
 
             <button
               onClick={() => setStep(2)}
-              className="w-full py-4 bg-[#FF5722] text-white rounded-xl font-bold hover:bg-[#e64a19] transition"
+              className="w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold hover:bg-hs-gold-light transition flex items-center justify-center gap-2"
             >
-              Continue
+              Continue <ChevronRight size={18} />
             </button>
           </div>
         ) : (
-          <div className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold mb-2">How do people order?</label>
+          <div className="space-y-6">
+            <section>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">How do people order?</label>
               <div className="grid grid-cols-2 gap-2">
                 {ORDERING_METHODS.map((m) => {
                   const Icon = m.icon
@@ -311,8 +351,10 @@ export default function JoinPage() {
                     <button
                       key={m.value}
                       onClick={() => setForm({ ...form, ordering_method: m.value })}
-                      className={`p-3 rounded-xl border text-sm font-medium transition flex items-center gap-2 ${
-                        form.ordering_method === m.value ? 'border-[#FF5722] bg-[#FF5722]/10 text-[#FF5722]' : 'border-gray-200 bg-white'
+                      className={`p-3 rounded-2xl border text-sm font-medium transition flex items-center gap-2 ${
+                        form.ordering_method === m.value
+                          ? 'border-hs-gold bg-hs-gold/10 text-hs-gold'
+                          : 'border-white/[0.06] bg-hs-charcoal text-hs-cream hover:bg-hs-soft'
                       }`}
                     >
                       <Icon size={20} />
@@ -321,76 +363,80 @@ export default function JoinPage() {
                   )
                 })}
               </div>
-            </div>
+            </section>
 
             {form.ordering_method === 'link' && (
-              <div>
-                <label className="block text-sm font-semibold mb-2">Order URL</label>
+              <section>
+                <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Order URL</label>
                 <input
                   value={form.ordering_url}
                   onChange={(e) => setForm({ ...form, ordering_url: e.target.value })}
                   placeholder="https://..."
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
+                  className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
                 />
-              </div>
+              </section>
             )}
 
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="pickup"
-                checked={form.pickup_available}
-                onChange={(e) => setForm({ ...form, pickup_available: e.target.checked })}
-                className="w-5 h-5 accent-[#FF5722]"
-              />
-              <label htmlFor="pickup" className="text-sm font-medium">Pickup available</label>
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="delivery"
-                checked={form.delivery_available}
-                onChange={(e) => setForm({ ...form, delivery_available: e.target.checked })}
-                className="w-5 h-5 accent-[#FF5722]"
-              />
-              <label htmlFor="delivery" className="text-sm font-medium">Delivery available</label>
-            </div>
+            <section className="space-y-3">
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider block">Availability</label>
+              <label className="flex items-center gap-3 p-4 bg-hs-charcoal rounded-2xl border border-white/[0.06] cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="pickup"
+                  checked={form.pickup_available}
+                  onChange={(e) => setForm({ ...form, pickup_available: e.target.checked })}
+                  className="w-5 h-5 accent-hs-gold rounded"
+                />
+                <span className="text-sm font-medium text-hs-cream">Pickup available</span>
+              </label>
+              <label className="flex items-center gap-3 p-4 bg-hs-charcoal rounded-2xl border border-white/[0.06] cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="delivery"
+                  checked={form.delivery_available}
+                  onChange={(e) => setForm({ ...form, delivery_available: e.target.checked })}
+                  className="w-5 h-5 accent-hs-gold rounded"
+                />
+                <span className="text-sm font-medium text-hs-cream">Delivery available</span>
+              </label>
+            </section>
 
-            <div>
-              <label className="block text-sm font-semibold mb-2">Description</label>
+            <section>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Description</label>
               <textarea
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 placeholder="What makes your food special?"
                 rows={3}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
+                className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition resize-none"
               />
-            </div>
+            </section>
 
-            <div>
-              <label className="block text-sm font-semibold mb-2">Logo / photo (optional)</label>
+            <section>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Logo / Photo <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
               <div className="flex items-center gap-3">
                 {logoPreview && <img src={logoPreview} alt="" className="w-16 h-16 rounded-xl object-cover" />}
-                <label className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-xl text-center text-sm text-gray-600 cursor-pointer hover:border-[#FF5722] hover:text-[#FF5722] transition">
+                <label className="flex-1 py-4 border-2 border-dashed border-white/15 rounded-2xl text-center text-sm text-hs-gray cursor-pointer hover:border-hs-gold/40 hover:text-hs-cream transition"
+                >
                   <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
                   Upload logo
                 </label>
               </div>
-            </div>
+            </section>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setStep(1)}
-                className="flex-1 py-4 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition"
+                className="flex-1 py-4 border border-white/[0.08] text-hs-cream rounded-2xl font-bold hover:bg-hs-charcoal transition"
               >
                 Back
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex-1 py-4 bg-[#FF5722] text-white rounded-xl font-bold hover:bg-[#e64a19] transition disabled:opacity-50"
+                className="flex-[2] py-4 bg-hs-gold text-hs-black rounded-2xl font-bold hover:bg-hs-gold-light transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {loading ? 'Creating...' : 'Create Seller Profile'}
+                {loading ? 'Creating…' : <>Create Seller Profile <CheckCircle2 size={18} /></>}
               </button>
             </div>
           </div>

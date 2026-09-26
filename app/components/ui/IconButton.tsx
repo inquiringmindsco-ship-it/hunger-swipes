@@ -10,7 +10,7 @@ export function IconButton({ label, children, className = '', ...props }: IconBu
     <button
       aria-label={label}
       title={label}
-      className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6422] focus-visible:ring-offset-2 ${className}`}
+      className={`inline-flex items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hs-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-hs-ink ${className}`}
       {...props}
     >
       {children}

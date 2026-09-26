@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
+import { LoadingState } from '@/app/components/ui/LoadingState'
 
 const CATEGORIES = [
   'American', 'BBQ', 'Breakfast', 'Cajun', 'Chinese', 'Dessert', 'Healthy', 'Indian', 'Italian',
@@ -115,161 +116,179 @@ function NewDishContent() {
   }
 
   if (authChecking) {
-    return <div className="min-h-screen flex items-center justify-center">Checking your account...</div>
+    return (
+      <div className="min-h-screen bg-hs-ink pb-24">
+        <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
+          <div className="max-w-md mx-auto flex items-center gap-2">
+            <BrandMark size={28} />
+            <span className="font-bold text-base text-hs-cream tracking-tight">Add Dish</span>
+          </div>
+        </header>
+        <main className="max-w-md mx-auto px-4 pt-8">
+          <LoadingState label="Loading your seller profile…" />
+        </main>
+      </div>
+    )
   }
 
   if (done) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] text-gray-900">
-        <header className="bg-white border-b border-gray-200 px-4 py-4">
-          <div className="max-w-lg mx-auto flex items-center gap-2">
-            <BrandMark size={36} />
-            <span className="font-bold text-gray-900">HungerSwipes</span>
+      <div className="min-h-screen bg-hs-ink pb-24">
+        <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
+          <div className="max-w-md mx-auto flex items-center gap-2">
+            <BrandMark size={28} />
+            <span className="font-bold text-base text-hs-cream tracking-tight">Dish Saved</span>
           </div>
         </header>
-        <div className="max-w-lg mx-auto px-4 py-8 text-center">
-          <div className="w-20 h-20 bg-[#10B981] rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 size={40} className="text-white" aria-hidden="true" />
+        <main className="max-w-md mx-auto px-4 py-8 text-center">
+          <div className="w-20 h-20 rounded-full bg-hs-gold/10 flex items-center justify-center mx-auto mb-5">
+            <CheckCircle2 size={44} className="text-hs-gold" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl font-black mb-2">Dish saved!</h1>
-          <p className="text-gray-600 mb-6">
+          <h1 className="text-2xl font-black text-hs-cream mb-2">Dish saved!</h1>
+          <p className="text-hs-gray text-sm mb-8">
             {sellerStatus === 'active' ? 'It is now live on the swipe feed.' : 'It will appear after your seller profile is approved.'}
           </p>
           <Link
             href="/seller/dashboard"
-            className="block w-full py-4 bg-[#FF5722] text-white rounded-xl font-bold text-center mb-3"
+            className="block w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold text-center hover:bg-hs-gold-light transition mb-3"
           >
             Back to Dashboard
           </Link>
           <Link
             href="/swipe"
-            className="block w-full py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold text-center"
+            className="block w-full py-3 border border-white/[0.08] text-hs-cream rounded-2xl font-semibold text-center hover:bg-hs-charcoal transition"
           >
             Preview in App
           </Link>
-        </div>
+        </main>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-gray-900">
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
-        <div className="max-w-lg mx-auto flex items-center gap-2">
-          <Link href="/seller/dashboard" aria-label="Back to seller dashboard" className="inline-flex min-h-11 min-w-11 items-center justify-center text-gray-600 hover:text-gray-900">
+    <div className="min-h-screen bg-hs-ink pb-24">
+      <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
+        <div className="max-w-md mx-auto flex items-center gap-2">
+          <Link href="/seller/dashboard" aria-label="Back to seller dashboard" className="w-10 h-10 rounded-full flex items-center justify-center text-hs-gray hover:bg-hs-soft hover:text-hs-cream transition">
             <ArrowLeft size={20} aria-hidden="true" />
           </Link>
-          <span className="font-bold text-gray-900">Add Your First Dish</span>
+          <span className="font-bold text-base text-hs-cream tracking-tight">Add a Dish</span>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
+      <main className="max-w-md mx-auto px-4 py-6 space-y-6">
         {error && (
-          <div className="bg-red-50 text-red-700 rounded-xl p-3 text-sm font-semibold">
-            {error}
+          <div className="rounded-2xl border border-hs-red/30 bg-hs-red/10 p-4">
+            <p className="text-sm text-hs-red font-medium">{error}</p>
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-semibold mb-2">Dish name *</label>
+        <section>
+          <label htmlFor="name" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Dish Name *</label>
           <input
+            id="name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Ex: Smoked Brisket Plate"
-            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
+            className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
           />
-        </div>
+        </section>
 
-        <div>
-          <label className="block text-sm font-semibold mb-2">Description</label>
+        <section>
+          <label htmlFor="description" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Description <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
           <textarea
+            id="description"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder="What makes it special?"
             rows={2}
-            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722] resize-none"
+            className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition resize-none"
           />
-        </div>
+        </section>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="block text-sm font-semibold mb-2">Price ($)</label>
+        <section className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="price" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Price ($)</label>
             <input
+              id="price"
               type="number"
               min="0"
               step="0.01"
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
               placeholder="0.00"
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
+              className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
             />
           </div>
-          <div className="flex-1">
-            <label className="block text-sm font-semibold mb-2">Category</label>
+          <div>
+            <label htmlFor="category" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Category</label>
             <select
+              id="category"
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
+              className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream focus:border-hs-gold/50 focus:outline-none transition appearance-none"
             >
               {CATEGORIES.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
           </div>
-        </div>
+        </section>
 
-        <div>
-          <label className="block text-sm font-semibold mb-2">Tags (comma separated)</label>
+        <section>
+          <label htmlFor="tags" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Tags <span className="text-hs-gray font-normal normal-case">(comma separated)</span></label>
           <input
+            id="tags"
             value={form.tags}
             onChange={(e) => setForm({ ...form, tags: e.target.value })}
             placeholder="gluten-free, spicy, comfort food"
-            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
+            className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
           />
-        </div>
+        </section>
 
-        <div>
-          <label className="block text-sm font-semibold mb-2">Photo</label>
+        <section>
+          <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Photo *</label>
           <label className="block cursor-pointer">
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-[#FF5722] transition">
+            <div className="border-2 border-dashed border-white/15 rounded-2xl p-6 text-center hover:border-hs-gold/40 transition bg-hs-charcoal">
               {preview || form.photo_url ? (
                 <img src={preview || form.photo_url} alt="Preview" className="w-32 h-32 object-cover rounded-xl mx-auto" />
               ) : (
-                <div className="text-gray-400 flex flex-col items-center gap-2">
+                <div className="text-hs-gray flex flex-col items-center gap-2">
                   <ImagePlus size={24} aria-hidden="true" />
-                  <span className="text-sm">Tap to upload dish photo</span>
+                  <span className="text-sm font-medium">Tap to upload dish photo</span>
                 </div>
               )}
             </div>
             <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
           </label>
-        </div>
+        </section>
 
-        <div>
-          <label className="block text-sm font-semibold mb-2">Or paste image URL</label>
+        <section>
+          <label htmlFor="photo-url" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Or Paste Image URL</label>
           <input
+            id="photo-url"
             value={form.photo_url}
             onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
             placeholder="https://..."
-            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#FF5722]"
+            className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
           />
-        </div>
+        </section>
 
-        <div className="flex gap-3 pt-4">
+        <section className="flex gap-3 pt-4">
           <Link
             href="/seller/dashboard"
-            className="min-h-12 px-5 py-3 bg-white border border-gray-200 rounded-xl font-semibold inline-flex items-center gap-2"
+            className="min-h-12 px-5 py-3 border border-white/[0.08] bg-hs-charcoal text-hs-cream rounded-2xl font-semibold inline-flex items-center gap-2 hover:bg-hs-soft transition"
           >
             <ArrowLeft size={18} aria-hidden="true" /> Back
           </Link>
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="flex-1 min-h-12 py-3 bg-[#FF5722] text-white rounded-xl font-bold disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            className="flex-1 min-h-12 py-3 bg-hs-gold text-hs-black rounded-2xl font-bold disabled:opacity-50 inline-flex items-center justify-center gap-2 hover:bg-hs-gold-light transition"
           >
             {submitting ? 'Publishing...' : <>Publish Dish <ArrowRight size={18} aria-hidden="true" /></>}
           </button>
-        </div>
+        </section>
       </main>
     </div>
   )

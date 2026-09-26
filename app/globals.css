@@ -1,10 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  /* Hunger Swipes premium design tokens */
+  --hs-black: #0A0A0A;
+  --hs-ink: #0D0D0D;
+  --hs-charcoal: #141414;
+  --hs-graphite: #1A1A1A;
+  --hs-soft: #252525;
+  --hs-muted: #6B6B6B;
+  --hs-gray: #8A8A8A;
+  --hs-silver: #BDBDBD;
+  --hs-cream: #FAF9F6;
+  --hs-white: #FFFFFF;
+  --hs-gold: #D4AF37;
+  --hs-gold-light: #E8C547;
+  --hs-gold-dark: #B8962E;
+  --hs-red: #E53935;
+  --hs-red-dark: #C62828;
+  --hs-success: #22C55E;
+
+  /* Legacy tokens kept for compatibility */
   --color-primary: #FF6A00;
   --color-primary-dark: #E05A00;
   --color-secondary: #1A1A2E;
@@ -16,6 +33,8 @@
   --color-card: #141414;
   --color-card-hover: #1E1E1E;
   --color-border: rgba(255,255,255,0.08);
+
+  color-scheme: dark;
 }
 
 * {
@@ -24,22 +43,27 @@
 
 html {
   scroll-behavior: smooth;
-}
-
-html {
-  background: #0D0D0D;
+  background: var(--hs-ink);
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #0D0D0D;
-  color: white;
+  background: var(--hs-ink);
+  color: var(--hs-cream);
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Poppins', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Premium selection */
+::selection {
+  background: rgba(212, 175, 55, 0.3);
+  color: var(--hs-cream);
 }
 
 /* Hide scrollbar but allow scroll */
@@ -67,6 +91,16 @@ h1, h2, h3, h4, h5, h6 {
   to { opacity: 1; }
 }
 
+@keyframes pulseSoft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .animate-bounce {
   animation: bounce 0.5s ease;
 }
@@ -79,6 +113,16 @@ h1, h2, h3, h4, h5, h6 {
   animation: fadeIn 0.3s ease;
 }
 
+.animate-pulse-soft {
+  animation: pulseSoft 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
 /* Card hover effects */
 .card-hover {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -89,25 +133,25 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
-/* Swipe animations */
+/* Swipe animations — presentational specs, logic in Gate 3 */
 .swipe-right {
-  animation: swipeRight 0.3s ease forwards;
+  animation: swipeRight 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .swipe-left {
-  animation: swipeLeft 0.3s ease forwards;
+  animation: swipeLeft 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes swipeRight {
   to {
-    transform: translateX(150%) rotate(20deg);
+    transform: translateX(120%) rotate(18deg);
     opacity: 0;
   }
 }
 
 @keyframes swipeLeft {
   to {
-    transform: translateX(-150%) rotate(-20deg);
+    transform: translateX(-120%) rotate(-18deg);
     opacity: 0;
   }
 }
@@ -122,12 +166,16 @@ h1, h2, h3, h4, h5, h6 {
   animation: confetti-fall 3s ease forwards;
 }
 
-/* Gold gradient for earnings */
+/* Gold gradient for premium accents */
 .gold-gradient {
-  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  background: linear-gradient(135deg, var(--hs-gold) 0%, var(--hs-gold-light) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.gold-gradient-bg {
+  background: linear-gradient(135deg, var(--hs-gold) 0%, var(--hs-gold-light) 100%);
 }
 
 /* Safe area insets for iOS */
@@ -137,5 +185,30 @@ h1, h2, h3, h4, h5, h6 {
   }
   .safe-top {
     padding-top: max(0px, env(safe-area-inset-top));
+  }
+}
+
+/* Premium image treatment utilities */
+.dish-image {
+  object-fit: cover;
+  object-position: center;
+}
+
+.dish-gradient {
+  background: linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.35) 40%, rgba(0,0,0,0) 70%);
+}
+
+/* Focus states */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.5);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

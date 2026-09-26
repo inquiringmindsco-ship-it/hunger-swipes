@@ -3,12 +3,15 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES, SPICE_LEVELS } from '@/lib/tags'
-import { Bookmark, Settings, SlidersHorizontal } from 'lucide-react'
-import { BrandMark, PassIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
+import { PassIcon, WantItIcon, FilterIcon, BrandMark } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
 import PlaceActions from '@/app/components/PlaceActions'
+import { FilterSheet } from '@/app/components/ui/FilterSheet'
+import { LoadingState } from '@/app/components/ui/LoadingState'
+import { EmptyState } from '@/app/components/ui/EmptyState'
+import { ErrorState } from '@/app/components/ui/ErrorState'
+import { ImageFallback } from '@/app/components/ui/ImageFallback'
 import { useAuth } from '@/lib/auth'
 import { authFetch, optionalAuthFetch } from '@/lib/auth-fetch'
 
@@ -50,6 +53,20 @@ function priceToRange(price?: number): string {
   return '$$$'
 }
 
+function shortLocation(dish: FoodDish): string | null {
+  const city = dish.seller?.city?.trim()
+  if (city) return city
+
+  const raw = dish.seller?.location_text || ''
+  const parts = raw.split(',').map((s) => s.trim()).filter(Boolean)
+  if (parts.length > 1) {
+    // last segment is typically city/state
+    return parts[parts.length - 1]
+  }
+  if (parts.length === 1 && parts[0].length <= 20) return parts[0]
+  return null
+}
+
 export default function SwipePage() {
   const router = useRouter()
   const [dishes, setDishes] = useState<FoodDish[]>([])
@@ -60,6 +77,7 @@ export default function SwipePage() {
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
     cuisine: '',
@@ -112,6 +130,7 @@ export default function SwipePage() {
 
   const fetchDishes = async (nextFilters = filters, nextMode = feedTab) => {
     setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams()
       params.set('limit', '20')
@@ -129,6 +148,7 @@ export default function SwipePage() {
       setCurrentIndex(0)
     } catch (err) {
       console.error('Dishes feed unavailable', err)
+      setError('feed-unavailable')
       setDishes([])
     } finally {
       setLoading(false)
@@ -251,10 +271,56 @@ export default function SwipePage() {
     }
   }
 
-  if (loading) {
+  // Header component reused across states
+  const BrandHeader = () => (
+    <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
+      <div className="max-w-md mx-auto flex items-center justify-between">
+        <Link href="/swipe" className="flex items-center gap-2 min-w-0 overflow-hidden">
+          <BrandMark size={34} className="shrink-0" />
+          <span className="font-bold text-base text-hs-cream tracking-tight whitespace-nowrap truncate block max-w-[170px] sm:max-w-none">Hunger Swipes</span>
+        </Link>
+        {!user && (
+          <Link
+            href="/auth"
+            className="shrink-0 ml-3 text-sm font-semibold text-hs-gold hover:text-hs-gold-light transition whitespace-nowrap"
+          >
+            Sign in
+          </Link>
+        )}
+      </div>
+    </header>
+  )
+
+  if (loading && dishes.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center pb-20">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="min-h-screen bg-hs-ink flex flex-col">
+        <BrandHeader />
+        <main className="flex-1 flex items-center justify-center">
+          <LoadingState label="Finding great food near you…" />
+        </main>
+        <MobileNav />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-hs-ink flex flex-col">
+        <BrandHeader />
+        <main className="flex-1">
+          <ErrorState
+            title="Couldn’t load dishes"
+            body="Something went wrong while fetching food. Check your connection and try again."
+            action={
+              <button
+                onClick={() => fetchDishes(filters, feedTab)}
+                className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm hover:bg-hs-gold-light transition"
+              >
+                Try Again
+              </button>
+            }
+          />
+        </main>
         <MobileNav />
       </div>
     )
@@ -262,20 +328,31 @@ export default function SwipePage() {
 
   if (dishes.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0D0D0D] flex flex-col items-center justify-center pb-20">
-        <div className="text-center px-4">
-          <div className="mb-6 flex justify-center"><BrandMark size={72} /></div>
-          <h1 className="text-3xl font-bold text-white mb-4">No dishes are live yet.</h1>
-          <p className="text-gray-400 mb-8">Check back soon, or invite a food seller to publish the first dish.</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button onClick={() => fetchDishes(filters, feedTab)} className="min-h-11 px-6 py-3 bg-white/10 text-white rounded-full font-semibold hover:bg-white/20 transition">
-              Refresh
-            </button>
-            <Link href="/join" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
-              List Your Food
-            </Link>
-          </div>
-        </div>
+      <div className="min-h-screen bg-hs-ink flex flex-col">
+        <BrandHeader />
+        <main className="flex-1">
+          <EmptyState
+            icon={<BrandMark size={56} />}
+            title="No dishes live yet"
+            body="Check back soon, or invite a food seller to publish the first dish."
+            action={
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => fetchDishes(filters, feedTab)}
+                  className="px-6 py-3 bg-hs-soft text-hs-cream rounded-full font-semibold text-sm hover:bg-hs-graphite transition"
+                >
+                  Refresh
+                </button>
+                <Link
+                  href="/join"
+                  className="px-6 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm hover:bg-hs-gold-light transition"
+                >
+                  List Your Food
+                </Link>
+              </div>
+            }
+          />
+        </main>
         <MobileNav />
       </div>
     )
@@ -283,15 +360,23 @@ export default function SwipePage() {
 
   if (currentIndex >= dishes.length) {
     return (
-      <div className="min-h-screen bg-[#0D0D0D] flex flex-col items-center justify-center pb-20">
-        <div className="text-center px-4">
-          <div className="mb-6 flex justify-center"><BrandMark size={72} /></div>
-          <h1 className="text-3xl font-bold text-white mb-4">You're all caught up!</h1>
-          <p className="text-gray-600 mb-8">Check back later for more delicious photos.</p>
-          <Link href="/saved" className="px-6 py-3 bg-[#FF5722] text-white rounded-full font-semibold hover:bg-[#e64a19] transition">
-            View Saved ({savedCount})
-          </Link>
-        </div>
+      <div className="min-h-screen bg-hs-ink flex flex-col">
+        <BrandHeader />
+        <main className="flex-1">
+          <EmptyState
+            icon={<WantItIcon size={48} className="text-hs-gold" />}
+            title="You’re all caught up"
+            body="Check back later for more delicious photos."
+            action={
+              <Link
+                href="/saved"
+                className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm hover:bg-hs-gold-light transition"
+              >
+                View Saved ({savedCount})
+              </Link>
+            }
+          />
+        </main>
         <MobileNav />
       </div>
     )
@@ -299,263 +384,170 @@ export default function SwipePage() {
 
   const currentDish = dishes[currentIndex]
   const nextDish = dishes[currentIndex + 1]
+  const locationLabel = shortLocation(currentDish)
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0D0D0D]/90 backdrop-blur-sm border-b border-white/5 px-4 py-3">
-        <div className="max-w-lg mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BrandMark size={32} />
-            <span className="font-bold text-lg text-white">HungerSwipes</span>
+    <div className="h-[100dvh] bg-hs-ink flex flex-col overflow-hidden">
+      <BrandHeader />
+
+      <main className="flex-1 flex flex-col max-w-md mx-auto w-full px-4 pt-2 pb-16">
+        {/* Filter context row */}
+        <div className="flex items-center justify-between mb-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 text-hs-gray text-xs font-medium min-w-0">
+            <span className="capitalize whitespace-nowrap">{feedTab.replace('-', ' ')}</span>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/preferences" aria-label="Food preferences" title="Food preferences" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-gray-300 hover:bg-white/10 hover:text-white">
-              <Settings size={21} aria-hidden="true" />
-            </Link>
-            <Link href="/join" className="hidden sm:block text-sm text-[#FF5722] font-semibold">
-              For Restaurants
-            </Link>
-            <Link href="/join" className="hidden sm:block text-sm text-white/60 hover:text-white font-semibold">
-              + List Food
-            </Link>
-            <Link href="/matches" aria-label={`Saved dishes${savedCount ? `, ${savedCount}` : ''}`} title="Saved dishes" className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-gray-300 hover:bg-white/10 hover:text-white">
-              <Bookmark size={21} aria-hidden="true" />
-              {savedCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF5722] text-white text-xs rounded-full flex items-center justify-center font-bold">
-                  {savedCount}
-                </span>
-              )}
-            </Link>
-            {!user && (
-              <Link href="/auth" className="text-sm text-[#FF5722] font-semibold">
-                Sign in
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Filter Bar */}
-      <div className="bg-[#1A1A1A] border-b border-white/5 px-4 py-2">
-        <div className="max-w-lg mx-auto flex gap-2 overflow-x-auto pb-1">
           <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition flex items-center gap-2 ${
-              showFilters ? 'bg-[#FFD700] text-[#0D0D0D]' : 'bg-white/10 text-gray-300 hover:bg-white/20'
+            onClick={() => setShowFilters(true)}
+            className={`flex items-center justify-center min-w-[44px] min-h-[44px] px-2.5 rounded-full text-[11px] font-semibold transition border ${
+              showFilters || filters.cuisine || filters.dietary || filters.health || filters.priceRange
+                ? 'bg-hs-gold text-hs-black border-hs-gold'
+                : 'bg-hs-soft/60 text-hs-cream border-transparent hover:border-hs-gold/30'
             }`}
+            aria-label="Filters"
           >
-            <SlidersHorizontal size={18} aria-hidden="true" /> Filters
-          </button>
-          <button
-            onClick={() => { const next = {...filters, cuisine: ''}; setFilters(next); fetchDishes(next, feedTab) }}
-            className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
-              filters.cuisine ? 'bg-[#FF5722] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
-            }`}
-          >
-            {filters.cuisine || 'Cuisine'}
-          </button>
-          <button
-            onClick={() => { const next = {...filters, dietary: ''}; setFilters(next); fetchDishes(next, feedTab) }}
-            className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
-              filters.dietary ? 'bg-[#10B981] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
-            }`}
-          >
-            {filters.dietary || 'Dietary'}
-          </button>
-          <button
-            onClick={() => { const next = {...filters, health: ''}; setFilters(next); fetchDishes(next, feedTab) }}
-            className={`min-h-11 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
-              filters.health ? 'bg-[#8B5CF6] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
-            }`}
-          >
-            {filters.health || 'Health'}
+            <FilterIcon size={12} />
+            <span className="hidden sm:inline ml-1">Filters</span>
           </button>
         </div>
-      </div>
 
-      {/* Expanded Filters */}
-      {showFilters && (
-        <div className="bg-[#1A1A1A] border-b border-white/5 px-4 py-4">
-          <div className="max-w-lg mx-auto space-y-4">
-            <div>
-              <label className="text-xs text-gray-600 mb-2 block">Cuisine</label>
-              <div className="flex flex-wrap gap-1">
-                {CUISINE_TAGS.slice(0, 10).map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setFilters({...filters, cuisine: c})}
-                    className={`min-h-11 px-3 py-2 rounded text-xs ${
-                      filters.cuisine === c ? 'bg-[#FF5722] text-white' : 'bg-white/10 text-gray-600'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-gray-600 mb-2 block">Dietary</label>
-              <div className="flex flex-wrap gap-1">
-                {['vegetarian', 'vegan', 'gluten-free', 'keto'].map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setFilters({...filters, dietary: d})}
-                    className={`min-h-11 px-3 py-2 rounded text-xs ${
-                      filters.dietary === d ? 'bg-[#10B981] text-white' : 'bg-white/10 text-gray-600'
-                    }`}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-gray-600 mb-2 block">Health</label>
-              <div className="flex flex-wrap gap-1">
-                {HEALTH_CATEGORIES.map(h => (
-                  <button
-                    key={h}
-                    onClick={() => setFilters({...filters, health: h})}
-                    className={`min-h-11 px-3 py-2 rounded text-xs ${
-                      filters.health === h ? 'bg-[#8B5CF6] text-white' : 'bg-white/10 text-gray-600'
-                    }`}
-                  >
-                    {h}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <button
-              onClick={applyFilters}
-              className="w-full min-h-11 py-2 bg-[#FFD700] text-[#0D0D0D] rounded-lg font-semibold text-sm"
-            >
-              Apply Filters
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Swipe Area */}
-      <main className="max-w-lg mx-auto px-4 py-4">
-        {/* Mode Tabs */}
-        <div className="flex gap-2 mb-4 bg-white/5 rounded-full p-1">
-          {[
-            { key: 'for-you' as const, label: 'For You' },
-            { key: 'nearby' as const, label: 'Nearby' },
-            { key: 'trending' as const, label: 'Trending' },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => {
-                setFeedTab(key)
-                fetchDishes(filters, key)
-              }}
-              className={`flex-1 min-h-11 py-2 rounded-full font-medium text-sm transition ${
-                feedTab === key ? 'bg-[#FF5722] text-white' : 'text-gray-600 hover:text-white'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Card Stack */}
-        <div className="relative h-[65vh] max-h-[520px]">
+        {/* Card Stack — fixed height, one decision object */}
+        <div className="relative h-[calc(100dvh-188px)] max-h-[720px] w-full mx-auto shrink-0">
           {nextDish && (
-            <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-lg scale-95 opacity-50">
+            <div className="absolute inset-x-[2%] top-[2%] bottom-[4%] rounded-[1.75rem] overflow-hidden bg-hs-graphite shadow-card scale-[0.97] opacity-40">
               <img
                 src={nextDish.imageUrl}
-                alt={nextDish.dish}
-                className="w-full h-full object-cover"
+                alt=""
+                className="w-full h-full object-cover dish-image"
               />
             </div>
           )}
 
           {currentDish && (
             <div
-              className="absolute inset-0 rounded-3xl overflow-hidden shadow-xl bg-[#1A1A1A] cursor-grab active:cursor-grabbing"
+              className="absolute inset-0 rounded-[1.75rem] overflow-hidden shadow-card-lg bg-hs-graphite cursor-grab active:cursor-grabbing select-none"
               style={getCardStyle()}
               onMouseDown={handleDragStart}
               onTouchStart={handleDragStart}
+              role="button"
+              aria-label={`${currentDish.dish} from ${currentDish.restaurant}. Swipe right to want, left to pass.`}
             >
-              <img
-                src={currentDish.imageUrl}
-                alt={currentDish.dish}
-                className="w-full h-full object-cover"
-              />
+              {currentDish.imageUrl ? (
+                <img
+                  src={currentDish.imageUrl}
+                  alt={currentDish.dish}
+                  className="w-full h-full object-cover dish-image"
+                  draggable={false}
+                />
+              ) : (
+                <ImageFallback label="Dish photo unavailable" className="w-full h-full" />
+              )}
+
+              {/* Gesture feedback overlays */}
+              {dragOffset.x > 40 && (
+                <div className="absolute top-6 left-6 border-[3px] border-hs-gold text-hs-gold px-4 py-2 rounded-2xl font-black text-lg tracking-tight rotate-[-12deg] bg-hs-black/35 backdrop-blur-sm">
+                  WANT IT
+                </div>
+              )}
+              {dragOffset.x < -40 && (
+                <div className="absolute top-6 right-6 border-[3px] border-hs-red text-hs-red px-4 py-2 rounded-2xl font-black text-lg tracking-tight rotate-[12deg] bg-hs-black/35 backdrop-blur-sm">
+                  PASS
+                </div>
+              )}
 
               {lastSwipe === 'right' && (
-                <div className="absolute inset-0 bg-[#10B981]/40 flex items-center justify-center">
-                  <div className="bg-[#10B981] text-white text-4xl font-bold px-8 py-4 rounded-2xl rotate-[-15deg] shadow-lg">
-                    WANT IT <WantItIcon size={46} className="inline-block" />
+                <div className="absolute inset-0 bg-hs-gold/20 flex items-center justify-center">
+                  <div className="bg-hs-gold text-hs-black text-3xl font-black px-6 py-3 rounded-2xl rotate-[-12deg] shadow-gold flex items-center gap-2">
+                    <WantItIcon size={32} /> WANT IT
                   </div>
                 </div>
               )}
               {lastSwipe === 'left' && (
-                <div className="absolute inset-0 bg-[#EF4444]/40 flex items-center justify-center">
-                  <div className="bg-[#EF4444] text-white text-4xl font-bold px-8 py-4 rounded-2xl rotate-[15deg] shadow-lg">
-                    NOPE
+                <div className="absolute inset-0 bg-hs-red/20 flex items-center justify-center">
+                  <div className="bg-hs-red text-white text-3xl font-black px-6 py-3 rounded-2xl rotate-[12deg] shadow-lg">
+                    PASS
                   </div>
                 </div>
               )}
-              <div className="absolute top-4 left-4 right-4 flex flex-wrap gap-2">
-                <span className={`px-2 py-1 rounded-full text-xs font-bold ${currentDish.contentKind === 'official' ? 'bg-[#FFD700] text-black' : 'bg-sky-500 text-white'}`}>
-                  {currentDish.contentKind === 'official' ? 'Official dish' : 'Community post'}
-                </span>
-              </div>
 
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6">
-                <div>
-                  <h2 className="text-white text-2xl font-bold mb-1">{currentDish.dish}</h2>
-                  <p className="text-white/75 text-lg">{currentDish.restaurant}</p>
+              {/* Subtle origin provenance */}
+              {currentDish.contentKind === 'community' && (
+                <div className="absolute top-3 left-3">
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-black/30 text-white/75 backdrop-blur-sm border border-white/10">
+                    Community
+                  </span>
+                </div>
+              )}
+
+              {/* Bottom gradient + dish info + primary actions (all inside the card) */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pt-16 pb-5">
+                <div className="mb-3">
+                  <h2 className="text-white text-[1.55rem] sm:text-[1.85rem] font-black leading-[1.1] tracking-tight mb-1 drop-shadow-lg">
+                    {currentDish.dish}
+                  </h2>
+                  <p className="text-white/85 text-sm sm:text-base font-medium drop-shadow-md">
+                    {currentDish.restaurant}
+                  </p>
+                  <p className="flex items-center gap-2 mt-1 text-white/60 text-xs font-medium">
+                    {locationLabel && (
+                      <span className="truncate max-w-[140px] sm:max-w-[180px]">{locationLabel}</span>
+                    )}
+                    {locationLabel && currentDish.priceRange && (
+                      <span className="text-white/30">•</span>
+                    )}
+                    {currentDish.priceRange && (
+                      <span className="text-hs-gold">{currentDish.priceRange}</span>
+                    )}
+                  </p>
                 </div>
 
-                <div className="flex justify-center gap-6 mt-6">
+                <div className="flex items-center justify-center gap-6">
                   <IconButton
                     label={`Pass on ${currentDish.dish}`}
                     onClick={() => handleSwipe('left')}
-                    className="h-16 w-16 border border-white/20 bg-black/35 text-white shadow-xl backdrop-blur hover:scale-105 hover:bg-black/55"
+                    className="w-16 h-16 sm:w-[72px] sm:h-[72px] bg-hs-red/10 border-2 border-hs-red text-hs-red shadow-lg backdrop-blur-sm hover:scale-105 hover:bg-hs-red hover:text-white transition active:scale-95"
                   >
-                    <PassIcon size={29} />
+                    <PassIcon size={26} className="sm:w-[30px] sm:h-[30px]" />
                   </IconButton>
                   <IconButton
                     label={`Want ${currentDish.dish}`}
                     onClick={() => handleSwipe('right')}
-                    className="h-16 w-16 bg-[#10B981] text-white shadow-xl shadow-[#10B981]/25 hover:scale-105 hover:bg-[#0f9f71]"
+                    className="w-[72px] h-[72px] sm:w-20 sm:h-20 bg-hs-gold text-hs-black shadow-gold hover:scale-105 hover:bg-hs-gold-light transition active:scale-95"
                   >
-                    <WantItIcon size={31} />
+                    <WantItIcon size={32} className="sm:w-9 sm:h-9" />
                   </IconButton>
                 </div>
               </div>
             </div>
           )}
         </div>
-
-        <div className="flex justify-center gap-8 mt-6 text-gray-500 text-sm">
-          <div className="flex items-center gap-2">
-            <PassIcon size={17} />
-            <span>PASS</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <WantItIcon size={17} />
-            <span>WANT IT</span>
-          </div>
-        </div>
       </main>
 
+      {/* Match modal */}
       {showMatch && currentDish && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1A1A1A] rounded-3xl p-8 text-center border border-white/10 animate-bounce">
-            <div className="mb-4 flex justify-center text-[#10B981]"><WantItIcon size={64} /></div>
-            <h2 className="text-2xl font-bold text-white mb-2">Match!</h2>
-            <p className="text-gray-600 mb-4">Added to your matches</p>
-            <p className="text-lg font-semibold text-white">{currentDish.dish}</p>
-            <p className="text-gray-600">{currentDish.restaurant}</p>
-            <div className="mt-4 flex justify-center"><PlaceActions place={{ ...currentDish.seller, name: currentDish.seller.business_name, order_url: currentDish.seller.order_url || currentDish.seller.ordering_url }} /></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="bg-hs-charcoal rounded-[2rem] p-6 text-center border border-white/[0.08] shadow-card-lg w-full max-w-sm animate-bounce">
+            <div className="w-16 h-16 rounded-full bg-hs-gold/10 flex items-center justify-center mx-auto mb-4 text-hs-gold">
+              <WantItIcon size={40} />
+            </div>
+            <h2 className="text-2xl font-black text-hs-cream mb-1">Saved</h2>
+            <p className="text-hs-gray text-sm mb-4">Added to your saved dishes.</p>
+            <p className="text-lg font-bold text-hs-cream">{currentDish.dish}</p>
+            <p className="text-hs-gray text-sm mb-5">{currentDish.restaurant}</p>
+            <div className="flex justify-center">
+              <PlaceActions place={{ ...currentDish.seller, name: currentDish.seller.business_name, order_url: currentDish.seller.order_url || currentDish.seller.ordering_url }} />
+            </div>
           </div>
         </div>
       )}
+
+      <FilterSheet
+        open={showFilters}
+        onClose={() => setShowFilters(false)}
+        filters={filters}
+        onChange={setFilters}
+        onApply={applyFilters}
+      />
+
       <MobileNav />
     </div>
   )

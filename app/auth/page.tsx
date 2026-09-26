@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import { authFetch } from '@/lib/auth-fetch'
+import { BrandMark } from '@/app/components/icons/HungerIcons'
+import { LoadingState } from '@/app/components/ui/LoadingState'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -89,34 +91,35 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex flex-col text-white">
-      <header className="px-4 py-5 max-w-md mx-auto w-full flex items-center justify-between">
-        <Link href="/swipe" className="flex items-center gap-2">
-          <span className="font-black text-lg tracking-tight">HungerSwipes</span>
+    <div className="min-h-screen bg-hs-ink flex flex-col text-hs-cream">
+      <header className="px-4 py-4 max-w-md mx-auto w-full safe-top">
+        <Link href="/swipe" className="inline-flex items-center gap-2">
+          <BrandMark size={28} />
+          <span className="font-bold text-base tracking-tight">Hunger Swipes</span>
         </Link>
       </header>
 
-      <main className="flex-1 flex items-start justify-center px-4 pt-4 pb-10">
+      <main className="flex-1 flex items-start justify-center px-4 pt-2 pb-10">
         <div className="w-full max-w-md">
           <div className="mb-6">
-            <h1 className="text-2xl md:text-3xl font-black mb-2">
-              {mode === 'login' ? 'Welcome back.' : 'Create your account.'}
+            <h1 className="text-2xl md:text-3xl font-black mb-2 tracking-tight">
+              {mode === 'login' ? 'Welcome back' : 'Create your account'}
             </h1>
-            <p className="text-gray-500 text-sm">
+            <p className="text-hs-gray text-sm">
               {mode === 'login'
-                ? 'Sign in to save food and manage your food listing.'
+                ? 'Sign in to save food and manage your listing.'
                 : 'One account to swipe through food and list your own.'}
             </p>
           </div>
 
-          <div className="bg-[#111] rounded-3xl p-6 border border-white/5">
+          <div className="bg-hs-charcoal rounded-[1.5rem] p-6 border border-white/[0.06]">
             {error && (
-              <div className="mb-4 p-3 bg-red-500/15 border border-red-500/30 rounded-xl text-red-400 text-sm">
+              <div className="mb-4 p-3 bg-hs-red/10 border border-hs-red/30 rounded-xl text-hs-red text-sm">
                 {error}
               </div>
             )}
             {message && (
-              <div className="mb-4 p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl text-emerald-400 text-sm">
+              <div className="mb-4 p-3 bg-hs-success/10 border border-hs-success/30 rounded-xl text-hs-success text-sm">
                 {message}
               </div>
             )}
@@ -124,38 +127,38 @@ export default function AuthPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === 'signup' && (
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Full Name</label>
+                  <label className="block text-xs font-semibold text-hs-gold mb-2 uppercase tracking-wider">Full Name</label>
                   <input
                     type="text"
                     placeholder="Your name"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#FF5722] transition"
+                    className="w-full px-4 py-3.5 bg-hs-soft border border-white/[0.08] rounded-2xl text-hs-cream placeholder-hs-muted focus:outline-none focus:border-hs-gold/50 transition"
                     required={mode === 'signup'}
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Email</label>
+                <label className="block text-xs font-semibold text-hs-gold mb-2 uppercase tracking-wider">Email</label>
                 <input
                   type="email"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#FF5722] transition"
+                  className="w-full px-4 py-3.5 bg-hs-soft border border-white/[0.08] rounded-2xl text-hs-cream placeholder-hs-muted focus:outline-none focus:border-hs-gold/50 transition"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Password</label>
+                <label className="block text-xs font-semibold text-hs-gold mb-2 uppercase tracking-wider">Password</label>
                 <input
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#FF5722] transition"
+                  className="w-full px-4 py-3.5 bg-hs-soft border border-white/[0.08] rounded-2xl text-hs-cream placeholder-hs-muted focus:outline-none focus:border-hs-gold/50 transition"
                   required
                   minLength={8}
                 />
@@ -164,7 +167,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-[#FF5722] text-white rounded-xl font-bold text-base hover:bg-[#E04A1B] transition disabled:opacity-50"
+                className="w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold text-base hover:bg-hs-gold-light transition disabled:opacity-50"
               >
                 {loading
                   ? mode === 'login'
@@ -176,18 +179,18 @@ export default function AuthPage() {
               </button>
             </form>
 
-            <p className="mt-5 text-center text-gray-500 text-sm">
+            <p className="mt-5 text-center text-hs-gray text-sm">
               {mode === 'login' ? (
                 <>
                   No account yet?{' '}
-                  <button onClick={() => setMode('signup')} className="text-[#FF5722] font-semibold">
+                  <button onClick={() => setMode('signup')} className="text-hs-gold font-semibold hover:text-hs-gold-light transition">
                     Sign up free
                   </button>
                 </>
               ) : (
                 <>
                   Already on HungerSwipes?{' '}
-                  <button onClick={() => setMode('login')} className="text-[#FF5722] font-semibold">
+                  <button onClick={() => setMode('login')} className="text-hs-gold font-semibold hover:text-hs-gold-light transition">
                     Sign in
                   </button>
                 </>

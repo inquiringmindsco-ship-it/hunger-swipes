@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth, getAuthToken } from '@/lib/auth'
 import { useEffect, useState } from 'react'
-import { Heart, User, Store, Flame, Camera } from 'lucide-react'
+import { DiscoverIcon, SavedIcon, PostIcon, SellIcon, ProfileIcon } from '@/app/components/icons/HungerIcons'
 
 function SellerLink() {
   const pathname = usePathname() || ''
@@ -32,21 +32,28 @@ function SellerLink() {
 
   if (loading || checking) {
     return (
-      <div className="flex flex-col items-center gap-0.5 px-3 py-1 text-gray-500">
-        <Store size={22} />
-        <span className="text-[10px] font-semibold">Sell</span>
+      <div className="flex flex-col items-center justify-center gap-1 min-w-[54px] min-h-[54px] py-2 text-hs-muted">
+        <SellIcon size={22} />
+        <span className="text-[10px] font-semibold whitespace-nowrap">Sell</span>
       </div>
     )
   }
 
-  const label = sellerId ? 'Dashboard' : 'Sell'
+  const label = sellerId ? 'Sell' : 'Sell'
   const href = sellerId ? `/seller/dashboard?id=${sellerId}` : '/join'
   const active = pathname.startsWith('/seller/dashboard') || pathname === '/join'
 
   return (
-    <Link href={href} className={`flex flex-col items-center gap-0.5 px-3 py-1 transition ${active ? 'text-[#FF5722]' : 'text-gray-500 hover:text-white'}`}>
-      <Store size={22} />
-      <span className="text-[10px] font-semibold">{label}</span>
+    <Link
+      href={href}
+      className={`flex flex-col items-center justify-center gap-1 min-w-[54px] min-h-[54px] py-2 rounded-2xl transition ${
+        active ? 'text-hs-gold' : 'text-hs-gray hover:text-hs-cream'
+      }`}
+    >
+      <div className={`rounded-xl p-1.5 ${active ? 'bg-hs-gold/10' : ''}`}>
+        <SellIcon size={22} />
+      </div>
+      <span className="text-[10px] sm:text-[11px] font-semibold tracking-wide whitespace-nowrap">{label}</span>
     </Link>
   )
 }
@@ -55,14 +62,14 @@ export default function MobileNav() {
   const pathname = usePathname() || ''
 
   const navItems = [
-    { href: '/swipe', label: 'Swipe', icon: Flame },
-    { href: '/saved', label: 'Saved', icon: Heart },
-    { href: '/post', label: 'Post', icon: Camera },
+    { href: '/swipe', label: 'Discover', icon: DiscoverIcon },
+    { href: '/saved', label: 'Saved', icon: SavedIcon },
+    { href: '/post', label: 'Post', icon: PostIcon },
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#0A0A0A]/95 backdrop-blur-lg border-t border-white/10 z-50 safe-bottom">
-      <div className="flex items-center justify-around py-2 px-2 max-w-md mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 bg-hs-black/95 backdrop-blur-xl border-t border-white/[0.06] z-50 safe-bottom">
+      <div className="flex items-end justify-around py-2 px-1 max-w-md mx-auto">
         {navItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           const Icon = item.icon
@@ -70,14 +77,14 @@ export default function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
-                active ? 'text-[#FF5722]' : 'text-gray-500 hover:text-gray-300'
+              className={`flex flex-col items-center justify-center gap-1 min-w-[54px] min-h-[54px] py-2 rounded-2xl transition-all ${
+                active ? 'text-hs-gold' : 'text-hs-gray hover:text-hs-cream'
               }`}
             >
-              <div className={`rounded-xl p-1.5 ${active ? 'bg-[#FF5722]/15' : ''}`}>
-                <Icon size={22} />
+              <div className={`rounded-xl p-1.5 ${active ? 'bg-hs-gold/10' : ''}`}>
+                <Icon size={23} />
               </div>
-              <span className="text-[10px] font-semibold tracking-wide">{item.label}</span>
+              <span className="text-[10px] sm:text-[11px] font-semibold tracking-wide whitespace-nowrap">{item.label}</span>
             </Link>
           )
         })}
@@ -86,16 +93,16 @@ export default function MobileNav() {
 
         <Link
           href="/account"
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
-            pathname === '/account' ? 'text-[#FF5722]' : 'text-gray-500 hover:text-gray-300'
+          className={`flex flex-col items-center justify-center gap-1 min-w-[54px] min-h-[54px] py-2 rounded-2xl transition-all ${
+            pathname === '/account' ? 'text-hs-gold' : 'text-hs-gray hover:text-hs-cream'
           }`}
         >
-          <div className={`rounded-xl p-1.5 ${pathname === '/account' ? 'bg-[#FF5722]/15' : ''}`}>
-            <User size={22} />
+          <div className={`rounded-xl p-1.5 ${pathname === '/account' ? 'bg-hs-gold/10' : ''}`}>
+            <ProfileIcon size={23} />
           </div>
-          <span className="text-[10px] font-semibold tracking-wide">Account</span>
+          <span className="text-[10px] sm:text-[11px] font-semibold tracking-wide whitespace-nowrap">Profile</span>
         </Link>
       </div>
-    </div>
+    </nav>
   )
 }
