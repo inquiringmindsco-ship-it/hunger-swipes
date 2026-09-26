@@ -4,6 +4,7 @@ import { useEffect, Suspense, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import { authFetch } from '@/lib/auth-fetch'
+import { safeNextRoute } from '@/lib/auth-routes'
 
 function CallbackContent() {
   const router = useRouter()
@@ -18,7 +19,7 @@ function CallbackContent() {
         if (typeof window === 'undefined') return
         const params = new URLSearchParams(window.location.search)
         const code = params.get('code')
-        const next = params.get('next') || '/swipe'
+        const next = safeNextRoute(params.get('next'))
 
         const supabase = getSupabase()
         if (!supabase) {
@@ -36,7 +37,11 @@ function CallbackContent() {
         }
 
         const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
+        if (!session?.user) {
+          router.replace(`/auth?error=session_expired&next=${encodeURIComponent(next)}`)
+          return
+        }
+        if (session.user) {
           // Record referral signup conversion if next URL has a ref
           const nextParams = new URLSearchParams(next.split('?')[1])
           const refSellerId = nextParams.get('ref')

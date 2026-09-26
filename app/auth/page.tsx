@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import { authFetch } from '@/lib/auth-fetch'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
-import { LoadingState } from '@/app/components/ui/LoadingState'
+import { safeNextRoute } from '@/lib/auth-routes'
 
 export default function AuthPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'recovery'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -24,12 +24,24 @@ export default function AuthPage() {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     if (params.get('mode') === 'signup') setMode('signup')
+    if (params.get('mode') === 'recovery') setMode('recovery')
     const requestedNext = params.get('next')
-    if (requestedNext?.startsWith('/') && !requestedNext.startsWith('//')) {
-      setNext(requestedNext)
-      const ref = new URLSearchParams(requestedNext.split('?')[1]).get('ref')
+    if (requestedNext) {
+      const safeNext = safeNextRoute(requestedNext)
+      setNext(safeNext)
+      const ref = new URLSearchParams(safeNext.split('?')[1]).get('ref')
       if (ref) setRefSellerId(ref)
     }
+    const authError = params.get('error')
+    if (authError) {
+      const readable = authError === 'auth_not_configured'
+        ? 'Authentication is temporarily unavailable.'
+        : authError === 'session_expired'
+          ? 'That sign-in link or session has expired. Please sign in again.'
+          : decodeURIComponent(authError)
+      setError(readable)
+    }
+    if (params.get('message') === 'password_updated') setMessage('Your password was updated. Sign in with your new password.')
     const directRef = params.get('ref')
     if (directRef) setRefSellerId(directRef)
   }, [])
@@ -61,7 +73,13 @@ export default function AuthPage() {
       }
       const emailRedirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(next)}`
 
-      if (mode === 'signup') {
+      if (mode === 'recovery') {
+        const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent('/auth/reset')}`,
+        })
+        if (recoveryError) throw recoveryError
+        setMessage('Check your email for a secure password-reset link.')
+      } else if (mode === 'signup') {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -103,12 +121,12 @@ export default function AuthPage() {
         <div className="w-full max-w-md">
           <div className="mb-6">
             <h1 className="text-2xl md:text-3xl font-black mb-2 tracking-tight">
-              {mode === 'login' ? 'Welcome back' : 'Create your account'}
+              {mode === 'login' ? 'Welcome back' : mode === 'signup' ? 'Create your account' : 'Reset your password'}
             </h1>
             <p className="text-hs-gray text-sm">
               {mode === 'login'
                 ? 'Sign in to save food and manage your listing.'
-                : 'One account to swipe through food and list your own.'}
+                : mode === 'signup' ? 'One account to swipe through food and list your own.' : 'We’ll send a secure recovery link to your email.'}
             </p>
           </div>
 
@@ -151,7 +169,7 @@ export default function AuthPage() {
                 />
               </div>
 
-              <div>
+              {mode !== 'recovery' && <div>
                 <label className="block text-xs font-semibold text-hs-gold mb-2 uppercase tracking-wider">Password</label>
                 <input
                   type="password"
@@ -162,7 +180,7 @@ export default function AuthPage() {
                   required
                   minLength={8}
                 />
-              </div>
+              </div>}
 
               <button
                 type="submit"
@@ -172,24 +190,25 @@ export default function AuthPage() {
                 {loading
                   ? mode === 'login'
                     ? 'Signing in...'
-                    : 'Creating account...'
+                    : mode === 'signup' ? 'Creating account...' : 'Sending recovery link...'
                   : mode === 'login'
                     ? 'Sign In'
-                    : 'Create Free Account'}
+                    : mode === 'signup' ? 'Create Free Account' : 'Send Recovery Link'}
               </button>
             </form>
 
             <p className="mt-5 text-center text-hs-gray text-sm">
               {mode === 'login' ? (
                 <>
-                  No account yet?{' '}
+                  <button onClick={() => setMode('recovery')} className="text-hs-gold font-semibold hover:text-hs-gold-light transition">Forgot password?</button>
+                  <span className="mx-2">•</span>No account yet?{' '}
                   <button onClick={() => setMode('signup')} className="text-hs-gold font-semibold hover:text-hs-gold-light transition">
                     Sign up free
                   </button>
                 </>
               ) : (
                 <>
-                  Already on HungerSwipes?{' '}
+                  {mode === 'signup' ? 'Already on HungerSwipes?' : 'Remembered your password?'}{' '}
                   <button onClick={() => setMode('login')} className="text-hs-gold font-semibold hover:text-hs-gold-light transition">
                     Sign in
                   </button>

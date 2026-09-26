@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "test": "node --test --experimental-strip-types tests/foundation.test.ts",
+    "test:ui": "vitest run",
+    "test:ui:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:gate3": "npm test && npm run test:ui && npm run lint && npm run build && npm run test:e2e",
     "test:security": "node --env-file=.env.local scripts/seller-security-audit.mjs",
     "places:import": "node --env-file=.env.local scripts/import-places.mjs",
     "places:google-enrich": "node --env-file=.env.local scripts/enrich-google-places.mjs"
@@ -24,12 +28,17 @@
     "stripe": "^22.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^20.12.12",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.11"
   }
 }

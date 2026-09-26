@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 import AuthHashHandler from '@/app/components/AuthHashHandler'
+import PwaRegistration from '@/app/components/PwaRegistration'
 
 const ICON_VERSION = 'v2-20260914'
 
@@ -58,6 +59,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <AuthHashHandler />
+        <PwaRegistration />
         {children}
       </body>
     </html>

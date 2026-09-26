@@ -2,17 +2,31 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
 import { boundedLimit, isOwnedManagedPhotoUrl, mapCommunityPost, mapOfficialDish } from '@/lib/food'
+import { haversineMiles } from '@/lib/geo'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const sellerId = searchParams.get('sellerId')
-    const cuisineTag = searchParams.get('cuisineTag')
-    const dietaryTag = searchParams.get('dietaryTag')
-    const healthCategory = searchParams.get('healthCategory')
+    const values = (single: string, plural: string) => (searchParams.get(plural) || searchParams.get(single) || '').split(',').map((value) => value.trim()).filter(Boolean).slice(0, 12)
+    const cuisineTags = values('cuisineTag', 'cuisineTags')
+    const dietaryTags = values('dietaryTag', 'dietaryTags')
+    const healthCategories = values('healthCategory', 'healthCategories')
     const priceRange = searchParams.get('priceRange')
+    const priceRanges = (searchParams.get('priceRanges') || priceRange || '').split(',').filter((value) => ['$', '$$', '$$$'].includes(value))
+    const requestedSpice = Number.parseInt(searchParams.get('spiceLevel') || '0', 10)
+    const spiceLevel = requestedSpice >= 1 && requestedSpice <= 5 ? requestedSpice : 0
     const limit = boundedLimit(searchParams.get('limit'))
     const mode = searchParams.get('mode') || 'for-you'
+    const offset = Math.max(0, Math.min(Number.parseInt(searchParams.get('offset') || '0', 10) || 0, 500))
+    const excludedByClient = new Set(searchParams.getAll('exclude').filter((value) => /^(official|community):[0-9a-f-]{36}$/i.test(value)).slice(0, 100))
+    const lat = Number(searchParams.get('lat'))
+    const lng = Number(searchParams.get('lng'))
+    const radius = Math.min(Math.max(Number(searchParams.get('radius')) || 15, 1), 100)
+    if (!['for-you', 'nearby', 'trending'].includes(mode)) return NextResponse.json({ error: 'Invalid feed mode', dishes: [] }, { status: 400 })
+    if (mode === 'nearby' && (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180)) {
+      return NextResponse.json({ error: 'Location is required for Nearby', code: 'LOCATION_REQUIRED', dishes: [] }, { status: 400 })
+    }
 
     const admin = getSupabaseAdmin()
     if (!admin) {
@@ -25,13 +39,14 @@ export async function GET(request: NextRequest) {
       admin.from('saved_food').select('content_kind,content_id').eq('actor_id', user.id),
     ]) : [{ data: [] }, { data: [] }]
     const excluded = new Set((swiped || []).map((row: any) => `${row.content_kind}:${row.content_id}`))
+    for (const key of excludedByClient) excluded.add(key)
     const savedKeys = new Set((saved || []).map((row: any) => `${row.content_kind}:${row.content_id}`))
 
     let officialQuery = admin
       .from('dishes')
       .select(`
         *,
-        seller:sellers!inner(id,business_name,seller_type,description,logo_url,location_text,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status)
+        seller:sellers!inner(id,business_name,seller_type,description,logo_url,location_text,address,latitude,longitude,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status)
       `)
       .eq('status', 'active')
       .eq('availability', 'available')
@@ -41,35 +56,31 @@ export async function GET(request: NextRequest) {
       .neq('name', '')
       .neq('sellers.business_name', '')
       .order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false })
-      .limit(limit * 2)
+      .limit(Math.min((offset + limit + 1) * 2, 1000))
 
     if (sellerId) {
       officialQuery = officialQuery.eq('seller_id', sellerId)
     }
 
-    if (cuisineTag) {
-      officialQuery = officialQuery.contains('tags', [cuisineTag])
-    }
-    if (dietaryTag) {
-      officialQuery = officialQuery.contains('tags', [dietaryTag])
-    }
-    if (healthCategory) {
-      officialQuery = officialQuery.contains('tags', [healthCategory])
-    }
-    if (priceRange) {
+    if (cuisineTags.length) officialQuery = officialQuery.overlaps('tags', cuisineTags)
+    if (dietaryTags.length) officialQuery = officialQuery.overlaps('tags', dietaryTags)
+    if (healthCategories.length) officialQuery = officialQuery.overlaps('tags', healthCategories)
+    if (priceRange && !searchParams.has('priceRanges')) {
       if (priceRange === '$') officialQuery = officialQuery.lte('price', 12)
       else if (priceRange === '$$') officialQuery = officialQuery.gte('price', 12).lte('price', 24)
       else if (priceRange === '$$$') officialQuery = officialQuery.gte('price', 24)
     }
 
     let communityQuery = admin.from('community_food_posts').select(`*, place:places!inner(id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,status)`)
-      .eq('status', 'active').eq('places.status', 'active').order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false }).limit(limit * 2)
-    if (cuisineTag) communityQuery = communityQuery.contains('tags', [cuisineTag])
-    if (dietaryTag) communityQuery = communityQuery.contains('tags', [dietaryTag])
-    if (healthCategory) communityQuery = communityQuery.contains('tags', [healthCategory])
-    if (priceRange === '$') communityQuery = communityQuery.lte('price', 12)
-    else if (priceRange === '$$') communityQuery = communityQuery.gte('price', 12).lte('price', 24)
-    else if (priceRange === '$$$') communityQuery = communityQuery.gte('price', 24)
+      .eq('status', 'active').eq('places.status', 'active').order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false }).limit(Math.min((offset + limit + 1) * 2, 1000))
+    if (cuisineTags.length) communityQuery = communityQuery.overlaps('tags', cuisineTags)
+    if (dietaryTags.length) communityQuery = communityQuery.overlaps('tags', dietaryTags)
+    if (healthCategories.length) communityQuery = communityQuery.overlaps('tags', healthCategories)
+    if (priceRange && !searchParams.has('priceRanges')) {
+      if (priceRange === '$') communityQuery = communityQuery.lte('price', 12)
+      else if (priceRange === '$$') communityQuery = communityQuery.gte('price', 12).lte('price', 24)
+      else if (priceRange === '$$$') communityQuery = communityQuery.gte('price', 24)
+    }
 
     const [{ data: official, error: officialError }, { data: community, error: communityError }] = await Promise.all([officialQuery, communityQuery])
     if (officialError || communityError) return NextResponse.json({ error: officialError?.message || communityError?.message, dishes: [] }, { status: 500 })
@@ -77,12 +88,29 @@ export async function GET(request: NextRequest) {
       ...(official || []).map(mapOfficialDish),
       ...(community || []).map(mapCommunityPost),
     ].filter((item: any) => !excluded.has(`${item.content_kind}:${item.id}`))
+      .filter((item: any) => !spiceLevel || Number(item.spice_level) === spiceLevel)
+      .filter((item: any) => {
+        if (!priceRanges.length) return true
+        const price = Number(item.price)
+        const range = !Number.isFinite(price) || price < 12 ? '$' : price < 24 ? '$$' : '$$$'
+        return priceRanges.includes(range)
+      })
       .map((item: any) => ({ ...item, saved: savedKeys.has(`${item.content_kind}:${item.id}`) }))
+      .map((item: any) => {
+        if (mode !== 'nearby') return item
+        const itemLat = Number(item.seller?.latitude)
+        const itemLng = Number(item.seller?.longitude)
+        if (!Number.isFinite(itemLat) || !Number.isFinite(itemLng)) return null
+        return { ...item, distance_miles: Math.round(haversineMiles(lat, lng, itemLat, itemLng) * 10) / 10 }
+      })
+      .filter((item: any) => item && (mode !== 'nearby' || item.distance_miles <= radius))
       .sort((a: any, b: any) => mode === 'trending'
         ? (b.right_swipes || 0) - (a.right_swipes || 0)
+        : mode === 'nearby'
+          ? a.distance_miles - b.distance_miles
         : new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, limit)
-    return NextResponse.json({ dishes: merged })
+    const page = merged.slice(offset, offset + limit + 1)
+    return NextResponse.json({ dishes: page.slice(0, limit), hasMore: page.length > limit, nextOffset: offset + Math.min(limit, page.length) })
   } catch (err: any) {
     return NextResponse.json({ error: err.message, dishes: [] }, { status: 500 })
   }

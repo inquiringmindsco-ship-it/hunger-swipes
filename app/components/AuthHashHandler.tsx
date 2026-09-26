@@ -15,13 +15,12 @@ export default function AuthHashHandler() {
     const supabase = getSupabase()
     if (!supabase) return
 
-    supabase.auth.getSession().then(() => {
+    supabase.auth.getSession().then(({ data }) => {
       // Remove tokens from URL
       const url = new URL(window.location.href)
       url.hash = ''
       window.history.replaceState({}, '', url.toString())
-      // Default redirect to swipe if no explicit next
-      router.replace('/swipe')
+      router.replace(data.session ? '/swipe' : '/auth?error=session_expired')
     })
   }, [router])
 

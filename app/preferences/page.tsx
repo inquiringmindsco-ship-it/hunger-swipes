@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plate, Globe, Flame, Dollar, Gear, ArrowRight, CheckLine, Leaf, Protein, Light, MapPin, Sparkle, Filter, Crown, Star, Rising, Close, Veggie as VeggieIcon, Rising as RisingIcon, FireIcon } from '@/app/components/HwIcon'
 import { ArrowLeft, Check, ChevronDown } from 'lucide-react'
+import { clearDiscoveryPreferences, DEFAULT_DISCOVERY_PREFERENCES, readDiscoveryPreferences, writeDiscoveryPreferences } from '@/lib/preferences'
 
 // ─── DIETARY ───
 const DIETARY = [
@@ -58,10 +59,9 @@ const SPICE = [
 
 // ─── PRICE TIERS ───
 const PRICE = [
-  { id: '$',    label: '$',     desc: 'Under $10' },
-  { id: '$$',   label: '$$',   desc: '$10–$20' },
-  { id: '$$$',  label: '$$$',  desc: '$20–$40' },
-  { id: '$$$$', label: '$$$$', desc: 'Premium' },
+  { id: '$',    label: '$',     desc: 'Under $12' },
+  { id: '$$',   label: '$$',   desc: '$12–$24' },
+  { id: '$$$',  label: '$$$',  desc: '$24+' },
 ]
 
 // ─── ICON MAPPING FOR HEALTH ───
@@ -96,19 +96,12 @@ function Section({ title, subtitle, icon: Icon, iconColor, children, open, onTog
 
 // ─── MAIN ───
 export default function PreferencesPage() {
-  const [prefs, setPrefs] = useState({
-    dietary: [] as string[],
-    cuisines: [] as string[],
-    health: [] as string[],
-    spice: 0,
-    price: [] as string[],
-  })
+  const [prefs, setPrefs] = useState(DEFAULT_DISCOVERY_PREFERENCES)
   const [saved, setSaved] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
 
   useEffect(() => {
-    const s = localStorage.getItem('hw_prefs')
-    if (s) setPrefs(JSON.parse(s))
+    setPrefs(readDiscoveryPreferences().preferences)
   }, [])
 
   const toggle = <T extends string>(arr: T[], setArr: (v: T[]) => void, item: T) => {
@@ -119,14 +112,14 @@ export default function PreferencesPage() {
   const total = prefs.dietary.length + prefs.cuisines.length + prefs.health.length + prefs.price.length + (prefs.spice > 0 ? 1 : 0)
 
   const save = () => {
-    localStorage.setItem('hw_prefs', JSON.stringify(prefs))
+    writeDiscoveryPreferences(prefs)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
   const reset = () => {
-    setPrefs({ dietary: [], cuisines: [], health: [], spice: 0, price: [] })
-    localStorage.removeItem('hw_prefs')
+    setPrefs(DEFAULT_DISCOVERY_PREFERENCES)
+    clearDiscoveryPreferences()
   }
 
   const totalSelected = (arr: string[]) => arr.length

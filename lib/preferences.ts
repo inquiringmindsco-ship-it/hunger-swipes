@@ -3,6 +3,75 @@
 
 import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES } from './tags'
 
+export const DISCOVERY_PREFERENCES_KEY = 'hungerswipes_discovery_preferences_v1'
+export const LEGACY_PREFERENCE_KEYS = ['hw_prefs', 'hungerswipes_preferences'] as const
+
+export interface DiscoveryPreferences {
+  version: 1
+  dietary: string[]
+  cuisines: string[]
+  health: string[]
+  spice: number
+  price: string[]
+  distanceMiles: number
+}
+
+export const DEFAULT_DISCOVERY_PREFERENCES: DiscoveryPreferences = {
+  version: 1,
+  dietary: [],
+  cuisines: [],
+  health: [],
+  spice: 0,
+  price: [],
+  distanceMiles: 15,
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+}
+
+function normalizeDiscoveryPreferences(value: any): DiscoveryPreferences {
+  return {
+    version: 1,
+    dietary: stringArray(value?.dietary ?? value?.dietaryRestrictions),
+    cuisines: stringArray(value?.cuisines ?? value?.favoriteCuisines),
+    health: stringArray(value?.health ?? value?.healthFocus),
+    spice: Number.isFinite(Number(value?.spice ?? value?.spicePreference)) ? Number(value?.spice ?? value?.spicePreference) : 0,
+    price: stringArray(value?.price ?? value?.priceRange).filter((range) => ['$', '$$', '$$$'].includes(range)),
+    distanceMiles: [5, 10, 15, 25, 50].includes(Number(value?.distanceMiles)) ? Number(value.distanceMiles) : 15,
+  }
+}
+
+export function readDiscoveryPreferences(): { preferences: DiscoveryPreferences; source: 'canonical' | 'hw_prefs' | 'hungerswipes_preferences' | 'default' } {
+  if (typeof window === 'undefined') return { preferences: DEFAULT_DISCOVERY_PREFERENCES, source: 'default' }
+  for (const key of [DISCOVERY_PREFERENCES_KEY, ...LEGACY_PREFERENCE_KEYS] as const) {
+    try {
+      const stored = localStorage.getItem(key)
+      if (stored) {
+        return {
+          preferences: normalizeDiscoveryPreferences(JSON.parse(stored)),
+          source: key === DISCOVERY_PREFERENCES_KEY ? 'canonical' : key,
+        }
+      }
+    } catch {
+      // Ignore a corrupt legacy value and continue to the next compatible key.
+    }
+  }
+  return { preferences: DEFAULT_DISCOVERY_PREFERENCES, source: 'default' }
+}
+
+export function writeDiscoveryPreferences(preferences: DiscoveryPreferences) {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(DISCOVERY_PREFERENCES_KEY, JSON.stringify(normalizeDiscoveryPreferences(preferences)))
+}
+
+export function clearDiscoveryPreferences() {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(DISCOVERY_PREFERENCES_KEY)
+  // Legacy values remain intact until the user explicitly chooses to clear them.
+  for (const key of LEGACY_PREFERENCE_KEYS) localStorage.removeItem(key)
+}
+
 export interface EaterPreferences {
   dietaryRestrictions: string[]
   favoriteCuisines: string[]

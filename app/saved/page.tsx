@@ -10,7 +10,8 @@ import MobileNav from '@/app/components/MobileNav'
 import PlaceActions from '@/app/components/PlaceActions'
 import { LoadingState } from '@/app/components/ui/LoadingState'
 import { EmptyState } from '@/app/components/ui/EmptyState'
-import { ImageFallback } from '@/app/components/ui/ImageFallback'
+import { ErrorState } from '@/app/components/ui/ErrorState'
+import { DishImage } from '@/app/components/DishImage'
 import { useAuth } from '@/lib/auth'
 import { authFetch } from '@/lib/auth-fetch'
 import { formatOptionalFoodPrice } from '@/lib/food'
@@ -51,6 +52,8 @@ export default function SavedPage() {
   const { user, loading: authLoading } = useAuth()
   const [saved, setSaved] = useState<SavedItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [removing, setRemoving] = useState<string | null>(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -63,19 +66,32 @@ export default function SavedPage() {
 
   const loadSaved = async () => {
     setLoading(true)
+    setError('')
     try {
       const res = await authFetch('/api/saves')
       const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Saved dishes unavailable')
       setSaved(data.saved || [])
     } catch (e) {
       console.error(e)
+      setError('Couldn’t load your saved dishes.')
     }
     setLoading(false)
   }
 
   const removeSaved = async (dishId: string, contentKind: SavedItem['content_kind']) => {
-    await authFetch(`/api/saves?contentKind=${contentKind}&contentId=${encodeURIComponent(dishId)}`, { method: 'DELETE' })
-    loadSaved()
+    if (removing) return
+    setRemoving(dishId)
+    setError('')
+    try {
+      const response = await authFetch(`/api/saves?contentKind=${contentKind}&contentId=${encodeURIComponent(dishId)}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Remove failed')
+      setSaved((items) => items.filter((item) => item.dish.id !== dishId || item.content_kind !== contentKind))
+    } catch {
+      setError('Couldn’t remove that dish. Nothing changed; please retry.')
+    } finally {
+      setRemoving(null)
+    }
   }
 
   if (authLoading || loading) {
@@ -119,7 +135,9 @@ export default function SavedPage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-5">
-        {saved.length === 0 ? (
+        {error && saved.length === 0 ? (
+          <ErrorState title="Saved is unavailable" body={error} action={<button onClick={loadSaved} className="rounded-full bg-hs-gold px-6 py-3 font-bold text-hs-black">Try Again</button>} />
+        ) : saved.length === 0 ? (
           <EmptyState
             icon={<WantItIcon size={52} className="text-hs-gold" />}
             title="No saved dishes yet"
@@ -135,6 +153,7 @@ export default function SavedPage() {
           />
         ) : (
           <div className="space-y-5">
+            {error && <p role="alert" className="rounded-xl border border-hs-red/30 bg-hs-red/10 p-3 text-sm text-hs-cream">{error}</p>}
             <p className="text-hs-gray text-sm mb-4">{saved.length} {saved.length === 1 ? 'dish' : 'dishes'} saved</p>
             {saved.map((item) => {
               const dish = item.dish
@@ -146,15 +165,7 @@ export default function SavedPage() {
                   className="bg-hs-charcoal rounded-[1.5rem] overflow-hidden border border-white/[0.06] shadow-card"
                 >
                   <div className="relative h-52 sm:h-60 bg-hs-graphite">
-                    {dish.photo_url ? (
-                      <img
-                        src={dish.photo_url}
-                        alt={dish.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <ImageFallback label="Photo unavailable" className="w-full h-full" />
-                    )}
+                    <DishImage src={dish.photo_url} alt={dish.name} sizes="(max-width: 480px) calc(100vw - 32px), 448px" quality={80} className="w-full h-full object-cover" />
                     <div className="absolute top-3 left-3">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
                         item.content_kind === 'official'
@@ -205,6 +216,7 @@ export default function SavedPage() {
                       </div>
                       <IconButton
                         label={`Remove ${dish.name} from saved dishes`}
+                        disabled={removing === dish.id}
                         onClick={() => removeSaved(dish.id, item.content_kind)}
                         className="w-11 h-11 rounded-xl bg-hs-soft text-hs-gray hover:text-hs-red hover:bg-hs-red/10 transition"
                       >

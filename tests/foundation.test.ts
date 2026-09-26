@@ -6,6 +6,8 @@ import { mapOsmElement } from '../lib/openstreetmap-places.ts'
 import { findDuplicate } from '../lib/place-dedup.ts'
 import { formatPhone, getAppleMapsUrl, getCallUrl, getGoogleMapsUrl } from '../lib/place-actions.ts'
 import { scoreGoogleCandidate } from '../lib/google-places.ts'
+import { haversineMiles } from '../lib/geo.ts'
+import { readFileSync } from 'node:fs'
 
 test('content kinds reject arbitrary table selectors', () => {
   assert.equal(normalizeContentKind('official'), 'official')
@@ -69,4 +71,17 @@ test('Google matching requires exact normalized name and close coordinates', () 
   const place = { name: 'Local Cafe', address: '10 Main Street', latitude: 38.74, longitude: -90.3 }
   assert.ok(scoreGoogleCandidate(place, { id: 'good', displayName: { text: 'Local Cafe' }, formattedAddress: '10 Main Street, Ferguson, MO', location: { latitude: 38.7401, longitude: -90.3001 } }) >= 0.85)
   assert.equal(scoreGoogleCandidate(place, { id: 'wrong', displayName: { text: 'Other Cafe' }, formattedAddress: '10 Main Street', location: { latitude: 38.7401, longitude: -90.3001 } }), 0)
+})
+
+test('nearby distance uses real coordinates', () => {
+  assert.equal(haversineMiles(38.7442, -90.3054, 38.7442, -90.3054), 0)
+  assert.ok(haversineMiles(38.627, -90.1994, 38.7442, -90.3054) > 8)
+})
+
+test('atomic swipe migration preserves duplicate and save semantics', () => {
+  const migration = readFileSync(new URL('../supabase/migrations/006_food_content_foundation.sql', import.meta.url), 'utf8')
+  assert.match(migration, /primary key \(actor_id, content_kind, content_id\)/)
+  assert.match(migration, /on conflict \(actor_id, content_kind, content_id\)/)
+  assert.match(migration, /if p_direction = 'right' then[\s\S]*insert into saved_food/)
+  assert.match(migration, /else[\s\S]*delete from saved_food/)
 })
