@@ -8,7 +8,6 @@ import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
 import PlaceActions from '@/app/components/PlaceActions'
 import { FilterSheet } from '@/app/components/ui/FilterSheet'
-import { LoadingState } from '@/app/components/ui/LoadingState'
 import { EmptyState } from '@/app/components/ui/EmptyState'
 import { ErrorState } from '@/app/components/ui/ErrorState'
 import { OfflineState } from '@/app/components/ui/OfflineState'
@@ -283,7 +282,25 @@ export default function SwipePage() {
 
   const BrandHeader = () => <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top"><div className="max-w-md mx-auto flex items-center justify-between"><Link href="/swipe" className="flex items-center gap-2 min-w-0 overflow-hidden"><BrandMark size={34} className="shrink-0" /><span className="font-bold text-base text-hs-cream tracking-tight whitespace-nowrap truncate block max-w-[170px] sm:max-w-none">Hunger Swipes</span></Link>{!user && <Link href="/auth" className="shrink-0 ml-3 text-sm font-semibold text-hs-gold hover:text-hs-gold-light transition whitespace-nowrap">Sign in</Link>}</div></header>
 
-  if (loading && dishes.length === 0) return <div className="min-h-screen bg-hs-ink flex flex-col"><BrandHeader /><main className="flex-1 flex items-center justify-center"><LoadingState label="Finding great food near you…" /></main><MobileNav /></div>
+  if (loading && dishes.length === 0) return (
+    <div className="min-h-screen bg-hs-ink flex flex-col">
+      <BrandHeader />
+      <main className="flex-1 flex flex-col px-4 pt-6 pb-24 max-w-md mx-auto w-full">
+        <h1 className="text-hs-cream text-2xl font-black tracking-tight mb-2">Discover food near you</h1>
+        <p className="text-hs-gray text-sm mb-6">Swipe through real dishes from local food businesses and community food posts. Save what you want, pass on the rest.</p>
+        <div className="flex flex-wrap gap-2 mb-8">
+          <Link href="/nearby" className="px-4 py-2 rounded-full bg-hs-soft text-hs-cream text-xs font-semibold hover:bg-hs-gold hover:text-hs-black transition">Nearby</Link>
+          <Link href="/saved" className="px-4 py-2 rounded-full bg-hs-soft text-hs-cream text-xs font-semibold hover:bg-hs-gold hover:text-hs-black transition">Saved</Link>
+          <Link href="/join" className="px-4 py-2 rounded-full bg-hs-gold text-hs-black text-xs font-bold hover:bg-hs-gold-light transition">List Your Food</Link>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center text-hs-gray text-sm" aria-busy="true">
+          <BrandMark size={48} className="text-hs-gold mb-4 animate-pulse" />
+          <p>Finding great food near you…</p>
+        </div>
+      </main>
+      <MobileNav />
+    </div>
+  )
   if (!online && dishes.length === 0) return <div className="min-h-screen bg-hs-ink flex flex-col"><BrandHeader /><main className="flex-1"><OfflineState /></main><MobileNav /></div>
   if (feedError) return <div className="min-h-screen bg-hs-ink flex flex-col"><BrandHeader /><main className="flex-1"><ErrorState title="Couldn’t load dishes" body="Something went wrong while fetching food. Check your connection and try again." action={<button onClick={() => fetchDishes({ reset: true })} className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">Try Again</button>} /></main><MobileNav /></div>
   if (dishes.length === 0) return <div className="min-h-screen bg-hs-ink flex flex-col"><BrandHeader /><main className="flex-1"><EmptyState icon={<BrandMark size={56} />} title="No dishes match" body="Adjust your filters or check back when more food is published." action={<div className="flex gap-3"><button onClick={() => { setFilters(EMPTY_FILTERS); void fetchDishes({ reset: true, nextFilters: EMPTY_FILTERS }) }} className="px-6 py-3 bg-hs-soft text-hs-cream rounded-full font-semibold text-sm">Clear Filters</button><Link href="/join" className="px-6 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">List Your Food</Link></div>} /></main><MobileNav /></div>
