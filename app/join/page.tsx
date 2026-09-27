@@ -41,10 +41,13 @@ export default function JoinPage() {
 
   const [form, setForm] = useState({
     business_name: '',
+    contact_name: '',
+    contact_email: '',
     seller_type: 'restaurant',
     description: '',
     location_text: '',
     address: '',
+    website_url: '',
     phone: '',
     hours_text: '',
     pickup_available: true,
@@ -62,6 +65,13 @@ export default function JoinPage() {
     setPrefillType(st)
     setRefSellerId(ref)
     if (st) setForm((f) => ({ ...f, seller_type: st }))
+    const savedIntake = sessionStorage.getItem('hungerswipes_business_intake')
+    if (savedIntake) {
+      try {
+        const intake = JSON.parse(savedIntake)
+        setForm((current) => ({ ...current, ...intake, contact_email: intake.email || '', website_url: intake.website || '', seller_type: 'restaurant' }))
+      } catch {}
+    }
 
     // Record scan if this page was opened via a seller's QR
     if (ref) {
@@ -123,8 +133,8 @@ export default function JoinPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.business_name || !form.location_text) {
-      alert('Business name and location are required.')
+    if (!form.business_name || !form.contact_name || !form.contact_email || !form.address || !form.location_text) {
+      alert('Business name, contact name, email, address, and location are required.')
       return
     }
     setLoading(true)
@@ -138,6 +148,7 @@ export default function JoinPage() {
       })
       const data = await res.json()
       if (data.seller) {
+        sessionStorage.removeItem('hungerswipes_business_intake')
         setSeller(data.seller)
         setSubmitted(true)
       } else {
@@ -151,6 +162,7 @@ export default function JoinPage() {
 
   const joinUrl = `${appUrl}/join${refSellerId ? `?ref=${refSellerId}` : ''}`
   const dashboardUrl = seller ? `${appUrl}/seller/dashboard?id=${seller.id}` : appUrl
+  const restaurantUrl = seller?.slug ? `${appUrl}/${seller.slug}` : appUrl
 
   if (authChecking) {
     return (
@@ -196,12 +208,14 @@ export default function JoinPage() {
           <div className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-6 mb-6">
             <h2 className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-4 text-left">Your QR Code</h2>
             <div className="flex justify-center mb-4">
-              <QRCodeSVG value={joinUrl} size={180} bgColor="#141414" fgColor="#D4AF37" />
+              <QRCodeSVG value={restaurantUrl} size={180} bgColor="#141414" fgColor="#D4AF37" />
             </div>
-            <p className="text-xs text-hs-gray text-center mb-4">Scan to share your listing</p>
+            <p className="text-xs text-hs-gray text-center mb-4">Scan to open your permanent restaurant page</p>
             <div className="bg-hs-soft rounded-xl p-3 text-left">
-              <p className="text-xs text-hs-gray mb-1">Your dashboard link:</p>
-              <p className="text-sm font-mono text-hs-gold break-all">{dashboardUrl}</p>
+              <p className="text-xs text-hs-gray mb-1">Your permanent restaurant page:</p>
+              <p className="text-sm font-mono text-hs-gold break-all">{restaurantUrl}</p>
+              <p className="mt-3 text-xs text-hs-gray mb-1">Your private dashboard:</p>
+              <p className="text-xs font-mono text-hs-silver break-all">{dashboardUrl}</p>
             </div>
           </div>
 
@@ -236,9 +250,8 @@ export default function JoinPage() {
       <main className="max-w-md mx-auto px-4 py-6">
         <div className="flex items-center gap-2 mb-8">
           {[
-            { n: 1, label: 'Welcome' },
-            { n: 2, label: 'Business' },
-            { n: 3, label: 'Ordering' },
+            { n: 1, label: 'Restaurant' },
+            { n: 2, label: 'Ordering' },
           ].map(({ n, label }, i) => (
             <div key={n} className="flex items-center gap-2">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition ${
@@ -247,7 +260,7 @@ export default function JoinPage() {
                 {n}
               </div>
               <span className={`text-xs font-medium ${step >= n ? 'text-hs-cream' : 'text-hs-gray'}`}>{label}</span>
-              {i < 2 && <ChevronRight size={14} className="text-hs-soft" />}
+              {i < 1 && <ChevronRight size={14} className="text-hs-soft" />}
             </div>
           ))}
         </div>
@@ -278,6 +291,17 @@ export default function JoinPage() {
               />
             </section>
 
+            <section className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="contact-name" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Contact Name *</label>
+                <input id="contact-name" value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} placeholder="Your name" className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
+              </div>
+              <div>
+                <label htmlFor="contact-email" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Email *</label>
+                <input id="contact-email" type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} placeholder="you@restaurant.com" className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
+              </div>
+            </section>
+
             <section>
               <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">What kind of seller are you? *</label>
               <div className="grid grid-cols-2 gap-2">
@@ -297,6 +321,11 @@ export default function JoinPage() {
                   </button>
                 ))}
               </div>
+            </section>
+
+            <section>
+              <label htmlFor="street-address" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Street Address *</label>
+              <input id="street-address" autoComplete="street-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Restaurant street address" className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
             </section>
 
             <section>
@@ -331,6 +360,11 @@ export default function JoinPage() {
                   className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
                 />
               </div>
+            </section>
+
+            <section>
+              <label htmlFor="website" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Website or Social Link <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
+              <input id="website" type="url" value={form.website_url} onChange={(e) => setForm({ ...form, website_url: e.target.value })} placeholder="https://" className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
             </section>
 
             <button

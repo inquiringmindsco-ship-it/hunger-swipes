@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { QRCodeSVG } from 'qrcode.react'
-import { Ban, CheckCircle2, Clock3, ExternalLink, LogOut, MapPin, Phone, Plus, Timer, ToggleLeft, ToggleRight, TrendingUp, Heart, Eye, Utensils } from 'lucide-react'
+import { Ban, CheckCircle2, Clock3, ExternalLink, LogOut, MapPin, Pencil, Phone, Plus, Timer, ToggleLeft, ToggleRight, TrendingUp, Heart, Eye, Utensils } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
 import { getSupabase } from '@/lib/supabase'
 import { BrandMark, SellerTypeIcon } from '@/app/components/icons/HungerIcons'
@@ -133,6 +133,8 @@ export default function SellerDashboardPage() {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hungerswipes.com'
   const joinUrl = seller ? `${appUrl}/join?ref=${seller.id}` : `${appUrl}/join`
+  const restaurantUrl = seller?.slug ? `${appUrl}/${seller.slug}` : joinUrl
+  const publicUrl = seller?.slug ? `${appUrl}/${seller.slug}` : null
   const StatusIcon = seller.status === 'active' ? CheckCircle2 : seller.status === 'suspended' ? Ban : Timer
 
   const statusColor = seller.status === 'active' ? 'text-hs-success' : seller.status === 'suspended' ? 'text-hs-red' : 'text-hs-gold'
@@ -148,7 +150,7 @@ export default function SellerDashboardPage() {
           </div>
           <div className="flex items-center gap-2">
             <Link
-              href="/swipe"
+              href={seller?.slug ? `/${seller.slug}` : '/swipe'}
               className="text-xs text-hs-gray hover:text-hs-cream flex items-center gap-1 transition"
             >
               <ExternalLink size={14} /> Preview
@@ -209,6 +211,10 @@ export default function SellerDashboardPage() {
               </div>
             )}
           </div>
+          <Link href="/seller/profile" className="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-hs-soft text-sm font-bold text-hs-cream hover:border-hs-gold/30">
+            <Pencil size={16} /> Edit restaurant and ordering
+          </Link>
+          {seller.slug && <p className="mt-3 text-center text-xs text-hs-muted">Public page: hungerswipes.com/{seller.slug}</p>}
         </section>
 
         {/* Performance */}
@@ -305,10 +311,25 @@ export default function SellerDashboardPage() {
           )}
         </section>
 
-        {/* QR / Referral */}
+        {/* Public Restaurant QR */}
+        {publicUrl && (
+          <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5 text-center">
+            <h2 className="font-bold text-hs-cream mb-1">Your Restaurant QR</h2>
+            <p className="text-xs text-hs-gray mb-4">Customers scan to see your dishes</p>
+            <div className="bg-hs-cream p-3 rounded-2xl inline-block">
+              <QRCodeSVG value={publicUrl} size={160} bgColor="#FAF9F6" fgColor="#0A0A0A" />
+            </div>
+            <p className="text-xs text-hs-muted mt-4 break-all px-2">{publicUrl}</p>
+            <p className="text-xs text-hs-gray mt-2">
+              Status: <span className={seller.status === 'active' ? 'text-hs-success' : 'text-hs-gold'}>{seller.status.replace('_', ' ')}</span>
+            </p>
+          </section>
+        )}
+
+        {/* Seller referral QR */}
         <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5 text-center">
-          <h2 className="font-bold text-hs-cream mb-1">Your Join QR</h2>
-          <p className="text-xs text-hs-gray mb-4">Scan to share your listing</p>
+          <h2 className="font-bold text-hs-cream mb-1">Restaurant Referral QR</h2>
+          <p className="text-xs text-hs-gray mb-4">Invite another food business</p>
           {referrals && (
             <div className="grid grid-cols-3 gap-2 mb-4">
               <div className="bg-hs-soft rounded-2xl p-2">

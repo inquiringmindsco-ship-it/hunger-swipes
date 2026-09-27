@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
 import { isHttpsUrl } from '@/lib/food'
+import { isAvailableRestaurantSlug, normalizeRestaurantSlug } from '@/lib/restaurant-slug'
 
-const PUBLIC_SELLER_FIELDS = 'id,business_name,seller_type,description,logo_url,location_text,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status'
+const PUBLIC_SELLER_FIELDS = 'id,slug,business_name,seller_type,description,logo_url,location_text,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,website_url,status,verification_status'
 
 export async function GET(request: NextRequest) {
   try {
@@ -71,6 +72,9 @@ export async function POST(request: NextRequest) {
       ordering_method,
       ordering_url,
       logo_url,
+      contact_name,
+      contact_email,
+      website_url,
       referred_by,
     } = body
 
@@ -78,6 +82,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'business_name and seller_type are required' }, { status: 400 })
     }
     if (ordering_url && !isHttpsUrl(ordering_url)) return NextResponse.json({ error: 'Ordering URL must use HTTPS' }, { status: 400 })
+    if (website_url && !isHttpsUrl(website_url)) return NextResponse.json({ error: 'Website or social link must use HTTPS' }, { status: 400 })
 
     const admin = getSupabaseAdmin()
     if (!admin) {
@@ -95,8 +100,17 @@ export async function POST(request: NextRequest) {
     if (findError) return NextResponse.json({ error: findError.message }, { status: 500 })
     if (existing) return NextResponse.json({ seller: existing }, { status: 200 })
 
+    const slugBase = normalizeRestaurantSlug(business_name)
+    if (!isAvailableRestaurantSlug(slugBase)) {
+      return NextResponse.json({ error: 'Please use a more distinctive business name' }, { status: 400 })
+    }
+    let slug = slugBase
+    const { data: slugMatch } = await admin.from('sellers').select('id').ilike('slug', slug).maybeSingle()
+    if (slugMatch) slug = `${slugBase}-${crypto.randomUUID().slice(0, 6)}`
+
     const insert: any = {
       owner_user_id: user.id,
+      slug,
       business_name,
       seller_type,
       description: description || null,
@@ -111,6 +125,9 @@ export async function POST(request: NextRequest) {
       ordering_method: ordering_method || 'none',
       ordering_url: ordering_url || null,
       logo_url: logo_url || null,
+      contact_name: contact_name || null,
+      contact_email: contact_email || user.email || null,
+      website_url: website_url || null,
       status: 'pending_review',
       verification_status: 'pending',
     }
@@ -156,7 +173,7 @@ export async function PUT(request: NextRequest) {
     const allowed = [
       'business_name', 'seller_type', 'description', 'logo_url', 'location_text', 'address',
       'latitude', 'longitude', 'phone', 'hours_text', 'pickup_available', 'delivery_available',
-      'ordering_method', 'ordering_url', 'service_area'
+      'ordering_method', 'ordering_url', 'service_area', 'contact_name', 'contact_email', 'website_url'
     ]
     const update: any = {}
     for (const key of allowed) {
@@ -166,6 +183,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }
     if (update.ordering_url && !isHttpsUrl(update.ordering_url)) return NextResponse.json({ error: 'Ordering URL must use HTTPS' }, { status: 400 })
+    if (update.website_url && !isHttpsUrl(update.website_url)) return NextResponse.json({ error: 'Website or social link must use HTTPS' }, { status: 400 })
 
     const { data, error } = await admin
       .from('sellers')
