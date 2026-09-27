@@ -3,7 +3,7 @@ const RESERVED_ROUTES = new Set([
   'leaderboard', 'matches', 'nearby', 'onboarding', 'places', 'post',
   'preferences', 'privacy', 'saved', 'seller', 'social', 'swipe', 'terms',
   'vendor', 'vendor-dashboard', 'vendor-intake', 'vendor-onepager', 'vendors',
-  'visits',
+  'verification', 'visits',
 ])
 
 export function normalizeRestaurantSlug(value: unknown) {
@@ -22,4 +22,3 @@ export function isAvailableRestaurantSlug(value: unknown) {
   const slug = normalizeRestaurantSlug(value)
   return slug.length >= 2 && !RESERVED_ROUTES.has(slug)
 }
-

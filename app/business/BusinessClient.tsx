@@ -60,7 +60,7 @@ export default function BusinessClient() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Submission failed')
       sessionStorage.setItem('hungerswipes_business_intake', JSON.stringify(form))
-      router.push('/auth?mode=signup&next=%2Fjoin%3Fseller_type%3Drestaurant')
+      router.push('/join?seller_type=restaurant')
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -110,7 +110,7 @@ export default function BusinessClient() {
               <h2 className="text-lg font-black text-hs-cream mb-1 flex items-center gap-2">
                 <QrCode size={20} className="text-hs-gold" /> Join Hunger Swipes
               </h2>
-              <p className="text-xs text-hs-gray mb-5">We&apos;ll review your info and send your restaurant dashboard.</p>
+              <p className="text-xs text-hs-gray mb-5">Start with the essentials, then create or connect your account.</p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -168,7 +168,7 @@ export default function BusinessClient() {
                 <div>
                   <label className="block text-xs font-semibold text-hs-silver mb-1.5">Website or social link</label>
                   <input
-                    type="text"
+                    type="url"
                     value={form.website}
                     onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
                     placeholder="https://..."

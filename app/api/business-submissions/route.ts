@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { isHttpsUrl } from '@/lib/food'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { business_name, contact_name, phone, email, address, website, notes } = body
-    if (!business_name?.trim()) {
-      return NextResponse.json({ error: 'Business name is required' }, { status: 400 })
+    if (![business_name, contact_name, phone, email, address].every((value) => typeof value === 'string' && value.trim())) {
+      return NextResponse.json({ error: 'Business name, contact name, phone, email, and address are required' }, { status: 400 })
     }
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
+    if (website?.trim() && !isHttpsUrl(website.trim())) return NextResponse.json({ error: 'Website or social link must use HTTPS' }, { status: 400 })
     const admin = getSupabaseAdmin()
     if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
 

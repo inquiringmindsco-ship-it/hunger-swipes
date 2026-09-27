@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowUpRight, CheckCircle2, Eye, Heart, RefreshCw, Shield, Trash2, XCircle, Search, QrCode, ExternalLink, Store } from 'lucide-react'
 import { PassIcon } from '@/app/components/icons/HungerIcons'
@@ -20,8 +19,7 @@ interface Submission {
 }
 
 function AdminContent() {
-  const params = useSearchParams()
-  const [secret, setSecret] = useState(params.get('secret') || '')
+  const [secret, setSecret] = useState('')
   const [authenticated, setAuthenticated] = useState(false)
   const [sellers, setSellers] = useState<any[]>([])
   const [dishes, setDishes] = useState<any[]>([])
