@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { QRCodeSVG } from 'qrcode.react'
-import { Ban, CheckCircle2, Clock3, ExternalLink, LogOut, MapPin, Pencil, Phone, Plus, Timer, ToggleLeft, ToggleRight, TrendingUp, Heart, Eye, Utensils } from 'lucide-react'
+import { Ban, CheckCircle2, Clock3, ExternalLink, LogOut, MapPin, Pencil, Phone, Plus, Timer, ToggleLeft, ToggleRight, TrendingUp, Heart, Eye, Utensils, Lock, RefreshCw } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
 import { getSupabase } from '@/lib/supabase'
 import { BrandMark, SellerTypeIcon } from '@/app/components/icons/HungerIcons'
@@ -22,6 +22,9 @@ export default function SellerDashboardPage() {
   const [stats, setStats] = useState<any>(null)
   const [referrals, setReferrals] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [staffPin, setStaffPin] = useState<string | null>(null)
+  const [hasStaffPin, setHasStaffPin] = useState(false)
+  const [pinLoading, setPinLoading] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -48,18 +51,22 @@ export default function SellerDashboardPage() {
         return
       }
       const ownedSellerId = sellerData.seller.id
-      const [dishesRes, statsRes, refRes] = await Promise.all([
+      const [dishesRes, statsRes, refRes, pinRes] = await Promise.all([
         authFetch(`/api/sellers/${ownedSellerId}/dishes`),
         authFetch(`/api/sellers/${ownedSellerId}/stats`),
         authFetch(`/api/sellers/${ownedSellerId}/referrals`),
+        authFetch('/api/sellers/staff-pin'),
       ])
       const dishesData = await dishesRes.json()
       const statsData = await statsRes.json()
       const refData = await refRes.json()
+      const pinData = await pinRes.json().catch(() => ({ hasPin: false }))
       setSeller(sellerData.seller)
       if (dishesData.dishes) setDishes(dishesData.dishes)
       if (statsData.stats) setStats(statsData.stats)
       if (refData.stats) setReferrals(refData.stats)
+      setHasStaffPin(pinData.hasPin)
+      if (!pinData.hasPin) setStaffPin(null)
     } catch {
       router.replace('/auth?next=%2Fseller%2Fdashboard')
     } finally {
@@ -83,6 +90,20 @@ export default function SellerDashboardPage() {
       localStorage.removeItem('hungerswipes_user')
     }
     router.replace('/auth?next=%2Fseller%2Fdashboard')
+  }
+
+  const regenerateStaffPin = async () => {
+    setPinLoading(true)
+    try {
+      const res = await authFetch('/api/sellers/staff-pin', { method: 'POST' })
+      const data = await res.json()
+      if (data.pin) {
+        setStaffPin(data.pin)
+        setHasStaffPin(true)
+      }
+    } finally {
+      setPinLoading(false)
+    }
   }
 
   if (loading) {
@@ -135,6 +156,7 @@ export default function SellerDashboardPage() {
   const joinUrl = seller ? `${appUrl}/join?ref=${seller.id}` : `${appUrl}/join`
   const restaurantUrl = seller?.slug ? `${appUrl}/${seller.slug}` : joinUrl
   const publicUrl = seller?.slug ? `${appUrl}/${seller.slug}` : null
+  const staffUrl = seller?.slug ? `${appUrl}/seller/staff/${seller.slug}` : null
   const StatusIcon = seller.status === 'active' ? CheckCircle2 : seller.status === 'suspended' ? Ban : Timer
 
   const statusColor = seller.status === 'active' ? 'text-hs-success' : seller.status === 'suspended' ? 'text-hs-red' : 'text-hs-gold'
@@ -310,6 +332,43 @@ export default function SellerDashboardPage() {
             </div>
           )}
         </section>
+
+        {/* Staff Upload QR + PIN */}
+        {staffUrl && (
+          <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Lock size={16} className="text-hs-gold" />
+              <h2 className="font-bold text-hs-cream">Staff Upload QR</h2>
+            </div>
+            <p className="text-xs text-hs-gray mb-4">Staff scan to add dishes from their phone</p>
+
+            {staffPin ? (
+              <div className="bg-hs-gold/10 border border-hs-gold/20 rounded-2xl p-4 mb-4">
+                <p className="text-xs text-hs-gold uppercase tracking-wider mb-1">Current staff PIN</p>
+                <p className="text-3xl font-black text-hs-cream tracking-[0.25em]">{staffPin}</p>
+                <p className="text-xs text-hs-gray mt-2">Give this PIN to staff. They enter it after scanning the QR.</p>
+              </div>
+            ) : hasStaffPin ? (
+              <p className="text-xs text-hs-gray mb-4">PIN is set. Regenerate to view a new PIN.</p>
+            ) : (
+              <p className="text-xs text-hs-gray mb-4">No staff PIN yet. Generate one to enable staff uploads.</p>
+            )}
+
+            <div className="bg-hs-cream p-3 rounded-2xl inline-block mb-3">
+              <QRCodeSVG value={staffUrl} size={160} bgColor="#FAF9F6" fgColor="#0A0A0A" />
+            </div>
+            <p className="text-xs text-hs-muted break-all px-2 mb-4">{staffUrl}</p>
+
+            <button
+              onClick={regenerateStaffPin}
+              disabled={pinLoading}
+              className="w-full py-3 border border-white/[0.08] bg-hs-charcoal text-hs-cream rounded-2xl font-semibold inline-flex items-center justify-center gap-2 hover:bg-hs-soft transition disabled:opacity-50"
+            >
+              <RefreshCw size={16} className={pinLoading ? 'animate-spin' : ''} />
+              {pinLoading ? 'Generating…' : hasStaffPin ? 'Regenerate Staff PIN' : 'Generate Staff PIN'}
+            </button>
+          </section>
+        )}
 
         {/* Public Restaurant QR */}
         {publicUrl && (
