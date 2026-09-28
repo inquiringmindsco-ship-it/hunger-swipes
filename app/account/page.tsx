@@ -70,6 +70,15 @@ export default function AccountPage() {
   const [postToDelete, setPostToDelete] = useState<string | null>(null)
 
   useEffect(() => {
+    if (postToDelete) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [postToDelete])
+
+  useEffect(() => {
     if (loading) return
     if (!user) {
       setChecking(false)
@@ -265,7 +274,7 @@ export default function AccountPage() {
                       <button
                         onClick={() => setPostToDelete(post.id)}
                         className="p-2 rounded-xl bg-hs-red/10 text-hs-red"
-                        aria-label="Delete post"
+                        aria-label="Open delete confirmation"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -309,25 +318,38 @@ export default function AccountPage() {
         </Section>
 
         {postToDelete && (
-          <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-50 p-4">
-            <div className="bg-hs-charcoal border border-white/10 rounded-2xl p-5 w-full max-w-sm">
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/80 p-4"
+            onClick={() => setPostToDelete(null)}
+          >
+            <div
+              className="bg-hs-charcoal border border-white/10 rounded-t-2xl sm:rounded-2xl p-5 w-full max-w-sm safe-bottom shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
               <h2 className="font-bold text-hs-cream mb-2">Delete this food post?</h2>
-              <p className="text-sm text-hs-gray mb-4">
+              <p className="text-sm text-hs-gray mb-5">
                 This will remove it from Hunger Swipes and stop any future Swipe Bucks from this post. Your past earnings stay in your wallet.
               </p>
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => setPostToDelete(null)} className="py-3 rounded-xl bg-white/5 text-hs-cream font-semibold">
+                <button
+                  onClick={() => setPostToDelete(null)}
+                  className="py-4 rounded-xl bg-white/5 text-hs-cream font-semibold active:bg-white/10"
+                >
                   Cancel
                 </button>
-                <button onClick={() => deletePost(postToDelete)} className="py-3 rounded-xl bg-hs-red text-white font-bold">
-                  Delete
+                <button
+                  onClick={() => postToDelete && deletePost(postToDelete)}
+                  className="py-4 rounded-xl bg-hs-red text-white font-bold active:bg-hs-red/80"
+                >
+                  Delete Post
                 </button>
               </div>
             </div>
           </div>
         )}
       </main>
-      <MobileNav />
+      <div style={{ display: postToDelete ? 'none' : 'block' }}>
+        <MobileNav />
+      </div>
     </div>
   )
 }
