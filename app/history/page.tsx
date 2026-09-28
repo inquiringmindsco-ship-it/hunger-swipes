@@ -3,22 +3,23 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Phone, Clock3, Trash2, History } from 'lucide-react'
-import { BrandMark, WantItIcon, GetItIcon, LocationIcon } from '@/app/components/icons/HungerIcons'
-import { IconButton } from '@/app/components/ui/IconButton'
+import { ArrowLeft, History, Heart, X, Phone, Clock3 } from 'lucide-react'
+import { BrandMark, WantItIcon, LocationIcon } from '@/app/components/icons/HungerIcons'
 import MobileNav from '@/app/components/MobileNav'
 import PlaceActions from '@/app/components/PlaceActions'
 import { LoadingState } from '@/app/components/ui/LoadingState'
 import { EmptyState } from '@/app/components/ui/EmptyState'
-import { ErrorState } from '@/app/components/ui/ErrorState'
 import { DishImage } from '@/app/components/DishImage'
 import { useAuth } from '@/lib/auth'
 import { authFetch } from '@/lib/auth-fetch'
 import { formatOptionalFoodPrice } from '@/lib/food'
 
-interface SavedItem {
+interface HistoryItem {
   id: string
   content_kind: 'official' | 'community'
+  direction: 'left' | 'right'
+  created_at: string
+  updated_at: string
   dish: {
     id: string
     name: string
@@ -47,50 +48,54 @@ interface SavedItem {
   }
 }
 
-export default function SavedPage() {
+export default function HistoryPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
-  const [saved, setSaved] = useState<SavedItem[]>([])
+  const [swipes, setSwipes] = useState<HistoryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [removing, setRemoving] = useState<string | null>(null)
+  const [saving, setSaving] = useState<string | null>(null)
 
   useEffect(() => {
     if (authLoading) return
     if (!user) {
-      router.replace('/auth?next=/saved')
+      router.replace('/auth?next=/history')
       return
     }
-    loadSaved()
+    loadHistory()
   }, [authLoading, user?.id, router])
 
-  const loadSaved = async () => {
+  const loadHistory = async () => {
     setLoading(true)
     setError('')
     try {
-      const res = await authFetch('/api/saves')
+      const res = await authFetch('/api/swipes')
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Saved dishes unavailable')
-      setSaved(data.saved || [])
+      if (!res.ok) throw new Error(data.error || 'Swipe history unavailable')
+      setSwipes(data.swipes || [])
     } catch (e) {
       console.error(e)
-      setError('Couldn’t load your saved dishes.')
+      setError('Couldn’t load your swipe history.')
     }
     setLoading(false)
   }
 
-  const removeSaved = async (dishId: string, contentKind: SavedItem['content_kind']) => {
-    if (removing) return
-    setRemoving(dishId)
+  const saveAgain = async (dishId: string, contentKind: HistoryItem['content_kind']) => {
+    if (saving) return
+    setSaving(dishId)
     setError('')
     try {
-      const response = await authFetch(`/api/saves?contentKind=${contentKind}&contentId=${encodeURIComponent(dishId)}`, { method: 'DELETE' })
-      if (!response.ok) throw new Error('Remove failed')
-      setSaved((items) => items.filter((item) => item.dish.id !== dishId || item.content_kind !== contentKind))
+      const res = await authFetch('/api/swipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contentId: dishId, contentKind, direction: 'right' }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      loadHistory()
     } catch {
-      setError('Couldn’t remove that dish. Nothing changed; please retry.')
+      setError('Couldn’t save that dish. Please retry.')
     } finally {
-      setRemoving(null)
+      setSaving(null)
     }
   }
 
@@ -98,24 +103,20 @@ export default function SavedPage() {
     return (
       <div className="min-h-screen bg-hs-ink pb-24">
         <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
-          <div className="max-w-md mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BrandMark size={28} />
-              <span className="font-bold text-base text-hs-cream tracking-tight">Saved</span>
-            </div>
+          <div className="max-w-md mx-auto flex items-center gap-2">
+            <BrandMark size={28} />
+            <span className="font-bold text-base text-hs-cream tracking-tight">History</span>
           </div>
         </header>
         <main className="max-w-md mx-auto px-4 pt-8">
-          <LoadingState label="Loading your saved dishes…" />
+          <LoadingState label="Loading your swipe history…" />
         </main>
         <MobileNav />
       </div>
     )
   }
 
-  if (!user) {
-    return null
-  }
+  if (!user) return null
 
   return (
     <div className="min-h-screen bg-hs-ink pb-24">
@@ -123,33 +124,28 @@ export default function SavedPage() {
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BrandMark size={28} />
-            <span className="font-bold text-base text-hs-cream tracking-tight">Saved</span>
+            <span className="font-bold text-base text-hs-cream tracking-tight">Swipe History</span>
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/history"
-              className="flex items-center gap-1 text-hs-gold text-sm font-semibold hover:text-hs-gold-light transition"
-            >
-              <History size={16} aria-hidden="true" /> History
-            </Link>
-            <Link
-              href="/swipe"
-              className="flex items-center gap-1 text-hs-gold text-sm font-semibold hover:text-hs-gold-light transition"
-            >
-              <ArrowLeft size={16} aria-hidden="true" /> Discover
-            </Link>
-          </div>
+          <Link
+            href="/saved"
+            className="flex items-center gap-1 text-hs-gold text-sm font-semibold hover:text-hs-gold-light transition"
+          >
+            <ArrowLeft size={16} aria-hidden="true" /> Saved
+          </Link>
         </div>
       </header>
 
       <main className="max-w-md mx-auto px-4 py-5">
-        {error && saved.length === 0 ? (
-          <ErrorState title="Saved is unavailable" body={error} action={<button onClick={loadSaved} className="rounded-full bg-hs-gold px-6 py-3 font-bold text-hs-black">Try Again</button>} />
-        ) : saved.length === 0 ? (
+        {error && swipes.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-hs-red text-sm mb-4">{error}</p>
+            <button onClick={loadHistory} className="rounded-full bg-hs-gold px-6 py-3 font-bold text-hs-black">Try Again</button>
+          </div>
+        ) : swipes.length === 0 ? (
           <EmptyState
             icon={<WantItIcon size={52} className="text-hs-gold" />}
-            title="No saved dishes yet"
-            body="Swipe right on food you want. Everything you save shows up here."
+            title="No swipe history yet"
+            body="Everything you swipe — left or right — shows up here, even after you clear your saved list."
             action={
               <Link
                 href="/swipe"
@@ -162,8 +158,8 @@ export default function SavedPage() {
         ) : (
           <div className="space-y-5">
             {error && <p role="alert" className="rounded-xl border border-hs-red/30 bg-hs-red/10 p-3 text-sm text-hs-cream">{error}</p>}
-            <p className="text-hs-gray text-sm mb-4">{saved.length} {saved.length === 1 ? 'dish' : 'dishes'} saved</p>
-            {saved.map((item) => {
+            <p className="text-hs-gray text-sm mb-4">{swipes.length} {swipes.length === 1 ? 'swipe' : 'swipes'} recorded</p>
+            {swipes.map((item) => {
               const dish = item.dish
               const seller = dish.seller
               const displayPrice = formatOptionalFoodPrice(dish.price)
@@ -174,13 +170,21 @@ export default function SavedPage() {
                 >
                   <div className="relative h-52 sm:h-60 bg-hs-graphite">
                     <DishImage src={dish.photo_url} alt={dish.name} sizes="(max-width: 480px) calc(100vw - 32px), 448px" quality={80} className="w-full h-full object-cover" />
-                    <div className="absolute top-3 left-3">
+                    <div className="absolute top-3 left-3 flex gap-2">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
                         item.content_kind === 'official'
                           ? 'bg-hs-gold text-hs-black'
                           : 'bg-hs-soft/80 text-hs-cream backdrop-blur-sm'
                       }`}>
                         {item.content_kind === 'official' ? 'Official' : 'Community'}
+                      </span>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${
+                        item.direction === 'right'
+                          ? 'bg-hs-success/20 text-hs-success'
+                          : 'bg-hs-red/20 text-hs-red'
+                      }`}>
+                        {item.direction === 'right' ? <Heart size={10} /> : <X size={10} />}
+                        {item.direction === 'right' ? 'Liked' : 'Passed'}
                       </span>
                     </div>
                   </div>
@@ -222,14 +226,15 @@ export default function SavedPage() {
                       <div className="flex-1 min-w-0">
                         <PlaceActions place={{ ...seller, name: seller.business_name, order_url: seller.order_url || seller.ordering_url }} compact />
                       </div>
-                      <IconButton
-                        label={`Remove ${dish.name} from saved dishes`}
-                        disabled={removing === dish.id}
-                        onClick={() => removeSaved(dish.id, item.content_kind)}
-                        className="w-11 h-11 rounded-xl bg-hs-soft text-hs-gray hover:text-hs-red hover:bg-hs-red/10 transition"
-                      >
-                        <Trash2 size={18} aria-hidden="true" />
-                      </IconButton>
+                      {item.direction === 'left' && (
+                        <button
+                          onClick={() => saveAgain(dish.id, item.content_kind)}
+                          disabled={saving === dish.id}
+                          className="px-4 py-2 rounded-xl bg-hs-gold text-hs-black text-sm font-bold hover:bg-hs-gold-light transition disabled:opacity-50"
+                        >
+                          {saving === dish.id ? 'Saving…' : 'Save'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </article>
