@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
       .select('id, impressions, right_swipes, left_swipes, created_at')
       .eq('user_id', user.id)
       .eq('status', 'active')
+      .eq('moderation_status', 'approved')
 
     const postIds = (posts || []).map((p: any) => p.id)
     let savesGenerated = 0

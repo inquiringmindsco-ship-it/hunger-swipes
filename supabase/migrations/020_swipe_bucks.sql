@@ -315,9 +315,9 @@ create trigger swipe_bucks_save
 
 drop trigger if exists swipe_bucks_first_photo on public.community_food_posts;
 create trigger swipe_bucks_first_photo
-  after insert or update of status on public.community_food_posts
+  after insert or update of status, moderation_status on public.community_food_posts
   for each row
-  when (NEW.status = 'active')
+  when (NEW.status = 'active' AND NEW.moderation_status = 'approved')
   execute function public.swipe_bucks_handle_first_photo();
 
 -- ============================================================

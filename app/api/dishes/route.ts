@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     }
 
     let communityQuery = admin.from('community_food_posts').select(`*, place:places!inner(id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,status)`)
-      .eq('status', 'active').eq('places.status', 'active').order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false }).limit(Math.min((offset + limit + 1) * 2, 1000))
+      .eq('status', 'active').eq('moderation_status', 'approved').eq('places.status', 'active').order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false }).limit(Math.min((offset + limit + 1) * 2, 1000))
     if (cuisineTags.length) communityQuery = communityQuery.overlaps('tags', cuisineTags)
     if (dietaryTags.length) communityQuery = communityQuery.overlaps('tags', dietaryTags)
     if (healthCategories.length) communityQuery = communityQuery.overlaps('tags', healthCategories)

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useAuth, signOut, getAuthToken } from '@/lib/auth'
 import { useEffect, useState } from 'react'
-import { LogOut, Store, Heart, User, ChevronRight, MapPin, SlidersHorizontal, Shield, Bell, Utensils, Wallet } from 'lucide-react'
+import { LogOut, Store, Heart, User, ChevronRight, MapPin, SlidersHorizontal, Shield, Bell, Utensils, Wallet, Camera, Trash2, Clock, CheckCircle, HelpCircle, XCircle } from 'lucide-react'
 import { BrandMark, ProfileIcon } from '@/app/components/icons/HungerIcons'
 import MobileNav from '@/app/components/MobileNav'
 import { LoadingState } from '@/app/components/ui/LoadingState'
@@ -65,23 +65,56 @@ export default function AccountPage() {
   const [seller, setSeller] = useState<any>(null)
   const [checking, setChecking] = useState(true)
 
+  const [myPosts, setMyPosts] = useState<any[]>([])
+  const [postsLoading, setPostsLoading] = useState(true)
+  const [postToDelete, setPostToDelete] = useState<string | null>(null)
+
   useEffect(() => {
     if (loading) return
     if (!user) {
       setChecking(false)
+      setPostsLoading(false)
       return
     }
     getAuthToken().then((token) =>
-      fetch('/api/sellers?mine=true', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.seller) setSeller(data.seller)
+      Promise.all([
+        fetch('/api/sellers?mine=true', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).then((r) => r.json()),
+        fetch('/api/community-posts?mine=true', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).then((r) => r.json()),
+      ])
+        .then(([sellerData, postsData]) => {
+          if (sellerData.seller) setSeller(sellerData.seller)
+          setMyPosts(postsData.posts || [])
         })
-        .finally(() => setChecking(false))
+        .finally(() => {
+          setChecking(false)
+          setPostsLoading(false)
+        })
     )
   }, [user, loading])
+
+  const deletePost = async (id: string) => {
+    const token = await getAuthToken()
+    const res = await fetch(`/api/community-posts/${id}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    const data = await res.json()
+    if (data.success) {
+      setMyPosts((prev) => prev.map((p) => (p.id === id ? { ...p, moderation_status: 'removed', status: 'removed' } : p)))
+      setPostToDelete(null)
+    }
+  }
+
+  const statusLabel = (status: string) => {
+    if (status === 'approved') return { text: 'Live', icon: <CheckCircle size={14} className="text-green-400" />, color: 'text-green-400' }
+    if (status === 'pending_review') return { text: 'Under Review', icon: <HelpCircle size={14} className="text-yellow-400" />, color: 'text-yellow-400' }
+    if (status === 'rejected') return { text: 'Not Approved', icon: <XCircle size={14} className="text-red-400" />, color: 'text-red-400' }
+    return { text: 'Removed', icon: <Trash2 size={14} className="text-gray-400" />, color: 'text-gray-400' }
+  }
 
   if (loading || checking) {
     return (
@@ -200,6 +233,50 @@ export default function AccountPage() {
           />
         </Section>
 
+        <Section title="Your food posts">
+          {postsLoading ? (
+            <p className="px-4 py-4 text-sm text-hs-gray">Loading…</p>
+          ) : myPosts.length === 0 ? (
+            <div className="px-4 py-5">
+              <p className="text-sm text-hs-gray">You haven&apos;t posted any dishes yet.</p>
+              <Link href="/post" className="inline-block mt-2 text-sm text-hs-gold font-semibold">Post your first dish →</Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/[0.06]">
+              {myPosts.map((post) => {
+                const st = statusLabel(post.moderation_status)
+                const isRemoved = post.moderation_status === 'removed' || post.status === 'removed'
+                return (
+                  <div key={post.id} className="px-4 py-3.5 flex items-center gap-3">
+                    <img src={post.photo_url} alt={post.dish_name} className="w-12 h-12 rounded-lg object-cover bg-black flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-hs-cream truncate">{post.dish_name}</p>
+                      <div className={`flex items-center gap-1 text-xs ${st.color}`}>
+                        {st.icon} {st.text}
+                      </div>
+                      {post.moderation_status === 'pending_review' && (
+                        <p className="text-xs text-hs-gray mt-0.5">We&apos;re checking this photo before it goes into Discover.</p>
+                      )}
+                      {post.moderation_status === 'rejected' && (
+                        <p className="text-xs text-hs-gray mt-0.5">This photo doesn&apos;t appear to clearly show food. Try another photo with the dish as the main subject.</p>
+                      )}
+                    </div>
+                    {!isRemoved && (
+                      <button
+                        onClick={() => setPostToDelete(post.id)}
+                        className="p-2 rounded-xl bg-hs-red/10 text-hs-red"
+                        aria-label="Delete post"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Section>
+
         <Section title="Saved">
           <Row
             href="/saved"
@@ -230,6 +307,25 @@ export default function AccountPage() {
             danger
           />
         </Section>
+
+        {postToDelete && (
+          <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-50 p-4">
+            <div className="bg-hs-charcoal border border-white/10 rounded-2xl p-5 w-full max-w-sm">
+              <h2 className="font-bold text-hs-cream mb-2">Delete this food post?</h2>
+              <p className="text-sm text-hs-gray mb-4">
+                This will remove it from Hunger Swipes and stop any future Swipe Bucks from this post. Your past earnings stay in your wallet.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setPostToDelete(null)} className="py-3 rounded-xl bg-white/5 text-hs-cream font-semibold">
+                  Cancel
+                </button>
+                <button onClick={() => deletePost(postToDelete)} className="py-3 rounded-xl bg-hs-red text-white font-bold">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
       <MobileNav />
     </div>

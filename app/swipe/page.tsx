@@ -106,6 +106,9 @@ export default function SwipePage() {
   const [pendingSwipe, setPendingSwipe] = useState<{ dish: FoodDish; direction: SwipeDirection } | null>(null)
   const [matchDish, setMatchDish] = useState<FoodDish | null>(null)
   const [announcement, setAnnouncement] = useState('')
+  const [continueEarly, setContinueEarly] = useState(false)
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingAdvance = useRef<{ dish: FoodDish; direction: SwipeDirection; saved: boolean } | null>(null)
   const startPoint = useRef({ x: 0, y: 0 })
   const gestureIntent = useRef<GestureIntent>('undecided')
   const activePointer = useRef<number | null>(null)
@@ -212,15 +215,35 @@ export default function SwipePage() {
     )
   }, [])
 
-  const finishAdvance = useCallback((dish: FoodDish, direction: SwipeDirection, saved: boolean) => {
+  const doAdvance = useCallback(() => {
+    const pending = pendingAdvance.current
+    if (!pending) { actionLock.current = false; return }
+    const { dish, direction, saved } = pending
     if (saved && direction === 'right') {
       setSavedCount((count) => count + 1); setMatchDish(dish); window.setTimeout(() => setMatchDish(null), 1800)
     }
     setAnnouncement(direction === 'right' ? `${dish.dish} saved` : `${dish.dish} passed`)
     setCurrentIndex((index) => index + 1)
-    setDragX(0); setGestureProgress(0); setLastSwipe(null); setPendingSwipe(null); setSwipeFailure(null); setActionState('idle')
+    setDragX(0); setGestureProgress(0); setLastSwipe(null); setPendingSwipe(null); setSwipeFailure(null); setActionState('idle'); setContinueEarly(false)
+    pendingAdvance.current = null
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null }
     actionLock.current = false
   }, [])
+
+  const finishAdvance = useCallback((dish: FoodDish, direction: SwipeDirection, saved: boolean) => {
+    pendingAdvance.current = { dish, direction, saved }
+    if (direction === 'right') {
+      setContinueEarly(true)
+      if (holdTimer.current) clearTimeout(holdTimer.current)
+      holdTimer.current = setTimeout(() => doAdvance(), 5000)
+    } else {
+      doAdvance()
+    }
+  }, [doAdvance])
+
+  const advanceNow = useCallback(() => {
+    doAdvance()
+  }, [doAdvance])
 
   const persistAndAdvance = useCallback(async (dish: FoodDish, direction: SwipeDirection) => {
     setActionState('persisting')
@@ -336,10 +359,36 @@ export default function SwipePage() {
             <DishImage src={currentDish.imageUrl} alt={currentDish.dish} sizes="(max-width: 480px) calc(100vw - 32px), 448px" preload quality={84} className="w-full h-full object-cover dish-image" />
             {dragX > 0 && <div className="absolute top-6 left-6 border-[3px] border-hs-gold text-hs-gold px-4 py-2 rounded-2xl font-black text-lg tracking-tight rotate-[-12deg] bg-hs-black/35 backdrop-blur-sm" style={{ opacity: gestureProgress }}>WANT IT</div>}
             {dragX < 0 && <div className="absolute top-6 right-6 border-[3px] border-hs-red text-hs-red px-4 py-2 rounded-2xl font-black text-lg tracking-tight rotate-[12deg] bg-hs-black/35 backdrop-blur-sm" style={{ opacity: gestureProgress }}>PASS</div>}
-            {lastSwipe === 'right' && <div className="absolute inset-0 bg-hs-gold/20 flex items-center justify-center"><div className="bg-hs-gold text-hs-black text-3xl font-black px-6 py-3 rounded-2xl rotate-[-12deg] shadow-gold flex items-center gap-2"><WantItIcon size={32} /> WANT IT</div></div>}
+            {lastSwipe === 'right' && (
+              <div className="absolute inset-0 bg-hs-gold/20 flex flex-col items-center justify-center gap-4">
+                <div className="bg-hs-gold text-hs-black text-3xl font-black px-6 py-3 rounded-2xl rotate-[-12deg] shadow-gold flex items-center gap-2">
+                  Saved ♥️
+                </div>
+                {continueEarly && (
+                  <button
+                    onClick={advanceNow}
+                    className="mt-4 px-6 py-3 bg-hs-black/70 text-white border border-white/20 rounded-full font-bold text-sm backdrop-blur-sm hover:bg-hs-black"
+                  >
+                    Continue →
+                  </button>
+                )}
+              </div>
+            )}
             {lastSwipe === 'left' && <div className="absolute inset-0 bg-hs-red/20 flex items-center justify-center"><div className="bg-hs-red text-white text-3xl font-black px-6 py-3 rounded-2xl rotate-[12deg] shadow-lg">PASS</div></div>}
             {currentDish.contentKind === 'community' && <div className="absolute top-3 left-3"><span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-black/30 text-white/75 backdrop-blur-sm border border-white/10">Community</span></div>}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pt-16 pb-5"><div className="mb-3"><h2 className="text-white text-[1.55rem] sm:text-[1.85rem] font-black leading-[1.1] tracking-tight mb-1 drop-shadow-lg">{currentDish.dish}</h2><p className="text-white/85 text-sm sm:text-base font-medium drop-shadow-md">{currentDish.restaurant}</p><p className="flex items-center gap-2 mt-1 text-white/60 text-xs font-medium">{locationLabel && <span className="truncate max-w-[140px] sm:max-w-[180px]">{locationLabel}</span>}{locationLabel && currentDish.priceRange && <span className="text-white/30">•</span>}{currentDish.priceRange && <span className="text-hs-gold">{currentDish.priceRange}</span>}</p></div><div className="flex items-center justify-center gap-6"><IconButton label={`Pass on ${currentDish.dish}`} disabled={actionLock.current} onClick={() => commitSwipe('left')} className="w-16 h-16 sm:w-[72px] sm:h-[72px] bg-hs-red/10 border-2 border-hs-red text-hs-red shadow-lg backdrop-blur-sm hover:scale-105 hover:bg-hs-red hover:text-white transition active:scale-95"><PassIcon size={26} className="sm:w-[30px] sm:h-[30px]" /></IconButton><IconButton label={`Want ${currentDish.dish}`} disabled={actionLock.current} onClick={() => commitSwipe('right')} className="w-[72px] h-[72px] sm:w-20 sm:h-20 bg-hs-gold text-hs-black shadow-gold hover:scale-105 hover:bg-hs-gold-light transition active:scale-95"><WantItIcon size={32} className="sm:w-9 sm:h-9" /></IconButton></div></div>
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pt-16 pb-5"><div className="mb-3"><h2 className="text-white text-[1.55rem] sm:text-[1.85rem] font-black leading-[1.1] tracking-tight mb-1 drop-shadow-lg">{currentDish.dish}</h2><p className="text-white/85 text-sm sm:text-base font-medium drop-shadow-md">{currentDish.restaurant}</p><p className="flex items-center gap-2 mt-1 text-white/60 text-xs font-medium">{locationLabel && <span className="truncate max-w-[140px] sm:max-w-[180px]">{locationLabel}</span>}{locationLabel && currentDish.priceRange && <span className="text-white/30">•</span>}{currentDish.priceRange && <span className="text-hs-gold">{currentDish.priceRange}</span>}</p></div><div className="flex items-center justify-center gap-6">{continueEarly ? (
+  <button
+    onClick={advanceNow}
+    className="px-6 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm hover:bg-hs-gold-light transition"
+  >
+    Continue / Next →
+  </button>
+) : (
+  <>
+    <IconButton label={`Pass on ${currentDish.dish}`} disabled={actionLock.current} onClick={() => commitSwipe('left')} className="w-16 h-16 sm:w-[72px] sm:h-[72px] bg-hs-red/10 border-2 border-hs-red text-hs-red shadow-lg backdrop-blur-sm hover:scale-105 hover:bg-hs-red hover:text-white transition active:scale-95"><PassIcon size={26} className="sm:w-[30px] sm:h-[30px]" /></IconButton>
+    <IconButton label={`Want ${currentDish.dish}`} disabled={actionLock.current} onClick={() => commitSwipe('right')} className="w-[72px] h-[72px] sm:w-20 sm:h-20 bg-hs-gold text-hs-black shadow-gold hover:scale-105 hover:bg-hs-gold-light transition active:scale-95"><WantItIcon size={32} className="sm:w-9 sm:h-9" /></IconButton>
+  </>
+)}</div></div>
           </article>
         </div>
       </main>

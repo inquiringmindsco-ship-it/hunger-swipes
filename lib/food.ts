@@ -64,6 +64,9 @@ export function mapCommunityPost(post: any) {
     right_swipes: post.right_swipes || 0,
     left_swipes: post.left_swipes || 0,
     created_at: post.created_at,
+    status: post.status,
+    moderation_status: post.moderation_status,
+    moderation_reason: post.moderation_reason,
     creator_name: post.creator_name,
     seller: {
       id: post.place?.id,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, CheckCircle2, Eye, Heart, RefreshCw, Shield, Trash2, XCircle, Search, QrCode, ExternalLink, Store, Wallet } from 'lucide-react'
+import { ArrowUpRight, CheckCircle2, Eye, Heart, RefreshCw, Shield, Trash2, XCircle, Search, QrCode, ExternalLink, Store, Wallet, Camera } from 'lucide-react'
 import { PassIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 
@@ -24,7 +24,7 @@ function AdminContent() {
   const [sellers, setSellers] = useState<any[]>([])
   const [dishes, setDishes] = useState<any[]>([])
   const [submissions, setSubmissions] = useState<Submission[]>([])
-  const [tab, setTab] = useState<'sellers' | 'dishes' | 'submissions' | 'swipe_bucks' | 'redemption'>('sellers')
+  const [tab, setTab] = useState<'sellers' | 'dishes' | 'submissions' | 'swipe_bucks' | 'redemption' | 'food_review'>('sellers')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -287,10 +287,10 @@ function AdminContent() {
             Submissions ({submissions.length})
           </button>
           <button
-            onClick={() => setTab('swipe_bucks')}
-            className={`px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center gap-1.5 ${tab === 'swipe_bucks' ? 'bg-[#FF5722] text-white' : 'bg-white/5 text-gray-400'}`}
+            onClick={() => setTab('food_review')}
+            className={`px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center gap-1.5 ${tab === 'food_review' ? 'bg-[#FF5722] text-white' : 'bg-white/5 text-gray-400'}`}
           >
-            <Wallet size={16} /> Swipe Bucks
+            <Camera size={16} /> Food Review
           </button>
           <button
             onClick={() => setTab('redemption')}
@@ -429,7 +429,7 @@ function AdminContent() {
               </div>
             ))}
           </div>
-        ) : (
+        ) : tab === 'submissions' ? (
           <div className="space-y-3">
             {submissions.length === 0 ? (
               <p className="text-gray-500 text-sm">No business submissions yet.</p>
@@ -483,9 +483,30 @@ function AdminContent() {
               ))
             )}
           </div>
-        )}
+        ) : null}
 
         {tab === 'swipe_bucks' && <SwipeBucksAdmin secret={secret} config={swipeBucksConfig} stats={swipeBucksStats} loading={swipeBucksLoading} onUpdate={loadSwipeBucks} />}
+        {tab === 'food_review' && (
+          <div className="space-y-4">
+            <p className="text-gray-400 text-sm">
+              Review and manage community food photos. Only approved photos appear in Discover and earn Swipe Bucks.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/admin/food-review"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-[#FF5722] text-white rounded-xl font-bold"
+              >
+                Open Food Review →
+              </Link>
+              <Link
+                href="/admin/food-review/manage"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-white/5 text-white rounded-xl font-semibold"
+              >
+                Manage all photos
+              </Link>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
