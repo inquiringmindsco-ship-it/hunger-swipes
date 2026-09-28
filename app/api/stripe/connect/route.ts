@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
           transfers: { requested: true },
         },
         metadata: { seller_id: seller.id, business_name: seller.business_name || '' },
-      })
+      }, { idempotencyKey: `seller-connect-${seller.id}` })
       accountId = account.id
       await admin.from('sellers').update({
         stripe_account_id: accountId,

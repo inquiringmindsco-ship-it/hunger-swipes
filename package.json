@@ -13,10 +13,12 @@
     "test:e2e": "playwright test",
     "test:gate3": "npm test && npm run test:ui && npm run lint && npm run build && npm run test:e2e",
     "test:security": "node --env-file=.env.local scripts/seller-security-audit.mjs",
+    "test:stripe": "node scripts/test-food-intent-stripe-commerce.mjs",
     "places:import": "node --env-file=.env.local scripts/import-places.mjs",
     "places:google-enrich": "node --env-file=.env.local scripts/enrich-google-places.mjs"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.12.0",
     "@stripe/stripe-js": "^9.0.1",
     "@supabase/supabase-js": "^2.101.1",
     "fluent-ffmpeg": "^2.1.3",

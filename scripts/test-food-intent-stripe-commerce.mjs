@@ -16,10 +16,16 @@ try {
 } catch {}
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SERVICE_KEY = proces…_KEY
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
+const ADMIN_SECRET = process.env.ADMIN_SECRET
 const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000'
+
+if (process.env.STRIPE_TEST_CONFIRM !== 'HUNGER_SWIPES_TEST_ONLY') {
+  console.error('❌ Set STRIPE_TEST_CONFIRM=HUNGER_SWIPES_TEST_ONLY to allow temporary test-data creation')
+  process.exit(1)
+}
 
 if (!SUPABASE_URL || !SERVICE_KEY) {
   console.error('❌ Missing Supabase env vars')
@@ -33,8 +39,12 @@ if (!WEBHOOK_SECRET || !WEBHOOK_SECRET.startsWith('whsec_')) {
   console.error('❌ STRIPE_WEBHOOK_SECRET must be set (whsec_...)')
   process.exit(1)
 }
+if (!ADMIN_SECRET) {
+  console.error('❌ Missing ADMIN_SECRET (needed to exercise the app refund endpoint)')
+  process.exit(1)
+}
 
-const stripe = new Stripe(STRIPE_SECRET, { apiVersion: '2025-03-31.basil' })
+const stripe = new Stripe(STRIPE_SECRET)
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
 
 function sleep(ms) {
@@ -66,7 +76,7 @@ async function createTestUser(email) {
 }
 
 let testUser = null
-let accounts = []
+let account = null
 let sellers = []
 let recipes = []
 
@@ -82,16 +92,18 @@ async function setup() {
   testUser = await createTestUser(email)
   console.log('Test user', testUser.user.id)
 
-  for (const tc of TEST_CASES) {
-    const account = await stripe.accounts.create({
-      type: 'standard',
-      country: 'US',
-      capabilities: { transfers: { requested: true } },
-      metadata: { test_case: tc.name },
-    })
-    accounts.push(account)
-    console.log(`Created Stripe account for ${tc.name}:`, account.id)
+  account = await stripe.accounts.create({
+    type: 'express',
+    country: 'US',
+    capabilities: {
+      card_payments: { requested: true },
+      transfers: { requested: true },
+    },
+    metadata: { purpose: 'hunger_swipes_automated_test' },
+  })
+  console.log('Created test Express account', account.id)
 
+  for (const tc of TEST_CASES) {
     const slug = `stripe-test-${tc.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
     const { data: seller } = await admin
       .from('sellers')
@@ -154,29 +166,19 @@ async function setup() {
 }
 
 async function confirmWithTestCard(clientSecret) {
-  // Use Stripe's public test publishable key is not needed for server-side confirmation.
-  // We create a payment method and confirm the PaymentIntent directly with the secret key.
-  const pm = await stripe.paymentMethods.create({
-    type: 'card',
-    card: {
-      number: '4242424242424242',
-      exp_month: 12,
-      exp_year: 2030,
-      cvc: '123',
-    },
-  })
   const pi = await stripe.paymentIntents.confirm(clientSecret.split('_secret')[0], {
-    payment_method: pm.id,
+    payment_method: 'pm_card_visa',
   })
   return pi
 }
 
-function makeWebhookEvent(pi) {
+function makeWebhookEvent(type, object) {
   const payload = {
-    id: `evt_${Date.now()}`,
+    id: `evt_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     object: 'event',
-    type: 'payment_intent.succeeded',
-    data: { object: pi },
+    livemode: false,
+    type,
+    data: { object },
     created: Math.floor(Date.now() / 1000),
   }
   const sig = stripe.webhooks.generateTestHeaderString({
@@ -186,8 +188,46 @@ function makeWebhookEvent(pi) {
   return { payload: JSON.stringify(payload), signature: sig }
 }
 
+async function sendWebhook(type, object, signatureOverride) {
+  const { payload, signature } = makeWebhookEvent(type, object)
+  return api('/api/stripe/webhook', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'stripe-signature': signatureOverride || signature,
+    },
+    body: payload,
+  })
+}
+
+async function verifyDecline(recipe) {
+  const purchaseRes = await api('/api/recipes/purchase', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${testUser.token}` },
+    body: JSON.stringify({ recipe_id: recipe.id }),
+  })
+  if (purchaseRes.status !== 201) throw new Error(`decline setup failed: ${JSON.stringify(purchaseRes.body)}`)
+  const piId = purchaseRes.body.client_secret.split('_secret')[0]
+  try {
+    await stripe.paymentIntents.confirm(piId, { payment_method: 'pm_card_visa_chargeDeclined' })
+  } catch {}
+  const failedPi = await stripe.paymentIntents.retrieve(piId)
+  const webhookRes = await sendWebhook('payment_intent.payment_failed', failedPi)
+  if (webhookRes.status !== 200) throw new Error(`failed-payment webhook failed: ${JSON.stringify(webhookRes.body)}`)
+  const { data: failedPurchase } = await admin.from('recipe_purchases').select('status').eq('id', purchaseRes.body.purchase.id).single()
+  const { count } = await admin.from('recipe_entitlements').select('id', { count: 'exact', head: true }).eq('recipe_purchase_id', purchaseRes.body.purchase.id)
+  if (failedPurchase?.status !== 'failed' || count !== 0) throw new Error('Declined payment state was not enforced')
+  console.log('  ✅ Decline leaves purchase failed and entitlement locked')
+}
+
 async function runTestCases() {
   const results = []
+  await verifyDecline(recipes[0])
+
+  const invalidSignature = await sendWebhook('payment_intent.succeeded', { id: 'pi_invalid' }, 'invalid')
+  if (invalidSignature.status !== 400) throw new Error('Webhook accepted an invalid signature')
+  console.log('  ✅ Invalid webhook signature rejected')
+
   for (let i = 0; i < TEST_CASES.length; i++) {
     const tc = TEST_CASES[i]
     const recipe = recipes[i]
@@ -215,16 +255,10 @@ async function runTestCases() {
       console.log('  PaymentIntent succeeded', pi.id)
 
       // 3. Simulate webhook
-      const { payload, signature } = makeWebhookEvent(pi)
-      const webhookRes = await api('/api/stripe/webhook', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'stripe-signature': signature,
-        },
-        body: payload,
-      })
+      const webhookRes = await sendWebhook('payment_intent.succeeded', pi)
       if (webhookRes.status !== 200) throw new Error(`webhook failed: ${JSON.stringify(webhookRes.body)}`)
+      const replayRes = await sendWebhook('payment_intent.succeeded', pi)
+      if (replayRes.status !== 200) throw new Error(`webhook replay failed: ${JSON.stringify(replayRes.body)}`)
       console.log('  Webhook settled')
 
       // 4. Verify entitlement and economics
@@ -235,6 +269,36 @@ async function runTestCases() {
         .eq('user_id', testUser.user.id)
         .maybeSingle()
       if (!entitlement || entitlement.status !== 'active') throw new Error('Entitlement not active')
+
+      const { count: entitlementCount } = await admin
+        .from('recipe_entitlements')
+        .select('id', { count: 'exact', head: true })
+        .eq('recipe_purchase_id', purchase.id)
+      if (entitlementCount !== 1) throw new Error(`Webhook idempotency failed: ${entitlementCount} entitlements`)
+
+      const stripePi = await stripe.paymentIntents.retrieve(pi.id)
+      const destination = stripePi.transfer_data?.destination
+      const destinationId = typeof destination === 'string' ? destination : destination?.id
+      if (destinationId !== account.id) throw new Error(`Wrong connected-account destination: ${destinationId}`)
+      if (stripePi.application_fee_amount !== economics.platform_fee_cents) {
+        throw new Error(`Wrong Stripe application fee: ${stripePi.application_fee_amount}`)
+      }
+      const chargeId = typeof stripePi.latest_charge === 'string' ? stripePi.latest_charge : stripePi.latest_charge?.id
+      const charge = await stripe.charges.retrieve(chargeId, { expand: ['transfer', 'application_fee'] })
+      const transfer = typeof charge.transfer === 'string' ? await stripe.transfers.retrieve(charge.transfer) : charge.transfer
+      const applicationFee = typeof charge.application_fee === 'string'
+        ? await stripe.applicationFees.retrieve(charge.application_fee)
+        : charge.application_fee
+      const transferDestination = typeof transfer?.destination === 'string' ? transfer.destination : transfer?.destination?.id
+      if (transferDestination !== account.id) {
+        throw new Error(`Stripe transfer proof mismatch: destination=${transferDestination}, amount=${transfer?.amount}`)
+      }
+      if (applicationFee?.amount !== economics.platform_fee_cents) {
+        throw new Error(`Stripe application-fee proof mismatch: ${applicationFee?.amount}`)
+      }
+      if ((transfer?.amount || 0) - applicationFee.amount !== economics.creator_payout_cents) {
+        throw new Error(`Stripe net connected amount mismatch: transfer=${transfer?.amount}, fee=${applicationFee.amount}`)
+      }
 
       const { data: settled } = await admin
         .from('recipe_purchases')
@@ -251,6 +315,8 @@ async function runTestCases() {
         platform_fee_percent: economics.platform_fee_percent,
         creator_share_percent: economics.creator_share_percent,
         entitlement_status: entitlement.status,
+        payment_intent_id: pi.id,
+        purchase_id: purchase.id,
       })
       console.log(`  ✅ ${tc.name} — price ${settled.price_cents}c, platform ${settled.platform_fee_cents}c, creator ${settled.creator_payout_cents}c`)
     } catch (err) {
@@ -259,6 +325,26 @@ async function runTestCases() {
     }
   }
   return results
+}
+
+async function verifyRefund(result) {
+  const refundRes = await api('/api/admin/recipe-purchases', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET },
+    body: JSON.stringify({ purchase_id: result.purchase_id, reason: 'Automated Stripe test refund' }),
+  })
+  if (refundRes.status !== 200) throw new Error(`refund endpoint failed: ${JSON.stringify(refundRes.body)}`)
+  const pi = await stripe.paymentIntents.retrieve(result.payment_intent_id)
+  const chargeId = typeof pi.latest_charge === 'string' ? pi.latest_charge : pi.latest_charge?.id
+  const charge = await stripe.charges.retrieve(chargeId)
+  const webhookRes = await sendWebhook('charge.refunded', charge)
+  if (webhookRes.status !== 200) throw new Error(`refund webhook failed: ${JSON.stringify(webhookRes.body)}`)
+  const { data: purchase } = await admin.from('recipe_purchases').select('status, refund_status').eq('id', result.purchase_id).single()
+  const { data: entitlement } = await admin.from('recipe_entitlements').select('status').eq('recipe_purchase_id', result.purchase_id).single()
+  if (purchase?.status !== 'refunded' || purchase?.refund_status !== 'succeeded' || entitlement?.status !== 'refunded') {
+    throw new Error('Refund did not revoke entitlement and settle database state')
+  }
+  console.log('  ✅ Refund reversed transfer/application fee and revoked entitlement')
 }
 
 async function cleanup() {
@@ -272,9 +358,7 @@ async function cleanup() {
     await admin.from('sellers').delete().eq('id', seller.id)
   }
   if (testUser) await admin.auth.admin.deleteUser(testUser.user.id)
-  for (const account of accounts) {
-    try { await stripe.accounts.del(account.id) } catch {}
-  }
+  if (account) try { await stripe.accounts.del(account.id) } catch {}
   console.log('Cleaned up')
 }
 
@@ -282,6 +366,8 @@ async function main() {
   try {
     await setup()
     const results = await runTestCases()
+    const successful = results.filter((result) => result.ok)
+    if (successful.length) await verifyRefund(successful[0])
     console.log('\n=== Economic Proof ===')
     for (const r of results) {
       if (r.ok) {

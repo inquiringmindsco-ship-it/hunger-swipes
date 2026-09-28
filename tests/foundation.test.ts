@@ -7,6 +7,7 @@ import { findDuplicate } from '../lib/place-dedup.ts'
 import { formatPhone, getAppleMapsUrl, getCallUrl, getGoogleMapsUrl } from '../lib/place-actions.ts'
 import { scoreGoogleCandidate } from '../lib/google-places.ts'
 import { haversineMiles } from '../lib/geo.ts'
+import { assertTestMode, computeRecipeEcon, getStripe, getWebhookSecret } from '../lib/stripe.ts'
 import { readFileSync } from 'node:fs'
 
 test('content kinds reject arbitrary table selectors', () => {
@@ -84,4 +85,30 @@ test('atomic swipe migration preserves duplicate and save semantics', () => {
   assert.match(migration, /on conflict \(actor_id, content_kind, content_id\)/)
   assert.match(migration, /if p_direction = 'right' then[\s\S]*insert into saved_food/)
   assert.match(migration, /else[\s\S]*delete from saved_food/)
+})
+
+test('recipe economics produce the configured 20 percent application fee', () => {
+  assert.deepEqual(computeRecipeEcon(499, 20), { platformFeeCents: 100, creatorPayoutCents: 399, platformFeePercent: 20, creatorSharePercent: 80 })
+  assert.deepEqual(computeRecipeEcon(999, 20), { platformFeeCents: 200, creatorPayoutCents: 799, platformFeePercent: 20, creatorSharePercent: 80 })
+  assert.deepEqual(computeRecipeEcon(500, 20), { platformFeeCents: 100, creatorPayoutCents: 400, platformFeePercent: 20, creatorSharePercent: 80 })
+  assert.deepEqual(computeRecipeEcon(1000, 20), { platformFeeCents: 200, creatorPayoutCents: 800, platformFeePercent: 20, creatorSharePercent: 80 })
+  assert.throws(() => computeRecipeEcon(0, 20), /Invalid recipe price/)
+  assert.throws(() => computeRecipeEcon(499, 101), /Invalid platform fee/)
+})
+
+test('Stripe server configuration rejects live keys and malformed webhook secrets', () => {
+  const originalKey = process.env.STRIPE_SECRET_KEY
+  const originalWebhook = process.env.STRIPE_WEBHOOK_SECRET
+  try {
+    process.env.STRIPE_SECRET_KEY = 'sk_live_forbidden'
+    assert.throws(() => getStripe(), /restricted to test mode/)
+    assert.throws(() => assertTestMode(), /restricted to Stripe test mode/)
+    process.env.STRIPE_WEBHOOK_SECRET = 'not-a-signing-secret'
+    assert.equal(getWebhookSecret(), undefined)
+  } finally {
+    if (originalKey === undefined) delete process.env.STRIPE_SECRET_KEY
+    else process.env.STRIPE_SECRET_KEY = originalKey
+    if (originalWebhook === undefined) delete process.env.STRIPE_WEBHOOK_SECRET
+    else process.env.STRIPE_WEBHOOK_SECRET = originalWebhook
+  }
 })

@@ -33,6 +33,9 @@ export async function POST(request: NextRequest) {
     if (recipe.recipe_type !== 'free' && sellerRow?.stripe_connect_status !== 'ready') {
       return NextResponse.json({ error: 'Creator is not ready to accept payments' }, { status: 400 })
     }
+    if (!sellerRow?.stripe_account_id?.startsWith('acct_')) {
+      return NextResponse.json({ error: 'Creator Stripe account is not configured' }, { status: 400 })
+    }
 
     // Determine price in cents
     let priceCents = Math.round(Number(recipe.price) * 100)
@@ -51,6 +54,9 @@ export async function POST(request: NextRequest) {
     // Server-side authoritative economics from centralized config
     const commerceConfig = await getRecipeCommerceConfig(admin)
     if (commerceConfig.testModeOnly) assertTestMode()
+    if (recipe.recipe_type === 'fixed_price' && priceCents < Math.round(commerceConfig.fixedPriceMinimum * 100)) {
+      return NextResponse.json({ error: `Fixed-price recipes must cost at least $${commerceConfig.fixedPriceMinimum.toFixed(2)}` }, { status: 400 })
+    }
     const { platformFeeCents, creatorPayoutCents, platformFeePercent, creatorSharePercent } = computeRecipeEcon(priceCents, commerceConfig.platformFeePercent)
 
     // Check existing active entitlement
@@ -87,24 +93,31 @@ export async function POST(request: NextRequest) {
 
     // Create Stripe PaymentIntent with Connect transfer
     const applicationFeeAmount = platformFeeCents
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: priceCents,
-      currency: 'usd',
-      application_fee_amount: applicationFeeAmount,
-      transfer_data: sellerRow?.stripe_account_id
-        ? { destination: sellerRow.stripe_account_id }
-        : undefined,
-      metadata: {
-        recipe_id: recipe_id,
-        user_id: user.id,
-        seller_id: recipe.seller_id,
-        purchase_id: purchase.id,
-        recipe_type: recipe.recipe_type,
-        platform_fee_cents: String(platformFeeCents),
-        creator_payout_cents: String(creatorPayoutCents),
-      },
-      automatic_payment_methods: { enabled: true },
-    })
+    let paymentIntent
+    try {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: priceCents,
+        currency: 'usd',
+        application_fee_amount: applicationFeeAmount,
+        transfer_data: { destination: sellerRow.stripe_account_id },
+        metadata: {
+          recipe_id: recipe_id,
+          user_id: user.id,
+          seller_id: recipe.seller_id,
+          purchase_id: purchase.id,
+          recipe_type: recipe.recipe_type,
+          platform_fee_cents: String(platformFeeCents),
+          creator_payout_cents: String(creatorPayoutCents),
+        },
+        automatic_payment_methods: { enabled: true },
+      }, { idempotencyKey: `recipe-purchase-${purchase.id}` })
+    } catch (error: any) {
+      await admin.from('recipe_purchases').update({
+        status: 'failed',
+        failure_reason: error?.message || 'Payment intent creation failed',
+      }).eq('id', purchase.id).eq('status', 'pending')
+      throw error
+    }
 
     await admin.from('recipe_purchases').update({
       payment_processor: 'stripe',

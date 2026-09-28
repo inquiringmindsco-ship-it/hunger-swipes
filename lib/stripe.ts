@@ -3,11 +3,15 @@ import Stripe from 'stripe'
 export function getStripe(): Stripe | null {
   const secret = process.env.STRIPE_SECRET_KEY
   if (!secret) return null
-  return new Stripe(secret, { apiVersion: '2025-03-31.basil' as any })
+  if (!secret.startsWith('sk_test_')) {
+    throw new Error('Stripe is restricted to test mode; STRIPE_SECRET_KEY must start with sk_test_.')
+  }
+  return new Stripe(secret)
 }
 
 export function getWebhookSecret(): string | undefined {
-  return process.env.STRIPE_WEBHOOK_SECRET
+  const secret = process.env.STRIPE_WEBHOOK_SECRET
+  return secret?.startsWith('whsec_') ? secret : undefined
 }
 
 export function isTestMode(): boolean {
@@ -35,6 +39,10 @@ export async function getRecipeCommerceConfig(admin: any) {
 }
 
 export function computeRecipeEcon(priceCents: number, platformFeePercent: number) {
+  if (!Number.isInteger(priceCents) || priceCents <= 0) throw new Error('Invalid recipe price')
+  if (!Number.isFinite(platformFeePercent) || platformFeePercent < 0 || platformFeePercent > 100) {
+    throw new Error('Invalid platform fee percentage')
+  }
   const creatorSharePercent = 100 - platformFeePercent
   const platformFeeCents = Math.round(priceCents * (platformFeePercent / 100))
   const creatorPayoutCents = priceCents - platformFeeCents

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Lock, ChefHat, X, AlertCircle } from 'lucide-react'
-import { authFetch, getAuthToken } from '@/lib/auth-fetch'
+import { ChefHat, X, AlertCircle } from 'lucide-react'
+import { getAuthToken } from '@/lib/auth-fetch'
+import RecipePaymentForm from '@/app/components/RecipePaymentForm'
 
 export type RecipeSummary = {
   id: string
@@ -33,6 +34,7 @@ type ViewState =
   | { status: 'preview'; recipe: RecipeSummary }
   | { status: 'unlocked'; recipe: RecipeDetail }
   | { status: 'purchase'; recipe: RecipeSummary }
+  | { status: 'checkout'; recipe: RecipeSummary; clientSecret: string }
   | { status: 'paying'; recipe: RecipeSummary }
   | { status: 'error'; message: string }
 
@@ -64,11 +66,9 @@ export default function RecipeUnlockSheet({ recipeId, dishId, sellerId, onClose 
   const [state, setState] = useState<ViewState>({ status: 'loading' })
   const [proudAmount, setProudAmount] = useState<number | 'other' | null>(null)
   const [customAmount, setCustomAmount] = useState('')
-  const [impactSent, setImpactSent] = useState(false)
 
   useEffect(() => {
     recordImpact('recipe_view', recipeId, dishId, sellerId)
-    setImpactSent(true)
   }, [recipeId, dishId, sellerId])
 
   useEffect(() => {
@@ -130,15 +130,24 @@ export default function RecipeUnlockSheet({ recipeId, dishId, sellerId, onClose 
         setState({ status: 'error', message: 'Payment could not be started.' })
         return
       }
-      // TODO: implement Stripe confirmation hook here. For now we leave a redirect architecture.
-      // eslint-disable-next-line no-console
-      console.log('Stripe PaymentIntent client_secret ready:', clientSecret)
-      // After successful payment, call unlock. Webhook should also unlock, but we optimistically unlock on return.
-      const unlockData = await api(`/api/recipes/${recipe.id}?mode=unlock`)
-      setState({ status: 'unlocked', recipe: unlockData.recipe as RecipeDetail })
+      setState({ status: 'checkout', recipe, clientSecret })
     } catch (err: any) {
       setState({ status: 'error', message: err.message || 'Payment failed.' })
     }
+  }
+
+  const finishPurchase = async (recipe: RecipeSummary) => {
+    setState({ status: 'paying', recipe })
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      try {
+        const unlockData = await api(`/api/recipes/${recipe.id}?mode=unlock`)
+        setState({ status: 'unlocked', recipe: unlockData.recipe as RecipeDetail })
+        return
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 750))
+      }
+    }
+    setState({ status: 'error', message: 'Payment succeeded, but the recipe is still processing. Reopen it in a moment.' })
   }
 
   const Header = ({ title }: { title: string }) => (
@@ -266,8 +275,20 @@ export default function RecipeUnlockSheet({ recipeId, dishId, sellerId, onClose 
               Pay & Unlock
             </button>
             <p className="text-[10px] text-hs-gray text-center mt-3">
-              Secure payment powered by Stripe. TODO: add Stripe Elements confirmation hook before this step.
+              Secure test payment powered by Stripe. No live payments are enabled.
             </p>
+          </>
+        )}
+
+        {state.status === 'checkout' && (
+          <>
+            <Header title="Secure payment" />
+            <RecipePaymentForm
+              clientSecret={state.clientSecret}
+              recipeId={state.recipe.id}
+              onPaid={() => finishPurchase(state.recipe)}
+              onError={(message) => setState({ status: 'error', message })}
+            />
           </>
         )}
 
