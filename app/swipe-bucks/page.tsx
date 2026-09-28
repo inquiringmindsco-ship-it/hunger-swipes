@@ -26,10 +26,16 @@ import { authFetch } from '@/lib/auth-fetch'
 const MEAL_GOAL_CENTS = 2000
 
 interface WalletData {
+  user_id: string
   balance_cents: number
   lifetime_earned_cents: number
   lifetime_redeemed_cents: number
   pending_cents: number
+  available_to_redeem_cents: number
+  held_cents: number
+  restricted_cents: number
+  redemption_status: string
+  risk_flags: string[]
 }
 
 interface LedgerEntry {
@@ -58,6 +64,8 @@ interface Impact {
   clicks_generated: number
   verified_meals_generated: number
   swipe_bucks_earned_cents: number
+  redemption_eligible: boolean
+  redemption_reasons: string[]
 }
 
 export default function SwipeBucksPage() {
@@ -169,6 +177,18 @@ export default function SwipeBucksPage() {
                 {formatDollars(balance)}
               </h1>
               <p className="text-sm text-hs-gray">Post food. Help people discover it. Earn meals.</p>
+
+              {(wallet?.restricted_cents || 0) > 0 && (
+                <p className="mt-3 text-xs text-hs-red bg-hs-red/10 border border-hs-red/20 rounded-lg px-3 py-2">
+                  ${formatDollars(wallet?.restricted_cents || 0)} is currently held from redemption. Contact support if you believe this is an error.
+                </p>
+              )}
+
+              {(wallet?.redemption_status === 'eligible' || wallet?.redemption_status === 'review') && !impact?.redemption_eligible && (
+                <p className="mt-3 text-xs text-hs-gold bg-hs-gold/10 border border-hs-gold/20 rounded-lg px-3 py-2">
+                  Swipe Bucks redemption is not open yet. Keep earning — your balance is safe.
+                </p>
+              )}
 
               {latestCredit && latestCredit.amount_cents > 0 && (
                 <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-hs-gold/10 border border-hs-gold/20 px-3 py-1.5">

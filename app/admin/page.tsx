@@ -24,7 +24,7 @@ function AdminContent() {
   const [sellers, setSellers] = useState<any[]>([])
   const [dishes, setDishes] = useState<any[]>([])
   const [submissions, setSubmissions] = useState<Submission[]>([])
-  const [tab, setTab] = useState<'sellers' | 'dishes' | 'submissions' | 'swipe_bucks'>('sellers')
+  const [tab, setTab] = useState<'sellers' | 'dishes' | 'submissions' | 'swipe_bucks' | 'redemption'>('sellers')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -32,6 +32,11 @@ function AdminContent() {
   const [swipeBucksConfig, setSwipeBucksConfig] = useState<any>(null)
   const [swipeBucksStats, setSwipeBucksStats] = useState<any>(null)
   const [swipeBucksLoading, setSwipeBucksLoading] = useState(false)
+  const [redemptionConfig, setRedemptionConfig] = useState<any>(null)
+  const [redemptionStats, setRedemptionStats] = useState<any>(null)
+  const [redemptionRestaurants, setRedemptionRestaurants] = useState<any[]>([])
+  const [redemptionUsers, setRedemptionUsers] = useState<any[]>([])
+  const [redemptionLoading, setRedemptionLoading] = useState(false)
 
   const login = () => {
     if (secret) setAuthenticated(true)
@@ -83,12 +88,40 @@ function AdminContent() {
     }
   }
 
+  const loadRedemption = async () => {
+    if (!secret) return
+    setRedemptionLoading(true)
+    try {
+      const [configRes, statsRes, restaurantsRes, usersRes] = await Promise.all([
+        fetch('/api/swipe-bucks/redemption/config', { headers: { 'x-admin-secret': secret } }),
+        fetch('/api/swipe-bucks/redemption/stats', { headers: { 'x-admin-secret': secret } }),
+        fetch('/api/swipe-bucks/redemption/restaurants', { headers: { 'x-admin-secret': secret } }),
+        fetch('/api/swipe-bucks/redemption/users', { headers: { 'x-admin-secret': secret } }),
+      ])
+      const [configData, statsData, restaurantsData, usersData] = await Promise.all([
+        configRes.json(), statsRes.json(), restaurantsRes.json(), usersRes.json(),
+      ])
+      setRedemptionConfig(configData.config)
+      setRedemptionStats(statsData)
+      setRedemptionRestaurants(restaurantsData.restaurants || [])
+      setRedemptionUsers(usersData.users || [])
+    } catch {
+      setError('Failed to load redemption data')
+    } finally {
+      setRedemptionLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (authenticated) loadData()
   }, [authenticated])
 
   useEffect(() => {
     if (authenticated && tab === 'swipe_bucks') loadSwipeBucks()
+  }, [authenticated, tab])
+
+  useEffect(() => {
+    if (authenticated && tab === 'redemption') loadRedemption()
   }, [authenticated, tab])
 
   const doAction = async (targetType: 'seller' | 'dish', targetId: string, action: string, reason?: string) => {
@@ -258,6 +291,12 @@ function AdminContent() {
             className={`px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center gap-1.5 ${tab === 'swipe_bucks' ? 'bg-[#FF5722] text-white' : 'bg-white/5 text-gray-400'}`}
           >
             <Wallet size={16} /> Swipe Bucks
+          </button>
+          <button
+            onClick={() => setTab('redemption')}
+            className={`px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center gap-1.5 ${tab === 'redemption' ? 'bg-[#FF5722] text-white' : 'bg-white/5 text-gray-400'}`}
+          >
+            <Shield size={16} /> Redemption
           </button>
         </div>
 
@@ -659,6 +698,187 @@ function SwipeBucksAdmin({ secret, config, stats, loading, onUpdate }: { secret:
                 <span className="text-red-400 font-semibold">{row.count} events today</span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RedemptionAdmin({ secret, config, stats, restaurants, users, loading, onUpdate }: { secret: string; config: any; stats: any; restaurants: any[]; users: any[]; loading: boolean; onUpdate: () => void }) {
+  const [edit, setEdit] = useState<any>(null)
+  const [saving, setSaving] = useState(false)
+  const [overrideReason, setOverrideReason] = useState('')
+  const [overrideTarget, setOverrideTarget] = useState<{ user_id?: string; restaurant_id?: string; action: string } | null>(null)
+
+  useEffect(() => { if (config) setEdit({ ...config }) }, [config])
+
+  const saveConfig = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/swipe-bucks/redemption/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify(edit),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      onUpdate()
+    } catch (e) {
+      alert('Failed to save redemption config')
+    }
+    setSaving(false)
+  }
+
+  const doOverride = async () => {
+    if (!overrideTarget || !overrideReason.trim()) return
+    try {
+      const res = await fetch('/api/swipe-bucks/redemption/override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({ ...overrideTarget, reason: overrideReason }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      setOverrideTarget(null)
+      setOverrideReason('')
+      onUpdate()
+    } catch (e: any) {
+      alert(e.message || 'Override failed')
+    }
+  }
+
+  const fmt = (cents: number) => `$${(cents / 100).toFixed(2)}`
+
+  if (loading) return <div className="text-gray-500 text-sm">Loading redemption guardrails…</div>
+
+  return (
+    <div className="space-y-6">
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <Stat label="Redemption" value={stats.redemption_enabled ? 'ON' : 'OFF'} />
+          <Stat label="Global budget" value={fmt(stats.global_monthly_budget_cents || 0)} />
+          <Stat label="Redeemed this month" value={fmt(stats.global_redeemed_this_month_cents || 0)} />
+          <Stat label="Remaining" value={fmt(stats.global_remaining_cents || 0)} />
+          <Stat label="Outstanding" value={fmt(stats.outstanding_cents || 0)} />
+          <Stat label="Restricted" value={fmt(stats.restricted_cents || 0)} />
+        </div>
+      )}
+
+      {config && edit && (
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold">Redemption controls</h3>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={edit.redemption_enabled}
+                onChange={(e) => setEdit({ ...edit, redemption_enabled: e.target.checked })}
+              />
+              Enable redemption
+            </label>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              { key: 'monthly_redemption_cap_cents', label: 'Monthly per-user cap' },
+              { key: 'daily_redemption_cap_cents', label: 'Daily per-user cap' },
+              { key: 'max_redemption_per_transaction_cents', label: 'Per-transaction max' },
+              { key: 'global_monthly_redemption_budget_cents', label: 'Global monthly budget' },
+            ].map((f) => (
+              <label key={f.key} className="block text-sm">
+                <span className="text-gray-400">{f.label} ($)</span>
+                <input
+                  type="number"
+                  value={(edit[f.key] || 0) / 100}
+                  onChange={(e) => setEdit({ ...edit, [f.key]: Math.round(parseFloat(e.target.value || '0') * 100) })}
+                  className="mt-1 w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                />
+              </label>
+            ))}
+          </div>
+          <button
+            onClick={saveConfig}
+            disabled={saving}
+            className="px-4 py-2 bg-[#FF5722] text-white rounded-lg font-semibold disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save redemption config'}
+          </button>
+        </div>
+      )}
+
+      {stats?.restricted_users?.length > 0 && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+          <h3 className="font-bold text-red-400 mb-3">Restricted / review accounts</h3>
+          <div className="space-y-2 text-sm">
+            {stats.restricted_users.map((row: any) => (
+              <div key={row.user_id} className="flex items-center justify-between">
+                <div className="min-w-0">
+                  <p className="text-gray-400 font-mono truncate">{row.user_id}</p>
+                  <p className="text-xs text-gray-500">{row.redemption_status} · {fmt(row.restricted_cents || 0)}</p>
+                  {row.risk_flags?.length > 0 && <p className="text-xs text-red-400">{row.risk_flags.join(', ')}</p>}
+                </div>
+                <button
+                  onClick={() => setOverrideTarget({ user_id: row.user_id, action: 'release_hold' })}
+                  className="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-semibold text-white shrink-0"
+                >
+                  Release
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {stats?.near_cap_users?.length > 0 && (
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+          <h3 className="font-bold mb-3">Users near monthly cap</h3>
+          <div className="space-y-2 text-sm">
+            {stats.near_cap_users.map((row: any) => (
+              <div key={row.user_id} className="flex justify-between">
+                <span className="text-gray-400 font-mono truncate max-w-[60%]">{row.user_id}</span>
+                <span className="text-hs-cream font-semibold">{fmt(row.lifetime_redeemed_cents || 0)} redeemed</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {restaurants.length > 0 && (
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+          <h3 className="font-bold mb-3">Restaurant limits</h3>
+          <div className="space-y-3 text-sm">
+            {restaurants.map((r: any) => (
+              <div key={r.restaurant_id} className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold">{r.restaurant?.name || r.restaurant_id}</p>
+                  <p className="text-gray-400 text-xs">
+                    Allowance {fmt(r.monthly_redemption_allowance_cents || 0)} ·
+                    Redemption {r.redemption_enabled ? 'ON' : 'OFF'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setOverrideTarget({ restaurant_id: r.restaurant_id, action: r.redemption_enabled ? 'disable_restaurant' : 'enable_restaurant' })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 ${r.redemption_enabled ? 'bg-red-500/20 text-red-500' : 'bg-[#10B981]/20 text-[#10B981]'}`}
+                >
+                  {r.redemption_enabled ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {overrideTarget && (
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-3">
+          <h3 className="font-bold">Override: {overrideTarget.action.replace(/_/g, ' ')}</h3>
+          <input
+            type="text"
+            placeholder="Reason (required)"
+            value={overrideReason}
+            onChange={(e) => setOverrideReason(e.target.value)}
+            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+          />
+          <div className="flex gap-2">
+            <button onClick={doOverride} disabled={!overrideReason.trim()} className="px-4 py-2 bg-[#FF5722] text-white rounded-lg font-semibold disabled:opacity-50">Confirm</button>
+            <button onClick={() => setOverrideTarget(null)} className="px-4 py-2 bg-white/10 text-white rounded-lg font-semibold">Cancel</button>
           </div>
         </div>
       )}

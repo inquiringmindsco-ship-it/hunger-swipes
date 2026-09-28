@@ -22,6 +22,11 @@ export async function GET(request: NextRequest) {
       lifetime_earned_cents: 0,
       lifetime_redeemed_cents: 0,
       pending_cents: 0,
+      available_to_redeem_cents: 0,
+      held_cents: 0,
+      restricted_cents: 0,
+      redemption_status: 'eligible',
+      risk_flags: [],
     }
 
     const { data: ledger } = await admin
@@ -48,14 +53,22 @@ export async function GET(request: NextRequest) {
       savesGenerated = savesRows?.length ?? 0
     }
 
+    const { data: eligibility } = await admin.rpc('swipe_bucks_check_redemption', {
+      p_user_id: user.id,
+      p_amount_cents: 0,
+      p_restaurant_id: null,
+    })
+
     const impact = {
       dishes_posted: (posts || []).length,
       people_reached: (posts || []).reduce((sum: number, p: any) => sum + (p.impressions || 0), 0),
       right_swipes_generated: (posts || []).reduce((sum: number, p: any) => sum + (p.right_swipes || 0), 0),
       saves_generated: savesGenerated,
-      clicks_generated: 0, // Not reliably tracked yet.
-      verified_meals_generated: 0, // Order attribution not built yet.
+      clicks_generated: 0,
+      verified_meals_generated: 0,
       swipe_bucks_earned_cents: wallet.lifetime_earned_cents,
+      redemption_eligible: eligibility?.eligible ?? false,
+      redemption_reasons: eligibility?.reasons ?? ['Swipe Bucks redemption is not enabled'],
     }
 
     return NextResponse.json({
