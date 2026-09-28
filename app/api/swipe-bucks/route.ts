@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     const { data: ledger } = await admin
       .from('swipe_bucks_ledger')
-      .select('*')
+      .select('*, post:community_food_posts(id, dish_name, place:places(id, name))')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50)
