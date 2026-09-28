@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       .from('dishes')
       .select(`
         *,
-        video_media:food_media!left(*),
+        video_media:food_media!dish_id(*),
         seller:sellers!inner(id,business_name,seller_type,description,logo_url,location_text,address,latitude,longitude,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status)
       `)
       .eq('status', 'active')
