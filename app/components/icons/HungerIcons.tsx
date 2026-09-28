@@ -273,13 +273,24 @@ export function OtherSellerIcon({ size = 24, className, ...props }: HungerIconPr
   )
 }
 
+export function RecipeCreatorIcon({ size = 24, className, ...props }: HungerIconProps) {
+  return (
+    <svg {...iconProps(size, className)} {...props}>
+      <rect x="5" y="4" width="14" height="16" rx="2" />
+      <path d="M9 8h6M9 12h6M9 16h4" />
+    </svg>
+  )
+}
+
 const sellerIcons: Record<string, (props: HungerIconProps) => JSX.Element> = {
   restaurant: RestaurantIcon,
   home_kitchen: HomeKitchenIcon,
+  home_cook: HomeKitchenIcon,
   food_truck: FoodTruckIcon,
   caterer: CatererIcon,
   pop_up: PopUpIcon,
   meal_prep: MealPrepIcon,
+  recipe_creator: RecipeCreatorIcon,
   other: OtherSellerIcon,
 }
 

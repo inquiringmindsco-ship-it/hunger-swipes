@@ -4,7 +4,7 @@ import { getRequestUser } from '@/lib/server-auth'
 import { isHttpsUrl } from '@/lib/food'
 import { isAvailableRestaurantSlug, normalizeRestaurantSlug } from '@/lib/restaurant-slug'
 
-const PUBLIC_SELLER_FIELDS = 'id,slug,business_name,seller_type,description,logo_url,location_text,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,website_url,status,verification_status'
+const PUBLIC_SELLER_FIELDS = 'id,slug,business_name,seller_type,seller_types,description,logo_url,location_text,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,website_url,status,verification_status'
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
     const {
       business_name,
       seller_type,
+      seller_types,
       description,
       location_text,
       address,
@@ -80,6 +81,20 @@ export async function POST(request: NextRequest) {
 
     if (!business_name || !seller_type) {
       return NextResponse.json({ error: 'business_name and seller_type are required' }, { status: 400 })
+    }
+
+    const normalizedTypes = Array.isArray(seller_types) && seller_types.length > 0
+      ? seller_types
+      : [seller_type]
+
+    const allowedSingleTypes = ['restaurant','home_kitchen','home_cook','food_truck','caterer','pop_up','meal_prep','recipe_creator','other']
+    if (!allowedSingleTypes.includes(seller_type)) {
+      return NextResponse.json({ error: 'Invalid seller_type' }, { status: 400 })
+    }
+
+    const invalidTypes = normalizedTypes.filter((t: string) => !allowedSingleTypes.includes(t))
+    if (invalidTypes.length > 0) {
+      return NextResponse.json({ error: `Invalid seller_types: ${invalidTypes.join(', ')}` }, { status: 400 })
     }
     if (ordering_url && !isHttpsUrl(ordering_url)) return NextResponse.json({ error: 'Ordering URL must use HTTPS' }, { status: 400 })
     if (website_url && !isHttpsUrl(website_url)) return NextResponse.json({ error: 'Website or social link must use HTTPS' }, { status: 400 })
@@ -113,6 +128,7 @@ export async function POST(request: NextRequest) {
       slug,
       business_name,
       seller_type,
+      seller_types: normalizedTypes,
       description: description || null,
       location_text: location_text || null,
       address: address || null,
@@ -171,13 +187,26 @@ export async function PUT(request: NextRequest) {
     if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
 
     const allowed = [
-      'business_name', 'seller_type', 'description', 'logo_url', 'location_text', 'address',
+      'business_name', 'seller_type', 'seller_types', 'description', 'logo_url', 'location_text', 'address',
       'latitude', 'longitude', 'phone', 'hours_text', 'pickup_available', 'delivery_available',
       'ordering_method', 'ordering_url', 'service_area', 'contact_name', 'contact_email', 'website_url'
     ]
     const update: any = {}
     for (const key of allowed) {
       if (body[key] !== undefined) update[key] = body[key]
+    }
+
+    if (update.seller_type || update.seller_types) {
+      const allowedSingleTypes = ['restaurant','home_kitchen','home_cook','food_truck','caterer','pop_up','meal_prep','recipe_creator','other']
+      if (update.seller_type && !allowedSingleTypes.includes(update.seller_type)) {
+        return NextResponse.json({ error: 'Invalid seller_type' }, { status: 400 })
+      }
+      if (update.seller_types) {
+        const arr = Array.isArray(update.seller_types) ? update.seller_types : [update.seller_type]
+        const invalid = arr.filter((t: string) => !allowedSingleTypes.includes(t))
+        if (invalid.length > 0) return NextResponse.json({ error: `Invalid seller_types: ${invalid.join(', ')}` }, { status: 400 })
+        update.seller_types = arr
+      }
     }
     if (Object.keys(update).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })

@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import { LoadingState } from '@/app/components/ui/LoadingState'
+import MobileNav from '@/app/components/MobileNav'
 
 const CATEGORIES = [
   'American', 'BBQ', 'Breakfast', 'Cajun', 'Chinese', 'Dessert', 'Healthy', 'Indian', 'Italian',
@@ -127,6 +128,7 @@ function NewDishContent() {
         <main className="max-w-md mx-auto px-4 pt-8">
           <LoadingState label="Loading your seller profile…" />
         </main>
+        <MobileNav />
       </div>
     )
   }
@@ -161,6 +163,7 @@ function NewDishContent() {
             Preview in App
           </Link>
         </main>
+        <MobileNav />
       </div>
     )
   }
@@ -290,6 +293,7 @@ function NewDishContent() {
           </button>
         </section>
       </main>
+      <MobileNav />
     </div>
   )
 }

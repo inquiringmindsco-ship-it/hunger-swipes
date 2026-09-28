@@ -3,16 +3,22 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, ExternalLink, Hand, MapPin, Phone, Search, Smartphone, Upload, ChevronRight, Utensils } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ExternalLink, Hand, MapPin, Phone, Search, Smartphone, Upload, ChevronRight, Utensils, ChefHat, ScrollText } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { authFetch } from '@/lib/auth-fetch'
 import { getSupabase } from '@/lib/supabase'
 import { BrandMark, GetItIcon, SellerTypeIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
 import { LoadingState } from '@/app/components/ui/LoadingState'
+import MobileNav from '@/app/components/MobileNav'
 
 const SELLER_TYPES = [
+  { value: 'restaurant', label: 'Restaurant / Food Business', description: 'Restaurants, food trucks, bakeries, caterers', icon: Utensils },
+  { value: 'home_cook', label: 'Home Cook', description: 'Sell your own prepared food where permitted', icon: ChefHat },
+  { value: 'recipe_creator', label: 'Recipe Creator', description: 'Share food and sell the recipe behind it', icon: ScrollText },
+]
+
+const RESTAURANT_SUB_TYPES = [
   { value: 'restaurant', label: 'Restaurant' },
-  { value: 'home_kitchen', label: 'Home Kitchen' },
   { value: 'food_truck', label: 'Food Truck' },
   { value: 'caterer', label: 'Caterer' },
   { value: 'pop_up', label: 'Pop-Up' },
@@ -26,6 +32,12 @@ const ORDERING_METHODS = [
   { value: 'in_app', label: 'In-App (coming)', icon: Smartphone },
   { value: 'none', label: 'In person', icon: Hand },
 ]
+
+function normalizeSellerTypes(input: string | string[]): string[] {
+  const raw = Array.isArray(input) ? input : [input]
+  const valid = new Set(['restaurant','home_kitchen','home_cook','food_truck','caterer','pop_up','meal_prep','recipe_creator','other'])
+  return Array.from(new Set(raw.filter((t) => valid.has(t))))
+}
 
 export default function JoinPage() {
   const router = useRouter()
@@ -44,6 +56,7 @@ export default function JoinPage() {
     contact_name: '',
     contact_email: '',
     seller_type: 'restaurant',
+    seller_types: ['restaurant'],
     description: '',
     location_text: '',
     address: '',
@@ -64,12 +77,16 @@ export default function JoinPage() {
     const ref = params.get('ref')
     setPrefillType(st)
     setRefSellerId(ref)
-    if (st) setForm((f) => ({ ...f, seller_type: st }))
+    if (st) {
+      const normalized = normalizeSellerTypes(st)
+      setForm((f) => ({ ...f, seller_type: normalized[0] || 'restaurant', seller_types: normalized }))
+    }
     const savedIntake = sessionStorage.getItem('hungerswipes_business_intake')
     if (savedIntake) {
       try {
         const intake = JSON.parse(savedIntake)
-        setForm((current) => ({ ...current, ...intake, contact_email: intake.email || '', website_url: intake.website || '', seller_type: 'restaurant' }))
+        const normalized = normalizeSellerTypes('restaurant')
+        setForm((current) => ({ ...current, ...intake, contact_email: intake.email || '', website_url: intake.website || '', seller_type: 'restaurant', seller_types: normalized }))
       } catch {}
     }
 
@@ -176,6 +193,7 @@ export default function JoinPage() {
         <main className="max-w-md mx-auto px-4 pt-8">
           <LoadingState label="Checking your account…" />
         </main>
+        <MobileNav />
       </div>
     )
   }
@@ -234,6 +252,7 @@ export default function JoinPage() {
             Preview the App
           </Link>
         </main>
+        <MobileNav />
       </div>
     )
   }
@@ -303,29 +322,75 @@ export default function JoinPage() {
             </section>
 
             <section>
-              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">What kind of seller are you? *</label>
-              <div className="grid grid-cols-2 gap-2">
-                {SELLER_TYPES.map((t) => (
-                  <button
-                    key={t.value}
-                    onClick={() => setForm({ ...form, seller_type: t.value })}
-                    aria-pressed={form.seller_type === t.value}
-                    className={`min-h-[4.5rem] p-3 rounded-2xl border text-sm font-medium transition flex items-center gap-2 text-left ${
-                      form.seller_type === t.value
-                        ? 'border-hs-gold bg-hs-gold/10 text-hs-gold'
-                        : 'border-white/[0.06] bg-hs-charcoal text-hs-cream hover:bg-hs-soft'
-                    }`}
-                  >
-                    <SellerTypeIcon type={t.value} size={22} className="shrink-0" />
-                    <span>{t.label}</span>
-                  </button>
-                ))}
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">What do you want to sell? *</label>
+              <div className="grid gap-3">
+                {SELLER_TYPES.map((t) => {
+                  const Icon = t.icon
+                  const selected = form.seller_types.includes(t.value)
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => {
+                        const next = selected
+                          ? form.seller_types.filter((x) => x !== t.value)
+                          : normalizeSellerTypes([...form.seller_types, t.value])
+                        const primary = next.includes('recipe_creator') && !next.some((x) => x !== 'recipe_creator')
+                          ? 'recipe_creator'
+                          : next.includes('home_cook')
+                            ? 'home_cook'
+                            : next.includes('restaurant')
+                              ? 'restaurant'
+                              : next[0] || 'restaurant'
+                        setForm({ ...form, seller_type: primary, seller_types: next.length ? next : ['restaurant'] })
+                      }}
+                      aria-pressed={selected}
+                      className={`p-4 rounded-2xl border text-left transition flex items-start gap-3 ${
+                        selected
+                          ? 'border-hs-gold bg-hs-gold/10 text-hs-gold'
+                          : 'border-white/[0.06] bg-hs-charcoal text-hs-cream hover:bg-hs-soft'
+                      }`}
+                    >
+                      <div className={`rounded-xl p-2 ${selected ? 'bg-hs-gold/20' : 'bg-hs-soft'}`}>
+                        <Icon size={22} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-sm">{t.label}</p>
+                        <p className={`text-xs mt-0.5 ${selected ? 'text-hs-gold/80' : 'text-hs-gray'}`}>{t.description}</p>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${selected ? 'border-hs-gold bg-hs-gold' : 'border-hs-gray'}`}>
+                        {selected && <CheckCircle2 size={12} className="text-hs-black" />}
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
+              {form.seller_types.includes('restaurant') && (
+                <div className="mt-4">
+                  <label className="text-xs font-semibold text-hs-silver uppercase tracking-wider mb-2 block">Food business type</label>
+                  <div className="flex flex-wrap gap-2">
+                    {RESTAURANT_SUB_TYPES.map((t) => (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => setForm({ ...form, seller_type: t.value, seller_types: normalizeSellerTypes([...form.seller_types.filter((x) => !RESTAURANT_SUB_TYPES.some((s) => s.value === x)), t.value]) })}
+                        className={`px-3 py-2 rounded-xl text-xs font-medium border transition ${
+                          form.seller_type === t.value
+                            ? 'border-hs-gold bg-hs-gold/10 text-hs-gold'
+                            : 'border-white/[0.06] bg-hs-charcoal text-hs-cream hover:bg-hs-soft'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
 
             <section>
               <label htmlFor="street-address" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Street Address *</label>
-              <input id="street-address" autoComplete="street-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Restaurant street address" className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
+              <input id="street-address" autoComplete="street-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={form.seller_types.includes('home_cook') ? 'Your pickup address' : 'Restaurant street address'} className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
             </section>
 
             <section>
@@ -335,7 +400,7 @@ export default function JoinPage() {
                 <input
                   value={form.location_text}
                   onChange={(e) => setForm({ ...form, location_text: e.target.value })}
-                  placeholder="Ex: Delmar Loop, St. Louis"
+                  placeholder={form.seller_types.includes('home_cook') ? 'Ex: Tower Grove South, St. Louis' : 'Ex: Delmar Loop, St. Louis'}
                   className="w-full pl-11 pr-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
                 />
               </div>
@@ -352,11 +417,11 @@ export default function JoinPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Hours</label>
+                <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{form.seller_types.includes('home_cook') ? 'Availability' : 'Hours'}</label>
                 <input
                   value={form.hours_text}
                   onChange={(e) => setForm({ ...form, hours_text: e.target.value })}
-                  placeholder="Mon–Sat 11am–9pm"
+                  placeholder={form.seller_types.includes('home_cook') ? 'Ex: Fri–Sun, pre-order 24h' : 'Mon–Sat 11am–9pm'}
                   className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
                 />
               </div>
@@ -476,6 +541,7 @@ export default function JoinPage() {
           </div>
         )}
       </main>
+      <MobileNav />
     </div>
   )
 }

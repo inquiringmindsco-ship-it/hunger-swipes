@@ -39,9 +39,9 @@ function SellerLink() {
     )
   }
 
+  const active = pathname.startsWith('/seller/') || pathname === '/join' || pathname === '/business'
   const label = sellerId ? 'Sell' : 'Sell'
   const href = sellerId ? `/seller/dashboard?id=${sellerId}` : '/join'
-  const active = pathname.startsWith('/seller/dashboard') || pathname === '/join'
 
   return (
     <Link

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, CheckCircle2, Smartphone, Utensils, Eye, Heart, Store, QrCode } from 'lucide-react'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
+import MobileNav from '@/app/components/MobileNav'
 
 const BENEFITS = [
   {
@@ -69,7 +70,7 @@ export default function BusinessClient() {
   }
 
   return (
-    <div className="min-h-screen bg-hs-ink flex flex-col">
+    <div className="min-h-screen bg-hs-ink flex flex-col pb-24">
       <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <Link href="/swipe" className="flex items-center gap-2">
@@ -214,6 +215,7 @@ export default function BusinessClient() {
           </div>
         )}
       </main>
+      <MobileNav />
     </div>
   )
 }
