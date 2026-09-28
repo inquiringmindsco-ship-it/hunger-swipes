@@ -234,7 +234,7 @@ export default function SellerDashboardPage() {
             )}
           </div>
           <Link href="/seller/profile" className="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-hs-soft text-sm font-bold text-hs-cream hover:border-hs-gold/30">
-            <Pencil size={16} /> Edit restaurant and ordering
+            <Pencil size={16} /> Edit {seller.seller_types?.includes('home_cook') ? 'seller' : 'restaurant'} and ordering
           </Link>
           {seller.slug && <p className="mt-3 text-center text-xs text-hs-muted">Public page: hungerswipes.com/{seller.slug}</p>}
         </section>
@@ -272,7 +272,7 @@ export default function SellerDashboardPage() {
         {/* Dishes */}
         <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-hs-cream">Your Dishes</h2>
+            <h2 className="font-bold text-hs-cream">{seller.seller_types?.includes('recipe_creator') ? 'Your Dishes & Meals' : 'Your Dishes'}</h2>
             <Link
               href="/seller/dishes/new"
               className="px-4 py-2 bg-hs-gold text-hs-black rounded-xl text-sm font-bold flex items-center gap-1 hover:bg-hs-gold-light transition"
@@ -332,6 +332,27 @@ export default function SellerDashboardPage() {
             </div>
           )}
         </section>
+
+        {/* Recipes */}
+        {seller.seller_types?.includes('recipe_creator') && (
+          <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <SellerTypeIcon type="recipe_creator" size={18} className="text-hs-gold" />
+                <h2 className="font-bold text-hs-cream">Recipe Products</h2>
+              </div>
+              <Link
+                href="/seller/recipes/new"
+                className="px-4 py-2 bg-hs-gold text-hs-black rounded-xl text-sm font-bold flex items-center gap-1 hover:bg-hs-gold-light transition"
+              >
+                <Plus size={16} /> Add
+              </Link>
+            </div>
+            <p className="text-sm text-hs-gray">
+              Attach a paid recipe to any of your dishes. Customers see the dish first, then can unlock the recipe.
+            </p>
+          </section>
+        )}
 
         {/* Staff Upload QR + PIN */}
         {staffUrl && (

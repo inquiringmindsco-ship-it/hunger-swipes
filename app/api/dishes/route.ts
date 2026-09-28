@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
       .from('dishes')
       .select(`
         *,
+        video_media:food_media!left(*),
         seller:sellers!inner(id,business_name,seller_type,description,logo_url,location_text,address,latitude,longitude,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status)
       `)
       .eq('status', 'active')
@@ -110,7 +111,36 @@ export async function GET(request: NextRequest) {
           ? a.distance_miles - b.distance_miles
         : new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     const page = merged.slice(offset, offset + limit + 1)
-    return NextResponse.json({ dishes: page.slice(0, limit), hasMore: page.length > limit, nextOffset: offset + Math.min(limit, page.length) })
+    const result = page.slice(0, limit)
+
+    // Enrich official dishes with approved video URLs and recipe previews.
+    const officialIds = result.filter((d: any) => d.content_kind === 'official').map((d: any) => d.id)
+    if (officialIds.length) {
+      const [{ data: recipes }, { data: mediaRows }] = await Promise.all([
+        admin.from('recipes').select('id,dish_id,title,description,price,photo_url').eq('status', 'active').eq('published', true).in('dish_id', officialIds),
+        admin.from('food_media').select('*').eq('kind', 'video').eq('moderation_status', 'approved').in('dish_id', officialIds),
+      ])
+      const mediaByDish = Object.fromEntries((mediaRows || []).map((m: any) => [m.dish_id, m]))
+      const recipeByDish = Object.fromEntries((recipes || []).map((r: any) => [r.dish_id, r]))
+      const admin2 = getSupabaseAdmin()
+      for (const item of result) {
+        if (item.content_kind !== 'official') continue
+        const media = mediaByDish[item.id]
+        if (media?.optimized_path) {
+          const { data: url } = admin2!.storage.from('food-media').getPublicUrl(media.optimized_path)
+          item.video_url = url.publicUrl
+          item.video_duration = media.duration_seconds
+        }
+        if (media?.thumbnail_path) {
+          const { data: url } = admin2!.storage.from('food-media').getPublicUrl(media.thumbnail_path)
+          item.poster_url = url.publicUrl
+        }
+        const recipe = recipeByDish[item.id]
+        if (recipe) item.recipe_preview = recipe
+      }
+    }
+
+    return NextResponse.json({ dishes: result, hasMore: page.length > limit, nextOffset: offset + Math.min(limit, page.length) })
   } catch (err: any) {
     return NextResponse.json({ error: err.message, dishes: [] }, { status: 500 })
   }
@@ -126,6 +156,8 @@ export async function POST(request: NextRequest) {
       name,
       description,
       photo_url,
+      video_media_id,
+      poster_url,
       price,
       availability,
       category,
@@ -156,20 +188,24 @@ export async function POST(request: NextRequest) {
     if (sellerError || !seller) return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
 
     const { data: place } = await admin.from('places').select('id').eq('claimed_seller_id', seller_id).maybeSingle()
+    const insert: any = {
+      seller_id,
+      place_id: place?.id || null,
+      name: name.trim(),
+      description: description || null,
+      photo_url: photo_url || null,
+      price: typeof price === 'number' ? price : 0,
+      availability: availability || 'available',
+      category: category || null,
+      tags: tags || [],
+      status: status || 'active',
+    }
+    if (video_media_id) insert.video_media_id = video_media_id
+    if (poster_url) insert.poster_url = poster_url
+
     const { data, error } = await admin
       .from('dishes')
-      .insert({
-        seller_id,
-        place_id: place?.id || null,
-        name: name.trim(),
-        description: description || null,
-        photo_url: photo_url || null,
-        price: typeof price === 'number' ? price : 0,
-        availability: availability || 'available',
-        category: category || null,
-        tags: tags || [],
-        status: status || 'active',
-      })
+      .insert(insert)
       .select()
       .single()
 
@@ -190,7 +226,7 @@ export async function PUT(request: NextRequest) {
     const user = await getRequestUser(request)
     if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     const allowed = [
-      'name', 'description', 'photo_url', 'price', 'availability', 'category', 'tags', 'status',
+      'name', 'description', 'photo_url', 'video_media_id', 'poster_url', 'price', 'availability', 'category', 'tags', 'status',
       'recipe_available', 'recipe_access_type', 'recipe_price', 'recipe_preview'
     ]
     const update: any = {}

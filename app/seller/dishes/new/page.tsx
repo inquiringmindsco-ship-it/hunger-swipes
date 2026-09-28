@@ -31,6 +31,10 @@ function NewDishContent() {
     status: 'active',
   })
   const [preview, setPreview] = useState('')
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState('')
+  const [videoMediaId, setVideoMediaId] = useState('')
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [videoError, setVideoError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
@@ -76,6 +80,32 @@ function NewDishContent() {
     } catch {}
   }
 
+  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingVideo(true)
+    setVideoError('')
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await authFetch('/api/upload-video', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Upload failed')
+      setVideoMediaId(data.media.id)
+      setVideoPreviewUrl(data.urls.optimized || data.urls.original)
+    } catch (reason: any) {
+      setVideoError(reason.message || 'Could not upload video')
+    } finally {
+      setUploadingVideo(false)
+    }
+  }
+
+  const removeVideo = () => {
+    setVideoMediaId('')
+    setVideoPreviewUrl('')
+    setVideoError('')
+  }
+
   const handleSubmit = async () => {
     if (!sellerId) {
       setError('Missing seller ID. Please return to dashboard.')
@@ -100,6 +130,8 @@ function NewDishContent() {
           tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
           availability: form.availability,
           photo_url: form.photo_url,
+          video_media_id: videoMediaId || undefined,
+          poster_url: videoPreviewUrl || undefined,
           status: form.status,
         }),
       })
@@ -275,6 +307,34 @@ function NewDishContent() {
             placeholder="https://..."
             className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
           />
+        </section>
+
+        <section>
+          <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">10-Second Food Video <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
+          {videoPreviewUrl ? (
+            <div className="space-y-3">
+              <video src={videoPreviewUrl} muted loop playsInline className="w-full max-h-64 rounded-2xl object-cover bg-hs-graphite" />
+              <button
+                type="button"
+                onClick={removeVideo}
+                className="w-full py-3 border border-white/[0.08] text-hs-cream rounded-2xl font-semibold hover:bg-hs-soft transition"
+              >
+                Remove video
+              </button>
+            </div>
+          ) : (
+            <label className="block cursor-pointer">
+              <div className="border-2 border-dashed border-white/15 rounded-2xl p-6 text-center hover:border-hs-gold/40 transition bg-hs-charcoal">
+                <div className="text-hs-gray flex flex-col items-center gap-2">
+                  <ImagePlus size={24} aria-hidden="true" />
+                  <span className="text-sm font-medium">{uploadingVideo ? 'Processing video…' : 'Tap to upload 10-second video'}</span>
+                </div>
+              </div>
+              <input type="file" accept="video/*" disabled={uploadingVideo} className="hidden" onChange={handleVideoChange} />
+            </label>
+          )}
+          {videoError && <p className="text-xs text-hs-red mt-2">{videoError}</p>}
+          <p className="text-xs text-hs-gray mt-2">MP4/MOV/WebM, ≤10 seconds, ≤50 MB. Videos are moderated before they appear in Discover.</p>
         </section>
 
         <section className="flex gap-3 pt-4">

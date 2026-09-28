@@ -27,6 +27,39 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+    const body = await request.json()
+    const admin = getSupabaseAdmin()
+    if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
+
+    const allowed = ['status', 'verification_status', 'suspension_reason']
+    const update: any = {}
+    for (const key of allowed) {
+      if (body[key] !== undefined) update[key] = body[key]
+    }
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: 'No valid fields' }, { status: 400 })
+    }
+
+    const allowedStatuses = ['active', 'suspended', 'pending_review', 'removed']
+    if (update.status && !allowedStatuses.includes(update.status)) {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+    }
+
+    const { data, error } = await admin.from('sellers').update(update).eq('id', id).select().single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ seller: data })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
 export async function POST(request: NextRequest) {
   if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
