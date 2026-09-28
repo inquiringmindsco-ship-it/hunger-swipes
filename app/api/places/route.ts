@@ -40,12 +40,13 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   const location = typeof body.location_text === 'string' ? body.location_text.trim() : ''
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
   if (name.length < 2 || name.length > 160 || location.length < 2 || location.length > 240) return NextResponse.json({ error: 'Place name and location are required' }, { status: 400 })
   const admin = getSupabaseAdmin()
   if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   const { data: existing } = await admin.from('places').select('*').eq('name', name).eq('location_text', location).eq('status', 'active').maybeSingle()
   if (existing) return NextResponse.json({ place: existing })
-  const { data, error } = await admin.from('places').insert({ name, location_text: location, address: body.address || null, latitude: body.latitude || null, longitude: body.longitude || null, source: 'community', claimed_status: 'unclaimed', created_by: user.id }).select().single()
+  const { data, error } = await admin.from('places').insert({ name, location_text: location, phone: phone || null, address: body.address || null, latitude: body.latitude || null, longitude: body.longitude || null, source: 'community', claimed_status: 'unclaimed', created_by: user.id }).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ place: data }, { status: 201 })
 }

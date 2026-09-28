@@ -24,6 +24,7 @@ export default function CommunityPostPage() {
   const [manual, setManual] = useState(false)
   const [newPlace, setNewPlace] = useState('')
   const [location, setLocation] = useState('')
+  const [newPlacePhone, setNewPlacePhone] = useState('')
   const [dishName, setDishName] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
@@ -81,7 +82,7 @@ export default function CommunityPostPage() {
     try {
       let resolvedPlaceId = placeId
       if (!resolvedPlaceId) {
-        const response = await authFetch('/api/places', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newPlace, location_text: location }) })
+        const response = await authFetch('/api/places', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newPlace, location_text: location, phone: newPlacePhone }) })
         const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not create place'); resolvedPlaceId = data.place.id
       }
       const upload = new FormData(); upload.append('file', file); upload.append('folder', 'community-posts')
@@ -232,7 +233,7 @@ export default function CommunityPostPage() {
 
           {manual && (
             <section className="grid gap-4 sm:grid-cols-2">
-              <div>
+              <div className="sm:col-span-2">
                 <label htmlFor="new-place" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">Place Name</label>
                 <input
                   id="new-place"
@@ -254,6 +255,18 @@ export default function CommunityPostPage() {
                     required={manual}
                   />
                 </div>
+              </div>
+              <div>
+                <label htmlFor="phone" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">Phone</label>
+                <input
+                  id="phone"
+                  type="tel"
+                  inputMode="tel"
+                  value={newPlacePhone}
+                  onChange={e => setNewPlacePhone(e.target.value)}
+                  placeholder="(555) 123-4567"
+                  className="w-full rounded-2xl border border-white/[0.08] bg-hs-charcoal px-4 py-3.5 text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
+                />
               </div>
             </section>
           )}
