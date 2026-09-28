@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useAuth, signOut, getAuthToken } from '@/lib/auth'
 import { useEffect, useState } from 'react'
-import { LogOut, Store, Heart, User, ChevronRight, MapPin, SlidersHorizontal, Shield, Bell, Utensils } from 'lucide-react'
+import { LogOut, Store, Heart, User, ChevronRight, MapPin, SlidersHorizontal, Shield, Bell, Utensils, Wallet } from 'lucide-react'
 import { BrandMark, ProfileIcon } from '@/app/components/icons/HungerIcons'
 import MobileNav from '@/app/components/MobileNav'
 import { LoadingState } from '@/app/components/ui/LoadingState'
@@ -189,6 +189,15 @@ export default function AccountPage() {
               detail="Become a seller on Hunger Swipes"
             />
           )}
+        </Section>
+
+        <Section title="Swipe Bucks">
+          <Row
+            href="/swipe-bucks"
+            icon={<Wallet size={18} />}
+            label="Swipe Bucks"
+            detail="Post food. Earn meals."
+          />
         </Section>
 
         <Section title="Saved">

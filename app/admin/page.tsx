@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, CheckCircle2, Eye, Heart, RefreshCw, Shield, Trash2, XCircle, Search, QrCode, ExternalLink, Store } from 'lucide-react'
+import { ArrowUpRight, CheckCircle2, Eye, Heart, RefreshCw, Shield, Trash2, XCircle, Search, QrCode, ExternalLink, Store, Wallet } from 'lucide-react'
 import { PassIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 
@@ -24,11 +24,14 @@ function AdminContent() {
   const [sellers, setSellers] = useState<any[]>([])
   const [dishes, setDishes] = useState<any[]>([])
   const [submissions, setSubmissions] = useState<Submission[]>([])
-  const [tab, setTab] = useState<'sellers' | 'dishes' | 'submissions'>('sellers')
+  const [tab, setTab] = useState<'sellers' | 'dishes' | 'submissions' | 'swipe_bucks'>('sellers')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [swipeBucksConfig, setSwipeBucksConfig] = useState<any>(null)
+  const [swipeBucksStats, setSwipeBucksStats] = useState<any>(null)
+  const [swipeBucksLoading, setSwipeBucksLoading] = useState(false)
 
   const login = () => {
     if (secret) setAuthenticated(true)
@@ -61,9 +64,32 @@ function AdminContent() {
     }
   }
 
+  const loadSwipeBucks = async () => {
+    if (!secret) return
+    setSwipeBucksLoading(true)
+    try {
+      const [configRes, statsRes] = await Promise.all([
+        fetch('/api/swipe-bucks/config', { headers: { 'x-admin-secret': secret } }),
+        fetch('/api/swipe-bucks/stats', { headers: { 'x-admin-secret': secret } }),
+      ])
+      const configData = await configRes.json()
+      const statsData = await statsRes.json()
+      setSwipeBucksConfig(configData.config)
+      setSwipeBucksStats(statsData)
+    } catch {
+      setError('Failed to load Swipe Bucks admin data')
+    } finally {
+      setSwipeBucksLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (authenticated) loadData()
   }, [authenticated])
+
+  useEffect(() => {
+    if (authenticated && tab === 'swipe_bucks') loadSwipeBucks()
+  }, [authenticated, tab])
 
   const doAction = async (targetType: 'seller' | 'dish', targetId: string, action: string, reason?: string) => {
     const key = `${targetType}:${targetId}:${action}`
@@ -226,6 +252,12 @@ function AdminContent() {
             className={`px-4 py-2 rounded-full text-sm font-semibold ${tab === 'submissions' ? 'bg-[#FF5722] text-white' : 'bg-white/5 text-gray-400'}`}
           >
             Submissions ({submissions.length})
+          </button>
+          <button
+            onClick={() => setTab('swipe_bucks')}
+            className={`px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center gap-1.5 ${tab === 'swipe_bucks' ? 'bg-[#FF5722] text-white' : 'bg-white/5 text-gray-400'}`}
+          >
+            <Wallet size={16} /> Swipe Bucks
           </button>
         </div>
 
@@ -413,7 +445,232 @@ function AdminContent() {
             )}
           </div>
         )}
+
+        {tab === 'swipe_bucks' && <SwipeBucksAdmin secret={secret} config={swipeBucksConfig} stats={swipeBucksStats} loading={swipeBucksLoading} onUpdate={loadSwipeBucks} />}
       </main>
+    </div>
+  )
+}
+
+function SwipeBucksAdmin({ secret, config, stats, loading, onUpdate }: { secret: string; config: any; stats: any; loading: boolean; onUpdate: () => void }) {
+  const [edit, setEdit] = useState<any>(null)
+  const [saving, setSaving] = useState(false)
+  const [manualOpen, setManualOpen] = useState(false)
+  const [manual, setManual] = useState({ user_id: '', amount_cents: '', type: 'credit', reason: '', post_id: '' })
+  const [manualLoading, setManualLoading] = useState(false)
+
+  useEffect(() => { if (config) setEdit({ ...config }) }, [config])
+
+  const saveConfig = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/swipe-bucks/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify(edit),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      onUpdate()
+    } catch (e) {
+      alert('Failed to save config')
+    }
+    setSaving(false)
+  }
+
+  const submitManual = async () => {
+    setManualLoading(true)
+    try {
+      const res = await fetch('/api/swipe-bucks/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({
+          user_id: manual.user_id,
+          amount_cents: parseInt(manual.amount_cents, 10),
+          type: manual.type,
+          reason: manual.reason,
+          post_id: manual.post_id || undefined,
+        }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      setManual({ user_id: '', amount_cents: '', type: 'credit', reason: '', post_id: '' })
+      setManualOpen(false)
+      onUpdate()
+    } catch (e: any) {
+      alert(e.message || 'Manual entry failed')
+    }
+    setManualLoading(false)
+  }
+
+  const fmt = (cents: number) => `$${(cents / 100).toFixed(2)}`
+
+  if (loading) return <div className="text-gray-500 text-sm">Loading Swipe Bucks…</div>
+
+  return (
+    <div className="space-y-6">
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <Stat label="Outstanding" value={fmt(stats.outstanding_cents || 0)} />
+          <Stat label="Issued today" value={fmt(stats.issued_today_cents || 0)} />
+          <Stat label="Issued this month" value={fmt(stats.issued_month_cents || 0)} />
+          <Stat label="Redeemed today" value={fmt(stats.redeemed_today_cents || 0)} />
+          <Stat label="Redeemed this month" value={fmt(stats.redeemed_month_cents || 0)} />
+        </div>
+      )}
+
+      {config && edit && (
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold">Reward configuration</h3>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={edit.active}
+                onChange={(e) => setEdit({ ...edit, active: e.target.checked })}
+              />
+              Active
+            </label>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              { key: 'right_swipe_cents', label: 'Right swipe' },
+              { key: 'save_cents', label: 'Save/match' },
+              { key: 'click_cents', label: 'Order click' },
+              { key: 'verified_order_cents', label: 'Verified order' },
+              { key: 'first_photo_cents', label: 'First photo bonus' },
+            ].map((f) => (
+              <label key={f.key} className="block text-sm">
+                <span className="text-gray-400">{f.label} (¢)</span>
+                <input
+                  type="number"
+                  value={edit[f.key]}
+                  onChange={(e) => setEdit({ ...edit, [f.key]: parseInt(e.target.value || '0', 10) })}
+                  className="mt-1 w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                />
+              </label>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { key: 'daily_cap_cents', label: 'Daily cap' },
+              { key: 'monthly_cap_cents', label: 'Monthly cap' },
+              { key: 'max_per_post_cents', label: 'Max per post' },
+              { key: 'global_budget_cents', label: 'Global budget' },
+            ].map((f) => (
+              <label key={f.key} className="block text-sm">
+                <span className="text-gray-400">{f.label} (¢)</span>
+                <input
+                  type="number"
+                  value={edit[f.key]}
+                  onChange={(e) => setEdit({ ...edit, [f.key]: parseInt(e.target.value || '0', 10) })}
+                  className="mt-1 w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                />
+              </label>
+            ))}
+          </div>
+          <button
+            onClick={saveConfig}
+            disabled={saving}
+            className="px-4 py-2 bg-[#FF5722] text-white rounded-lg font-semibold disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save config'}
+          </button>
+        </div>
+      )}
+
+      <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold">Manual adjustment</h3>
+          <button onClick={() => setManualOpen(!manualOpen)} className="text-sm text-[#FF5722]">
+            {manualOpen ? 'Cancel' : 'New adjustment'}
+          </button>
+        </div>
+        {manualOpen && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="text"
+                placeholder="User ID"
+                value={manual.user_id}
+                onChange={(e) => setManual({ ...manual, user_id: e.target.value })}
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+              />
+              <input
+                type="number"
+                placeholder="Amount (cents)"
+                value={manual.amount_cents}
+                onChange={(e) => setManual({ ...manual, amount_cents: e.target.value })}
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+              />
+            </div>
+            <select
+              value={manual.type}
+              onChange={(e) => setManual({ ...manual, type: e.target.value })}
+              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+            >
+              <option value="credit">Manual credit</option>
+              <option value="reversal">Manual reversal</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Reason (required)"
+              value={manual.reason}
+              onChange={(e) => setManual({ ...manual, reason: e.target.value })}
+              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+            />
+            <input
+              type="text"
+              placeholder="Post ID (optional)"
+              value={manual.post_id}
+              onChange={(e) => setManual({ ...manual, post_id: e.target.value })}
+              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+            />
+            <button
+              onClick={submitManual}
+              disabled={manualLoading || !manual.user_id || !manual.amount_cents || !manual.reason}
+              className="px-4 py-2 bg-[#FF5722] text-white rounded-lg font-semibold disabled:opacity-50"
+            >
+              {manualLoading ? 'Submitting…' : 'Submit'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {stats?.top_users?.length > 0 && (
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+          <h3 className="font-bold mb-3">Top users</h3>
+          <div className="space-y-2 text-sm">
+            {stats.top_users.map((row: any, i: number) => (
+              <div key={i} className="flex justify-between">
+                <span className="text-gray-400 font-mono truncate max-w-[60%]">{row.user_id}</span>
+                <span className="text-hs-cream font-semibold">{fmt(row.sum || 0)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {stats?.suspicious?.length > 0 && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+          <h3 className="font-bold text-red-400 mb-3">Suspicious activity</h3>
+          <div className="space-y-2 text-sm">
+            {stats.suspicious.map((row: any, i: number) => (
+              <div key={i} className="flex justify-between">
+                <span className="text-gray-400 font-mono truncate max-w-[60%]">{row.user_id}</span>
+                <span className="text-red-400 font-semibold">{row.count} events today</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
+      <p className="text-xs text-gray-400 uppercase">{label}</p>
+      <p className="text-lg font-bold text-hs-cream">{value}</p>
     </div>
   )
 }
