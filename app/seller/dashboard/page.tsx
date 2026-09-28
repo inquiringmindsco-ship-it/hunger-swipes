@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { QRCodeSVG } from 'qrcode.react'
-import { Ban, CheckCircle2, Clock3, ExternalLink, LogOut, MapPin, Pencil, Phone, Plus, Timer, ToggleLeft, ToggleRight, TrendingUp, Heart, Eye, Utensils, Lock, RefreshCw } from 'lucide-react'
+import { Ban, CheckCircle2, Clock3, CreditCard, ExternalLink, LogOut, MapPin, Pencil, Phone, Plus, Timer, ToggleLeft, ToggleRight, TrendingUp, Heart, Eye, Utensils, Lock, RefreshCw } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
 import { getSupabase } from '@/lib/supabase'
 import { BrandMark, SellerTypeIcon } from '@/app/components/icons/HungerIcons'
@@ -21,6 +21,8 @@ export default function SellerDashboardPage() {
   const [dishes, setDishes] = useState<any[]>([])
   const [stats, setStats] = useState<any>(null)
   const [referrals, setReferrals] = useState<any>(null)
+  const [connect, setConnect] = useState<any>(null)
+  const [connectLoading, setConnectLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [staffPin, setStaffPin] = useState<string | null>(null)
   const [hasStaffPin, setHasStaffPin] = useState(false)
@@ -51,20 +53,23 @@ export default function SellerDashboardPage() {
         return
       }
       const ownedSellerId = sellerData.seller.id
-      const [dishesRes, statsRes, refRes, pinRes] = await Promise.all([
+      const [dishesRes, statsRes, refRes, pinRes, connectRes] = await Promise.all([
         authFetch(`/api/sellers/${ownedSellerId}/dishes`),
         authFetch(`/api/sellers/${ownedSellerId}/stats`),
         authFetch(`/api/sellers/${ownedSellerId}/referrals`),
         authFetch('/api/sellers/staff-pin'),
+        authFetch(`/api/stripe/connect?seller_id=${ownedSellerId}`),
       ])
       const dishesData = await dishesRes.json()
       const statsData = await statsRes.json()
       const refData = await refRes.json()
       const pinData = await pinRes.json().catch(() => ({ hasPin: false }))
+      const connectData = await connectRes.json().catch(() => ({}))
       setSeller(sellerData.seller)
       if (dishesData.dishes) setDishes(dishesData.dishes)
       if (statsData.stats) setStats(statsData.stats)
       if (refData.stats) setReferrals(refData.stats)
+      setConnect(connectData.status || connectData.error ? connectData : null)
       setHasStaffPin(pinData.hasPin)
       if (!pinData.hasPin) setStaffPin(null)
     } catch {
@@ -103,6 +108,29 @@ export default function SellerDashboardPage() {
       }
     } finally {
       setPinLoading(false)
+    }
+  }
+
+  const startStripeConnect = async () => {
+    if (!seller?.id) return
+    setConnectLoading(true)
+    try {
+      const res = await authFetch('/api/stripe/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller_id: seller.id }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        // Refresh cached status
+        const statusRes = await authFetch(`/api/stripe/connect?seller_id=${seller.id}`)
+        const statusData = await statusRes.json().catch(() => ({}))
+        setConnect(statusData.status || statusData.error ? statusData : null)
+      }
+    } finally {
+      setConnectLoading(false)
     }
   }
 
@@ -351,6 +379,38 @@ export default function SellerDashboardPage() {
             <p className="text-sm text-hs-gray">
               Attach a paid recipe to any of your dishes. Customers see the dish first, then can unlock the recipe.
             </p>
+          </section>
+        )}
+
+        {/* Stripe Connect */}
+        {seller.seller_types?.includes('recipe_creator') && (
+          <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <CreditCard size={18} className="text-hs-gold" />
+              <h2 className="font-bold text-hs-cream">Creator Setup / Stripe Connect</h2>
+            </div>
+            <div className="rounded-2xl bg-hs-soft p-4 mb-4">
+              <p className="text-xs text-hs-gray uppercase tracking-wider mb-1">Status</p>
+              <p className={`text-sm font-bold capitalize ${
+                connect?.status === 'ready'
+                  ? 'text-hs-success'
+                  : connect?.status === 'onboarding_incomplete'
+                    ? 'text-hs-gold'
+                    : 'text-hs-gray'
+              }`}>
+                {connect?.status?.replace('_', ' ') || 'Unknown'}
+              </p>
+              {connect?.stripe_account_id && (
+                <p className="text-xs text-hs-gray mt-1 truncate">Account: {connect.stripe_account_id}</p>
+              )}
+            </div>
+            <button
+              onClick={startStripeConnect}
+              disabled={connectLoading || connect?.status === 'ready'}
+              className="w-full py-3 bg-hs-gold text-hs-black rounded-2xl font-bold text-sm hover:bg-hs-gold-light transition disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            >
+              {connectLoading ? 'Connecting…' : connect?.status === 'ready' ? 'Stripe Connected' : 'Connect Stripe Account'}
+            </button>
           </section>
         )}
 

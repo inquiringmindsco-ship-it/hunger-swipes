@@ -18,6 +18,11 @@ import { authFetch, optionalAuthFetch } from '@/lib/auth-fetch'
 import { DEFAULT_DISCOVERY_PREFERENCES, readDiscoveryPreferences, type DiscoveryPreferences } from '@/lib/preferences'
 import { committedDirection, isSystemEdgeStart, sampleGesture, type GestureIntent, type SwipeDirection } from '@/lib/swipe-engine'
 import { persistSwipe, type SwipeWriteResult } from '@/lib/swipe-persistence'
+import { DiscoveryModeSwitch, useStoredDiscoveryMode } from '@/app/components/DiscoveryModeSwitch'
+import { RecipeBadge } from '@/app/components/RecipeBadge'
+import RecipeUnlockSheet from '@/app/components/RecipeUnlockSheet'
+import FollowButton from '@/app/components/FollowButton'
+
 
 interface FoodDish {
   id: string
@@ -26,7 +31,8 @@ interface FoodDish {
   videoUrl?: string
   posterUrl?: string
   videoDuration?: number
-  recipePreview?: { id: string; title: string; description?: string; price: number; photo_url?: string }
+  recipePreview?: { id: string; title: string; description?: string; price: number; photo_url?: string; recipe_type?: 'free' | 'fixed_price' | 'proud_to_pay'; min_proud_to_pay_amount?: number }
+  recipeAvailable?: boolean
   restaurant: string
   location: string
   dish: string
@@ -38,7 +44,7 @@ interface FoodDish {
   spiceLevel?: number
   healthCategory?: string
   distanceMiles?: number
-  seller: { id: string; business_name: string; location_text?: string; address?: string; city?: string; state?: string; latitude?: number; longitude?: number; phone?: string; website?: string; order_url?: string; ordering_method?: string; ordering_url?: string }
+  seller: { id: string; business_name: string; location_text?: string; address?: string; city?: string; state?: string; latitude?: number; longitude?: number; phone?: string; website?: string; order_url?: string; ordering_method?: string; ordering_url?: string; owner_user_id?: string }
 }
 
 interface TemporaryFilters { cuisine: string; dietary: string; health: string; priceRange: string; spiceLevel: number }
@@ -71,6 +77,7 @@ function mapDish(dish: any): FoodDish {
     posterUrl: dish.poster_url,
     videoDuration: dish.video_duration,
     recipePreview: dish.recipe_preview,
+    recipeAvailable: !!dish.recipe_available,
     restaurant: dish.seller.business_name,
     location: dish.seller.location_text || '',
     dish: dish.name,
@@ -102,7 +109,10 @@ export default function SwipePage() {
   const [preferences, setPreferences] = useState<DiscoveryPreferences>(DEFAULT_DISCOVERY_PREFERENCES)
   const [preferencesReady, setPreferencesReady] = useState(false)
   const [feedTab, setFeedTab] = useState<'for-you' | 'nearby' | 'trending'>('for-you')
+  const { mode: discoveryMode, setMode: setDiscoveryMode, ready: discoveryModeReady } = useStoredDiscoveryMode('eat')
+  const [recipeSheetRecipeId, setRecipeSheetRecipeId] = useState<string | null>(null)
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null)
+
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'ready' | 'denied' | 'unavailable'>('idle')
   const [radius, setRadius] = useState(15)
   const [online, setOnline] = useState(true)
@@ -145,8 +155,8 @@ export default function SwipePage() {
     } catch { setSavedCount(0) }
   }, [])
 
-  const fetchDishes = useCallback(async ({ reset = false, nextFilters = filters, nextMode = feedTab }: { reset?: boolean; nextFilters?: TemporaryFilters; nextMode?: typeof feedTab } = {}) => {
-    if (!preferencesReady || authLoading) return
+  const fetchDishes = useCallback(async ({ reset = false, nextFilters = filters, nextMode = feedTab, nextDiscoveryMode = discoveryMode }: { reset?: boolean; nextFilters?: TemporaryFilters; nextMode?: typeof feedTab; nextDiscoveryMode?: 'eat' | 'make' | 'explore' } = {}) => {
+    if (!preferencesReady || authLoading || !discoveryModeReady) return
     if (nextMode === 'nearby' && !coordinates) {
       setLoading(false)
       setShowFilters(true)
@@ -160,7 +170,7 @@ export default function SwipePage() {
       setLoadingMore(true); setRefillError(false)
     }
     try {
-      const params = new URLSearchParams({ limit: String(PAGE_SIZE), mode: nextMode, offset: '0' })
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE), mode: nextMode, offset: '0', discoveryMode: nextDiscoveryMode })
       const cuisine = nextFilters.cuisine ? [nextFilters.cuisine] : preferences.cuisines
       const dietary = nextFilters.dietary ? [nextFilters.dietary] : preferences.dietary
       const health = nextFilters.health ? [nextFilters.health] : preferences.health
@@ -199,10 +209,10 @@ export default function SwipePage() {
 
   useEffect(() => {
     localStorage.removeItem('hungerswipes_matches')
-    if (!preferencesReady || authLoading) return
+    if (!preferencesReady || authLoading || !discoveryModeReady) return
     void fetchDishes({ reset: true })
     if (user) void loadSavedCount(); else setSavedCount(0)
-  }, [authLoading, user?.id, preferencesReady])
+  }, [authLoading, user?.id, preferencesReady, discoveryModeReady])
 
   useEffect(() => {
     if (currentIndex < dishes.length && dishes.length - currentIndex <= REFILL_AT && hasMore && !loadingMore) void fetchDishes()
@@ -310,8 +320,12 @@ export default function SwipePage() {
     if (direction) commitSwipe(direction); else { setDragX(0); setGestureProgress(0) }
   }
 
-  const applyFilters = () => { setShowFilters(false); void fetchDishes({ reset: true, nextFilters: filters, nextMode: feedTab }) }
+  const applyFilters = () => { setShowFilters(false); void fetchDishes({ reset: true, nextFilters: filters, nextMode: feedTab, nextDiscoveryMode: discoveryMode }) }
   const changeMode = (mode: typeof feedTab) => { setFeedTab(mode); if (mode === 'nearby' && !coordinates && locationState === 'idle') requestLocation() }
+  const onDiscoveryModeChange = (mode: 'eat' | 'make' | 'explore') => {
+    setDiscoveryMode(mode)
+    void fetchDishes({ reset: true, nextDiscoveryMode: mode })
+  }
   const currentDish = dishes[currentIndex]
   const nextDish = dishes[currentIndex + 1]
   const locationLabel = currentDish ? shortLocation(currentDish) : null
@@ -359,6 +373,7 @@ export default function SwipePage() {
     <div className="h-[100dvh] bg-hs-ink flex flex-col overflow-hidden">
       <BrandHeader />
       <main className="flex-1 flex flex-col max-w-md mx-auto w-full px-4 pt-2 pb-16">
+        <DiscoveryModeSwitch value={discoveryMode} onChange={onDiscoveryModeChange} />
         <div className="flex items-center justify-between mb-1.5 shrink-0"><div className="flex items-center gap-2 text-hs-gray text-xs font-medium min-w-0"><span className="capitalize whitespace-nowrap">{feedTab.replace('-', ' ')}</span>{feedTab === 'nearby' && currentDish.distanceMiles != null && <span className="text-hs-gold">• {currentDish.distanceMiles} mi</span>}{loadingMore && <span aria-live="polite">• loading more</span>}</div><button onClick={() => setShowFilters(true)} className={`flex items-center justify-center min-w-[44px] min-h-[44px] px-2.5 rounded-full text-[11px] font-semibold transition border ${filters.cuisine || filters.dietary || filters.health || filters.priceRange ? 'bg-hs-gold text-hs-black border-hs-gold' : 'bg-hs-soft/60 text-hs-cream border-transparent hover:border-hs-gold/30'}`} aria-label="Filters"><FilterIcon size={12} /><span className="hidden sm:inline ml-1">Filters</span></button></div>
         {!online && <div role="status" className="mb-2 rounded-xl bg-hs-red/10 px-3 py-2 text-center text-xs text-hs-red">Offline — authenticated choices stay on the card until saved.</div>}
         {swipeFailure && <div role="alert" className="mb-2 flex items-center gap-2 rounded-xl border border-hs-red/30 bg-hs-red/10 px-3 py-2 text-xs text-hs-cream"><span className="flex-1">{swipeFailure.message}</span>{swipeFailure.retryable ? <button onClick={retrySwipe} className="min-h-9 rounded-lg bg-hs-gold px-3 font-bold text-hs-black">Retry</button> : swipeFailure.kind === 'auth' ? <Link href="/auth?next=/swipe" className="font-bold text-hs-gold">Sign in</Link> : <button onClick={() => { setSwipeFailure(null); setPendingSwipe(null); setActionState('idle') }} className="font-bold text-hs-gold">Dismiss</button>}</div>}
@@ -390,8 +405,27 @@ export default function SwipePage() {
             )}
             {lastSwipe === 'left' && <div className="absolute inset-0 bg-hs-red/20 flex items-center justify-center"><div className="bg-hs-red text-white text-3xl font-black px-6 py-3 rounded-2xl rotate-[12deg] shadow-lg">PASS</div></div>}
             {currentDish.contentKind === 'community' && <div className="absolute top-3 left-3"><span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-black/30 text-white/75 backdrop-blur-sm border border-white/10">Community</span></div>}
-            {currentDish.recipePreview && <div className="absolute top-3 right-3"><span className="px-2 py-1 rounded-full text-[10px] font-bold bg-hs-gold text-hs-black border border-hs-gold">Recipe ${Number(currentDish.recipePreview.price).toFixed(2)}</span></div>}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pt-16 pb-5"><div className="mb-3"><h2 className="text-white text-[1.55rem] sm:text-[1.85rem] font-black leading-[1.1] tracking-tight mb-1 drop-shadow-lg">{currentDish.dish}</h2><p className="text-white/85 text-sm sm:text-base font-medium drop-shadow-md">{currentDish.restaurant}</p><p className="flex items-center gap-2 mt-1 text-white/60 text-xs font-medium">{locationLabel && <span className="truncate max-w-[140px] sm:max-w-[180px]">{locationLabel}</span>}{locationLabel && currentDish.priceRange && <span className="text-white/30">•</span>}{currentDish.priceRange && <span className="text-hs-gold">{currentDish.priceRange}</span>}</p></div><div className="flex items-center justify-center gap-6">{continueEarly ? (
+            {currentDish.recipePreview && (
+              <button
+                onClick={() => setRecipeSheetRecipeId(currentDish.recipePreview!.id)}
+                className="absolute top-3 right-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-hs-gold rounded-full"
+                aria-label={`Unlock recipe: ${currentDish.recipePreview.title}`}
+              >
+                <RecipeBadge recipeAvailable={currentDish.recipeAvailable} type={currentDish.recipePreview.recipe_type} price={currentDish.recipePreview.price} />
+              </button>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pt-16 pb-5">
+              <div className="mb-3">
+                <h2 className="text-white text-[1.55rem] sm:text-[1.85rem] font-black leading-[1.1] tracking-tight mb-1 drop-shadow-lg">{currentDish.dish}</h2>
+                <p className="text-white/85 text-sm sm:text-base font-medium drop-shadow-md">{currentDish.restaurant}</p>
+                <p className="flex items-center gap-2 mt-1 text-white/60 text-xs font-medium">{locationLabel && <span className="truncate max-w-[140px] sm:max-w-[180px]">{locationLabel}</span>}{locationLabel && currentDish.priceRange && <span className="text-white/30">•</span>}{currentDish.priceRange && <span className="text-hs-gold">{currentDish.priceRange}</span>}</p>
+              </div>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                {currentDish.seller?.id && user?.id && currentDish.seller?.owner_user_id !== user.id && (
+                  <FollowButton followingType={currentDish.contentKind === 'community' ? 'user' : 'seller'} followingId={currentDish.seller.id} variant="compact" />
+                )}
+              </div>
+              <div className="flex items-center justify-center gap-6">{continueEarly ? (
   <button
     onClick={advanceNow}
     className="px-6 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm hover:bg-hs-gold-light transition"
@@ -408,6 +442,14 @@ export default function SwipePage() {
         </div>
       </main>
       <div aria-live="polite" className="sr-only">{announcement}</div>
+      {recipeSheetRecipeId && currentDish?.recipePreview && (
+        <RecipeUnlockSheet
+          recipeId={recipeSheetRecipeId}
+          dishId={currentDish.id}
+          sellerId={currentDish.seller?.id}
+          onClose={() => setRecipeSheetRecipeId(null)}
+        />
+      )}
       {matchDish && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" role="status"><div className="bg-hs-charcoal rounded-[2rem] p-6 text-center border border-white/[0.08] shadow-card-lg w-full max-w-sm animate-bounce"><div className="w-16 h-16 rounded-full bg-hs-gold/10 flex items-center justify-center mx-auto mb-4 text-hs-gold"><WantItIcon size={40} /></div><h2 className="text-2xl font-black text-hs-cream mb-1">Saved</h2><p className="text-hs-gray text-sm mb-4">Added to your saved dishes.</p><p className="text-lg font-bold text-hs-cream">{matchDish.dish}</p><p className="text-hs-gray text-sm mb-5">{matchDish.restaurant}</p><div className="flex justify-center"><PlaceActions place={{ ...matchDish.seller, name: matchDish.seller.business_name, order_url: matchDish.seller.order_url || matchDish.seller.ordering_url }} /></div></div></div>}
       <FilterSheet open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} onApply={applyFilters} mode={feedTab} onModeChange={changeMode} radius={radius} onRadiusChange={setRadius} locationState={locationState} onRequestLocation={requestLocation} />
       <MobileNav />

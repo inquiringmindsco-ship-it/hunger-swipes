@@ -42,45 +42,74 @@ export async function GET(request: NextRequest) {
     for (const key of excludedByClient) excluded.add(key)
     const savedKeys = new Set((saved || []).map((row: any) => `${row.content_kind}:${row.content_id}`))
 
+    const discoveryModeRaw = searchParams.get('discoveryMode') || searchParams.get('mode_type') || ''
+    const discoveryMode = ['eat','make','explore'].includes(discoveryModeRaw) ? discoveryModeRaw as 'eat'|'make'|'explore' : null
+    if (discoveryModeRaw && !discoveryMode) return NextResponse.json({ error: 'Invalid discoveryMode', dishes: [] }, { status: 400 })
+
+    let communityQuery = admin.from('community_food_posts').select(`*, place:places!inner(id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,status)`)
+      .eq('status', 'active').eq('moderation_status', 'approved').eq('places.status', 'active').order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false }).limit(Math.min((offset + limit + 1) * 2, 1000))
+
     let officialQuery = admin
       .from('dishes')
       .select(`
         *,
         video_media:food_media!dish_id(*),
-        seller:sellers!inner(id,business_name,seller_type,description,logo_url,location_text,address,latitude,longitude,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status)
+        seller:sellers!inner(id,business_name,seller_type,seller_types,description,logo_url,location_text,address,latitude,longitude,service_area,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status)
       `)
       .eq('status', 'active')
       .eq('availability', 'available')
-      .eq('sellers.status', 'active')
+      .eq('seller.status', 'active')
       .not('photo_url', 'is', null)
       .neq('photo_url', '')
       .neq('name', '')
-      .neq('sellers.business_name', '')
+      .neq('seller.business_name', '')
       .order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false })
       .limit(Math.min((offset + limit + 1) * 2, 1000))
 
     if (sellerId) {
       officialQuery = officialQuery.eq('seller_id', sellerId)
+      communityQuery = communityQuery.eq('place_id', sellerId)
     }
 
-    if (cuisineTags.length) officialQuery = officialQuery.overlaps('tags', cuisineTags)
-    if (dietaryTags.length) officialQuery = officialQuery.overlaps('tags', dietaryTags)
-    if (healthCategories.length) officialQuery = officialQuery.overlaps('tags', healthCategories)
-    if (priceRange && !searchParams.has('priceRanges')) {
-      if (priceRange === '$') officialQuery = officialQuery.lte('price', 12)
-      else if (priceRange === '$$') officialQuery = officialQuery.gte('price', 12).lte('price', 24)
-      else if (priceRange === '$$$') officialQuery = officialQuery.gte('price', 24)
+    // Discovery mode eligibility
+    if (discoveryMode === 'eat') {
+      // Surface food that can be obtained: restaurants, food businesses, food trucks,
+      // home cooks, caterers, pop-ups, meal prep. Recipe-only creators are excluded.
+      // We filter seller eligibility in memory because the embedded seller OR filter
+      // is hard to express safely across Supabase versions.
+      communityQuery = communityQuery.limit(0)
+    } else if (discoveryMode === 'make') {
+      // Surface dishes that have an active published recipe behind them.
+      officialQuery = officialQuery.eq('recipe_available', true)
+      communityQuery = communityQuery.limit(0)
+    } else if (discoveryMode === 'explore') {
+      // Broad discovery: all approved food content including videos and community posts.
+      // No additional filter.
     }
 
-    let communityQuery = admin.from('community_food_posts').select(`*, place:places!inner(id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,status)`)
-      .eq('status', 'active').eq('moderation_status', 'approved').eq('places.status', 'active').order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false }).limit(Math.min((offset + limit + 1) * 2, 1000))
-    if (cuisineTags.length) communityQuery = communityQuery.overlaps('tags', cuisineTags)
-    if (dietaryTags.length) communityQuery = communityQuery.overlaps('tags', dietaryTags)
-    if (healthCategories.length) communityQuery = communityQuery.overlaps('tags', healthCategories)
+    if (cuisineTags.length) {
+      officialQuery = officialQuery.overlaps('tags', cuisineTags)
+      communityQuery = communityQuery.overlaps('tags', cuisineTags)
+    }
+    if (dietaryTags.length) {
+      officialQuery = officialQuery.overlaps('tags', dietaryTags)
+      communityQuery = communityQuery.overlaps('tags', dietaryTags)
+    }
+    if (healthCategories.length) {
+      officialQuery = officialQuery.overlaps('tags', healthCategories)
+      communityQuery = communityQuery.overlaps('tags', healthCategories)
+    }
     if (priceRange && !searchParams.has('priceRanges')) {
-      if (priceRange === '$') communityQuery = communityQuery.lte('price', 12)
-      else if (priceRange === '$$') communityQuery = communityQuery.gte('price', 12).lte('price', 24)
-      else if (priceRange === '$$$') communityQuery = communityQuery.gte('price', 24)
+      if (priceRange === '$') {
+        officialQuery = officialQuery.lte('price', 12)
+        communityQuery = communityQuery.lte('price', 12)
+      } else if (priceRange === '$$') {
+        officialQuery = officialQuery.gte('price', 12).lte('price', 24)
+        communityQuery = communityQuery.gte('price', 12).lte('price', 24)
+      } else if (priceRange === '$$$') {
+        officialQuery = officialQuery.gte('price', 24)
+        communityQuery = communityQuery.gte('price', 24)
+      }
     }
 
     const [{ data: official, error: officialError }, { data: community, error: communityError }] = await Promise.all([officialQuery, communityQuery])
@@ -89,6 +118,13 @@ export async function GET(request: NextRequest) {
       ...(official || []).map(mapOfficialDish),
       ...(community || []).map(mapCommunityPost),
     ].filter((item: any) => !excluded.has(`${item.content_kind}:${item.id}`))
+      .filter((item: any) => {
+        if (discoveryMode !== 'eat') return true
+        if (item.content_kind !== 'official') return false
+        const eatTypes = new Set(['restaurant','food_truck','caterer','pop_up','meal_prep','home_cook','home_kitchen','other'])
+        const types = Array.isArray(item.seller?.seller_types) ? item.seller.seller_types : [item.seller?.seller_type]
+        return types.some((t: string) => eatTypes.has(t))
+      })
       .filter((item: any) => !spiceLevel || Number(item.spice_level) === spiceLevel)
       .filter((item: any) => {
         if (!priceRanges.length) return true

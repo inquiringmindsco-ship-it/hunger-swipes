@@ -2,6 +2,17 @@
 
 import { getSupabase } from '@/lib/supabase'
 
+export async function getAuthToken(): Promise<string | null> {
+  const supabase = getSupabase()
+  if (!supabase) return null
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || null
+  } catch {
+    return null
+  }
+}
+
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   const supabase = getSupabase()
   if (!supabase) throw new Error('Authentication is not configured')

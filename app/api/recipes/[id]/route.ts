@@ -34,6 +34,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           title: recipe.title,
           description: recipe.description,
           price: recipe.price,
+          recipe_type: recipe.recipe_type,
+          min_proud_to_pay_amount: recipe.min_proud_to_pay_amount,
           photo_url: recipe.photo_url,
           published: recipe.published,
           created_at: recipe.created_at,
@@ -108,7 +110,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 
-    const allowed = ['title', 'description', 'price', 'ingredients', 'instructions', 'photo_url', 'video_media_id', 'published']
+    const allowed = ['title', 'description', 'price', 'recipe_type', 'min_proud_to_pay_amount', 'ingredients', 'instructions', 'photo_url', 'video_media_id', 'published']
     const update: any = {}
     for (const key of allowed) {
       if (body[key] !== undefined) update[key] = body[key]
@@ -119,14 +121,38 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (update.price !== undefined && (isNaN(parseFloat(update.price)) || parseFloat(update.price) < 0)) {
       return NextResponse.json({ error: 'price must be 0 or more' }, { status: 400 })
     }
+    if (update.recipe_type && !['free','fixed_price','proud_to_pay'].includes(update.recipe_type)) {
+      return NextResponse.json({ error: 'Invalid recipe_type' }, { status: 400 })
+    }
+
+    // Re-validate price/type minimums if either changed
+    const { data: existingRecipe } = await admin.from('recipes').select('price, recipe_type').eq('id', id).single()
+    const finalType = update.recipe_type || existingRecipe?.recipe_type || 'free'
+    const finalPrice = update.price !== undefined ? parseFloat(update.price) : Number(existingRecipe?.price ?? 0)
+    const { data: minFixed } = await admin.from('recipe_commerce_config').select('value').eq('key', 'fixed_price_minimum').maybeSingle()
+    const { data: minProud } = await admin.from('recipe_commerce_config').select('value').eq('key', 'proud_to_pay_minimum').maybeSingle()
+    const fixedMin = Number(minFixed?.value?.amount ?? 4.99)
+    const proudMin = Number(minProud?.value?.amount ?? 5.00)
+    if (finalType === 'free' && finalPrice !== 0) return NextResponse.json({ error: 'Free recipes must have price 0' }, { status: 400 })
+    if (finalType === 'fixed_price' && finalPrice < fixedMin) return NextResponse.json({ error: `Fixed-price recipes must be at least $${fixedMin.toFixed(2)}` }, { status: 400 })
+    if (finalType === 'proud_to_pay' && finalPrice < proudMin) return NextResponse.json({ error: `Proud to Pay minimum is $${proudMin.toFixed(2)}` }, { status: 400 })
+
+    // Normalize Proud to Pay minimum
+    if (finalType === 'proud_to_pay' && update.min_proud_to_pay_amount !== undefined) {
+      const m = parseFloat(update.min_proud_to_pay_amount)
+      if (isNaN(m) || m < proudMin) return NextResponse.json({ error: `Proud to Pay minimum cannot be below $${proudMin.toFixed(2)}` }, { status: 400 })
+      update.min_proud_to_pay_amount = m
+    }
+
 
     const { data, error } = await admin.from('recipes').update(update).eq('id', id).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     // Sync dish flags
+    const accessType = data.recipe_type === 'free' ? 'preview' : 'purchase'
     await admin.from('dishes').update({
       recipe_available: true,
-      recipe_access_type: data.price === 0 ? 'preview' : 'purchase',
+      recipe_access_type: accessType,
       recipe_price: data.price,
     }).eq('id', data.dish_id)
 

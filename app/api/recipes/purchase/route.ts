@@ -1,27 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
-
-// Hunger Swipes recipe purchase architecture.
-// This endpoint records a purchase INTENT. It does NOT collect real money
-// and does NOT activate an entitlement. Real payment settlement (Stripe,
-// etc.) should call settle_recipe_purchase() after confirming funds.
-//
-// Remaining work to activate payments:
-//  1. Choose/configure payment processor (Stripe/PayPal/etc).
-//  2. Create payment intent/session from processor and return client secret here.
-//  3. Webhook handler confirms payment, then calls settle_recipe_purchase().
-//  4. Define platform fee %, creator payout %, tax rules, refund policy.
-//  5. Payout mechanics to creator bank account.
-
-function computeEcon(priceCents: number) {
-  // Placeholder economics. DO NOT invent permanent percentages in this task.
-  // These are explicitly architecture defaults; Od must approve real values.
-  const platformFeeCents = 0
-  const creatorPayoutCents = priceCents
-  const taxCents = 0
-  return { platformFeeCents, creatorPayoutCents, taxCents }
-}
+import { getStripe, assertTestMode, getRecipeCommerceConfig, computeRecipeEcon } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,27 +9,51 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
 
     const body = await request.json()
-    const { recipe_id } = body
+    const { recipe_id, proud_to_pay_amount } = body
     if (!recipe_id) return NextResponse.json({ error: 'recipe_id is required' }, { status: 400 })
 
     const admin = getSupabaseAdmin()
     if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
 
-    // Validate recipe is available for purchase.
+    const stripe = getStripe()
+    if (!stripe) return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 })
+    assertTestMode()
+
     const { data: recipe, error: recipeError } = await admin
       .from('recipes')
-      .select('id, dish_id, seller_id, title, price, status, published')
+      .select('id, dish_id, seller_id, title, price, recipe_type, min_proud_to_pay_amount, status, published, seller:sellers!inner(stripe_account_id, stripe_connect_status, owner_user_id)')
       .eq('id', recipe_id)
       .maybeSingle()
     if (recipeError) return NextResponse.json({ error: recipeError.message }, { status: 500 })
     if (!recipe || recipe.status !== 'active' || !recipe.published) {
       return NextResponse.json({ error: 'Recipe not available for purchase' }, { status: 404 })
     }
-    if (recipe.price <= 0) {
-      return NextResponse.json({ error: 'This recipe is free; use unlock instead of purchase' }, { status: 400 })
+
+    const sellerRow = recipe.seller as any
+    if (recipe.recipe_type !== 'free' && sellerRow?.stripe_connect_status !== 'ready') {
+      return NextResponse.json({ error: 'Creator is not ready to accept payments' }, { status: 400 })
     }
 
-    // Check existing active entitlement.
+    // Determine price in cents
+    let priceCents = Math.round(Number(recipe.price) * 100)
+    if (recipe.recipe_type === 'free') {
+      return NextResponse.json({ error: 'This recipe is free; use unlock instead' }, { status: 400 })
+    }
+    if (recipe.recipe_type === 'proud_to_pay') {
+      const min = Math.round(Number(recipe.min_proud_to_pay_amount || 5) * 100)
+      const offered = Math.round(Number(proud_to_pay_amount) * 100)
+      if (isNaN(offered) || offered < min) {
+        return NextResponse.json({ error: `Proud to Pay amount must be at least $${(min / 100).toFixed(2)}` }, { status: 400 })
+      }
+      priceCents = offered
+    }
+
+    // Server-side authoritative economics from centralized config
+    const commerceConfig = await getRecipeCommerceConfig(admin)
+    if (commerceConfig.testModeOnly) assertTestMode()
+    const { platformFeeCents, creatorPayoutCents, platformFeePercent, creatorSharePercent } = computeRecipeEcon(priceCents, commerceConfig.platformFeePercent)
+
+    // Check existing active entitlement
     const { data: existingEntitlement } = await admin
       .from('recipe_entitlements')
       .select('id')
@@ -61,10 +65,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You already own this recipe' }, { status: 409 })
     }
 
-    const priceCents = Math.round(recipe.price * 100)
-    const { platformFeeCents, creatorPayoutCents, taxCents } = computeEcon(priceCents)
-
-    // Record a pending purchase intent. No money is collected.
+    // Record pending purchase intent
     const { data: purchase, error: purchaseError } = await admin
       .from('recipe_purchases')
       .insert({
@@ -74,36 +75,59 @@ export async function POST(request: NextRequest) {
         price_cents: priceCents,
         platform_fee_cents: platformFeeCents,
         creator_payout_cents: creatorPayoutCents,
-        tax_cents: taxCents,
+        tax_cents: 0,
         currency: 'usd',
         status: 'pending',
+        recipe_type: recipe.recipe_type,
+        proud_to_pay_amount: recipe.recipe_type === 'proud_to_pay' ? priceCents / 100 : null,
       })
       .select()
       .single()
     if (purchaseError) return NextResponse.json({ error: purchaseError.message }, { status: 500 })
 
+    // Create Stripe PaymentIntent with Connect transfer
+    const applicationFeeAmount = platformFeeCents
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: priceCents,
+      currency: 'usd',
+      application_fee_amount: applicationFeeAmount,
+      transfer_data: sellerRow?.stripe_account_id
+        ? { destination: sellerRow.stripe_account_id }
+        : undefined,
+      metadata: {
+        recipe_id: recipe_id,
+        user_id: user.id,
+        seller_id: recipe.seller_id,
+        purchase_id: purchase.id,
+        recipe_type: recipe.recipe_type,
+        platform_fee_cents: String(platformFeeCents),
+        creator_payout_cents: String(creatorPayoutCents),
+      },
+      automatic_payment_methods: { enabled: true },
+    })
+
+    await admin.from('recipe_purchases').update({
+      payment_processor: 'stripe',
+      payment_intent_id: paymentIntent.id,
+    }).eq('id', purchase.id)
+
     return NextResponse.json({
       purchase,
+      client_secret: paymentIntent.client_secret,
       recipe: {
         id: recipe.id,
         title: recipe.title,
-        price: recipe.price,
+        price: priceCents / 100,
+        recipe_type: recipe.recipe_type,
       },
-      status: 'pending_payment',
-      message: 'Purchase intent recorded. Payment not yet activated.',
-      architecture: {
+      economics: {
         platform_fee_cents: platformFeeCents,
         creator_payout_cents: creatorPayoutCents,
-        tax_cents: taxCents,
-        settlement_function: 'public.settle_recipe_purchase(purchase_id, processor, intent_id, succeeded, failure)',
+        platform_fee_percent: platformFeePercent,
+        creator_share_percent: creatorSharePercent,
       },
-      remaining_for_activation: [
-        'Configure payment processor (Stripe recommended).',
-        'Create payment intent in this endpoint and return client_secret.',
-        'Add webhook route to confirm payment and call settle_recipe_purchase().',
-        'Od approves platform fee %, creator payout %, and tax handling.',
-        'Implement creator payout mechanics and refund policy.',
-      ],
+      status: 'requires_payment',
+      message: 'Payment intent created. Complete payment via Stripe. Webhook will unlock recipe.',
     }, { status: 201 })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })

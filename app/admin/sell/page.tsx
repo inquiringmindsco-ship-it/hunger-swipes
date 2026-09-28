@@ -141,6 +141,9 @@ export default function SellAdminPage() {
                     <p className="font-bold text-hs-cream">{s.business_name}</p>
                     <p className="text-xs text-hs-gray">{(s.seller_types || [s.seller_type]).join(', ')} • {s.location_text}</p>
                     <p className="text-xs text-hs-gold mt-1">Status: {s.status}</p>
+                    <p className="text-xs text-hs-gray mt-1">
+                      Stripe: {s.stripe_connect_status || 'not connected'} {s.stripe_account_id ? `· ${s.stripe_account_id}` : ''}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     {s.status !== 'active' && <button disabled={actionId === s.id} onClick={() => toggleSellerStatus(s, 'active')} className="p-2 rounded-xl bg-hs-success/10 text-hs-success"><CheckCircle2 size={16} /></button>}
@@ -160,7 +163,11 @@ export default function SellAdminPage() {
                   {r.photo_url && <img src={r.photo_url} alt="" className="w-16 h-16 rounded-xl object-cover" />}
                   <div className="flex-1">
                     <p className="font-bold text-hs-cream">{r.title}</p>
-                    <p className="text-xs text-hs-gray">${Number(r.price).toFixed(2)} • {r.published ? 'Published' : 'Draft'} • {r.status}</p>
+                    <p className="text-xs text-hs-gray">
+                      {r.recipe_type === 'free' ? 'Free' : r.recipe_type === 'proud_to_pay' ? `Proud to Pay (min $${Number(r.min_proud_to_pay_amount || r.price).toFixed(2)})` : `$${Number(r.price).toFixed(2)}`}
+                      {' · '}
+                      {r.published ? 'Published' : 'Draft'} · {r.status}
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3">

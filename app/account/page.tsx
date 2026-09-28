@@ -190,7 +190,23 @@ export default function AccountPage() {
           </div>
         </div>
 
+        <Section title="Food Profile">
+          <Row
+            href="/account/profile"
+            icon={<User size={18} />}
+            label="Edit Food Profile"
+            detail="Claim @handle, bio, social links"
+          />
+        </Section>
+
         <Section title="Discovery">
+          <Row
+            href="/account/profile"
+            icon={<User size={18} />}
+            label="Edit Profile"
+            detail="Claim @handle, bio, links"
+          />
+          <div className="h-px bg-white/[0.06]" />
           <Row
             href="/preferences"
             icon={<SlidersHorizontal size={18} />}

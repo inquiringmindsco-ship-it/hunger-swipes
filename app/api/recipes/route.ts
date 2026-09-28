@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
       title,
       description,
       price,
+      recipe_type,
+      min_proud_to_pay_amount,
       ingredients,
       instructions,
       photo_url,
@@ -53,17 +55,40 @@ export async function POST(request: NextRequest) {
     if (isNaN(priceNum) || priceNum < 0) {
       return NextResponse.json({ error: 'price must be 0 or more' }, { status: 400 })
     }
-    if (photo_url && !isHttpsUrl(photo_url)) {
-      return NextResponse.json({ error: 'photo_url must be HTTPS' }, { status: 400 })
+
+    const type = recipe_type || (priceNum === 0 ? 'free' : 'fixed_price')
+    if (!['free','fixed_price','proud_to_pay'].includes(type)) {
+      return NextResponse.json({ error: 'Invalid recipe_type' }, { status: 400 })
     }
 
     const admin = getSupabaseAdmin()
     if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
 
+    // Centralized commerce config
+    const { data: minFixed } = await admin.from('recipe_commerce_config').select('value').eq('key', 'fixed_price_minimum').maybeSingle()
+    const { data: minProud } = await admin.from('recipe_commerce_config').select('value').eq('key', 'proud_to_pay_minimum').maybeSingle()
+    const fixedMin = Number(minFixed?.value?.amount ?? 4.99)
+    const proudMin = Number(minProud?.value?.amount ?? 5.00)
+
+    if (type === 'free' && priceNum !== 0) {
+      return NextResponse.json({ error: 'Free recipes must have price 0' }, { status: 400 })
+    }
+    if (type === 'fixed_price' && priceNum < fixedMin) {
+      return NextResponse.json({ error: `Fixed-price recipes must be at least $${fixedMin.toFixed(2)}` }, { status: 400 })
+    }
+    if (type === 'proud_to_pay' && priceNum < proudMin) {
+      return NextResponse.json({ error: `Proud to Pay minimum is $${proudMin.toFixed(2)}` }, { status: 400 })
+    }
+    const minProudNum = type === 'proud_to_pay' ? Math.max(parseFloat(min_proud_to_pay_amount ?? '0') || proudMin, proudMin) : null
+
+    if (photo_url && !isHttpsUrl(photo_url)) {
+      return NextResponse.json({ error: 'photo_url must be HTTPS' }, { status: 400 })
+    }
+
     // Verify ownership of the dish/seller
     const { data: dish, error: dishError } = await admin
       .from('dishes')
-      .select('id, seller_id, seller:sellers!inner(owner_user_id)')
+      .select('id, seller_id, seller:sellers!inner(owner_user_id, stripe_account_id, stripe_connect_status)')
       .eq('id', dish_id)
       .eq('sellers.owner_user_id', user.id)
       .maybeSingle()
@@ -88,6 +113,8 @@ export async function POST(request: NextRequest) {
       title: title.trim(),
       description: description?.trim() || null,
       price: priceNum,
+      recipe_type: type,
+      min_proud_to_pay_amount: minProudNum,
       ingredients: Array.isArray(ingredients) ? ingredients.map((s: string) => String(s).trim()).filter(Boolean) : [],
       instructions: Array.isArray(instructions) ? instructions.map((s: string) => String(s).trim()).filter(Boolean) : [],
       photo_url: photo_url || null,
@@ -102,7 +129,7 @@ export async function POST(request: NextRequest) {
     // Update dish flags so the feed can surface recipe availability
     await admin.from('dishes').update({
       recipe_available: true,
-      recipe_access_type: priceNum === 0 ? 'preview' : 'purchase',
+      recipe_access_type: type === 'free' ? 'preview' : 'purchase',
       recipe_price: priceNum,
       recipe_id: data.id,
     }).eq('id', dish_id)

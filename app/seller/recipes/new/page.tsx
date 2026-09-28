@@ -28,6 +28,8 @@ export default function NewRecipePage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('4.99')
+  const [recipeType, setRecipeType] = useState<'free' | 'fixed_price' | 'proud_to_pay'>('fixed_price')
+  const [minProudAmount, setMinProudAmount] = useState('5.00')
   const [published, setPublished] = useState(false)
   const [photoUrl, setPhotoUrl] = useState('')
   const [ingredients, setIngredients] = useState([''])
@@ -94,8 +96,13 @@ export default function NewRecipePage() {
       return
     }
     const priceNum = parseFloat(price || '0')
+    const minProudNum = parseFloat(minProudAmount || '0')
     if (isNaN(priceNum) || priceNum < 0) {
       setError('Price must be 0 or more.')
+      return
+    }
+    if (recipeType === 'proud_to_pay' && (isNaN(minProudNum) || minProudNum <= 0)) {
+      setError('Set a minimum proud-to-pay amount.')
       return
     }
 
@@ -107,6 +114,8 @@ export default function NewRecipePage() {
         title: title.trim(),
         description: description.trim() || null,
         price: priceNum,
+        recipe_type: recipeType,
+        min_proud_to_pay_amount: recipeType === 'proud_to_pay' ? minProudNum : null,
         ingredients: cleanIngredients,
         instructions: cleanInstructions,
         photo_url: photoUrl || selectedDish?.photo_url || null,
@@ -226,9 +235,24 @@ export default function NewRecipePage() {
           />
         </section>
 
+        <section className="grid gap-4">
+          <div>
+            <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Recipe Type *</label>
+            <select
+              value={recipeType}
+              onChange={(e) => setRecipeType(e.target.value as typeof recipeType)}
+              className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream focus:border-hs-gold/50 focus:outline-none transition appearance-none"
+            >
+              <option value="free">Free Recipe</option>
+              <option value="fixed_price">Fixed Price</option>
+              <option value="proud_to_pay">Proud to Pay</option>
+            </select>
+          </div>
+        </section>
+
         <section className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Price ($)</label>
+            <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{recipeType === 'proud_to_pay' ? 'Suggested Price ($)' : recipeType === 'free' ? 'Price ($)' : 'Price ($)'} *</label>
             <input
               type="number"
               min="0"
@@ -237,7 +261,21 @@ export default function NewRecipePage() {
               onChange={(e) => setPrice(e.target.value)}
               className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
             />
+            <p className="text-xs text-hs-gray mt-2">Server validates minimums for fixed / proud-to-pay.</p>
           </div>
+          {recipeType === 'proud_to_pay' && (
+            <div>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Minimum Proud-to-Pay ($)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={minProudAmount}
+                onChange={(e) => setMinProudAmount(e.target.value)}
+                className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
+              />
+            </div>
+          )}
           <div className="flex items-end">
             <label className="flex items-center gap-3 p-4 bg-hs-charcoal rounded-2xl border border-white/[0.06] cursor-pointer w-full">
               <input
