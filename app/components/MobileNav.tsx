@@ -32,8 +32,8 @@ function SellerLink() {
 
   if (loading || checking) {
     return (
-      <div className="flex flex-col items-center justify-center gap-1 min-w-[54px] min-h-[54px] py-2 text-hs-muted">
-        <SellIcon size={22} />
+      <div className="flex flex-col items-center justify-center gap-0.5 min-w-[52px] min-h-[44px] py-1 text-hs-muted">
+        <SellIcon size={20} />
         <span className="text-[10px] font-semibold whitespace-nowrap">Sell</span>
       </div>
     )
@@ -46,14 +46,14 @@ function SellerLink() {
   return (
     <Link
       href={href}
-      className={`flex flex-col items-center justify-center gap-1 min-w-[54px] min-h-[54px] py-2 rounded-2xl transition ${
+      className={`flex flex-col items-center justify-center gap-0.5 min-w-[52px] min-h-[44px] py-1 rounded-2xl transition ${
         active ? 'text-hs-gold' : 'text-hs-gray hover:text-hs-cream'
       }`}
     >
-      <div className={`rounded-xl p-1.5 ${active ? 'bg-hs-gold/10' : ''}`}>
-        <SellIcon size={22} />
+      <div className={`rounded-lg p-1 ${active ? 'bg-hs-gold/10' : ''}`}>
+        <SellIcon size={20} />
       </div>
-      <span className="text-[10px] sm:text-[11px] font-semibold tracking-wide whitespace-nowrap">{label}</span>
+      <span className="text-[10px] font-semibold tracking-wide whitespace-nowrap">{label}</span>
     </Link>
   )
 }
@@ -70,7 +70,7 @@ export default function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-hs-black/95 backdrop-blur-xl border-t border-white/[0.06] z-50 safe-bottom">
-      <div className="flex items-end justify-around py-2 px-1 max-w-md mx-auto">
+      <div className="flex items-end justify-around py-1.5 px-1 max-w-md mx-auto">
         {navItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           const Icon = item.icon
@@ -78,14 +78,14 @@ export default function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center gap-1 min-w-[54px] min-h-[54px] py-2 rounded-2xl transition-all ${
+              className={`flex flex-col items-center justify-center gap-0.5 min-w-[52px] min-h-[44px] py-1 rounded-2xl transition-all ${
                 active ? 'text-hs-gold' : 'text-hs-gray hover:text-hs-cream'
               }`}
             >
-              <div className={`rounded-xl p-1.5 ${active ? 'bg-hs-gold/10' : ''}`}>
-                <Icon size={23} />
+              <div className={`rounded-lg p-1 ${active ? 'bg-hs-gold/10' : ''}`}>
+                <Icon size={20} />
               </div>
-              <span className="text-[10px] sm:text-[11px] font-semibold tracking-wide whitespace-nowrap">{item.label}</span>
+              <span className="text-[10px] font-semibold tracking-wide whitespace-nowrap">{item.label}</span>
             </Link>
           )
         })}
@@ -94,14 +94,14 @@ export default function MobileNav() {
 
         <Link
           href="/account"
-          className={`flex flex-col items-center justify-center gap-1 min-w-[54px] min-h-[54px] py-2 rounded-2xl transition-all ${
+          className={`flex flex-col items-center justify-center gap-0.5 min-w-[52px] min-h-[44px] py-1 rounded-2xl transition-all ${
             pathname === '/account' ? 'text-hs-gold' : 'text-hs-gray hover:text-hs-cream'
           }`}
         >
-          <div className={`rounded-xl p-1.5 ${pathname === '/account' ? 'bg-hs-gold/10' : ''}`}>
-            <ProfileIcon size={23} />
+          <div className={`rounded-lg p-1 ${pathname === '/account' ? 'bg-hs-gold/10' : ''}`}>
+            <ProfileIcon size={20} />
           </div>
-          <span className="text-[10px] sm:text-[11px] font-semibold tracking-wide whitespace-nowrap">Profile</span>
+          <span className="text-[10px] font-semibold tracking-wide whitespace-nowrap">Profile</span>
         </Link>
       </div>
     </nav>

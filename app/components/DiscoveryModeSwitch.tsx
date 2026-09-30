@@ -43,16 +43,16 @@ export function DiscoveryModeSwitch({ value, onChange }: Props) {
   }
 
   return (
-    <div className="flex items-center justify-between gap-1 rounded-2xl border border-white/[0.06] bg-hs-charcoal p-1 mb-3">
+    <div className="flex items-center justify-between gap-1 rounded-xl border border-white/[0.06] bg-hs-charcoal p-0.5 mb-2">
       {MODES.map((mode) => {
         const active = value === mode.value
         return (
           <button
             key={mode.value}
             onClick={() => select(mode.value)}
-            className={`flex-1 min-h-11 rounded-xl text-xs font-black tracking-wide transition-all ${
+            className={`flex-1 min-h-8 rounded-lg text-[11px] font-black tracking-wide transition-all ${
               active
-                ? 'bg-hs-gold text-hs-black shadow-md'
+                ? 'bg-hs-gold text-hs-black shadow-sm'
                 : 'text-hs-gray hover:text-hs-cream hover:bg-hs-soft'
             }`}
             aria-pressed={active}

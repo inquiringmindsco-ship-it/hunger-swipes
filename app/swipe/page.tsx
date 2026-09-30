@@ -352,19 +352,19 @@ export default function SwipePage() {
   const locationLabel = currentDish ? shortLocation(currentDish) : null
   const rotation = Math.max(-10, Math.min(10, dragX * 0.025))
 
-  const BrandHeader = () => <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top"><div className="max-w-md mx-auto flex items-center justify-between"><Link href="/swipe" className="flex items-center gap-2 min-w-0 overflow-hidden"><BrandMark size={34} className="shrink-0" /><span className="font-bold text-base text-hs-cream tracking-tight whitespace-nowrap truncate block max-w-[170px] sm:max-w-none">Hunger Swipes</span></Link>{!user && <Link href="/auth" className="shrink-0 ml-3 text-sm font-semibold text-hs-gold hover:text-hs-gold-light transition whitespace-nowrap">Sign in</Link>}</div></header>
+  const BrandHeader = () => <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-2 safe-top"><div className="max-w-md mx-auto flex items-center justify-between"><Link href="/swipe" className="flex items-center gap-2 min-w-0 overflow-hidden"><BrandMark size={30} className="shrink-0" /><span className="font-bold text-base text-hs-cream tracking-tight whitespace-nowrap truncate block max-w-[170px] sm:max-w-none">Hunger Swipes</span></Link>{!user && <Link href="/auth" className="shrink-0 ml-3 text-sm font-semibold text-hs-gold hover:text-hs-gold-light transition whitespace-nowrap">Sign in</Link>}</div></header>
 
   const DiscoverShell = ({ children, includeModeSwitch = true }: { children: React.ReactNode; includeModeSwitch?: boolean }) => (
     <div className="min-h-screen bg-hs-ink flex flex-col">
       <BrandHeader />
-      <main className="flex-1 flex flex-col px-4 pt-6 pb-24 max-w-md mx-auto w-full">
-        <h1 className="text-hs-cream text-2xl font-black tracking-tight mb-2">Discover food near you</h1>
-        <p className="text-hs-gray text-sm mb-6">Swipe through real dishes from local food businesses and community food posts. Save what you want, pass on the rest.</p>
+      <main className="flex-1 flex flex-col px-4 pt-3 pb-20 max-w-md mx-auto w-full">
+        <h1 className="text-hs-cream text-xl font-black tracking-tight mb-1">Discover food near you</h1>
+        <p className="text-hs-gray text-xs mb-3">Swipe through real dishes from local food businesses and community food posts. Save what you want, pass on the rest.</p>
         {includeModeSwitch && <DiscoveryModeSwitch value={discoveryMode} onChange={onDiscoveryModeChange} />}
-        <div className="flex flex-wrap gap-2 mb-8">
-          <Link href="/nearby" className="px-4 py-2 rounded-full bg-hs-soft text-hs-cream text-xs font-semibold hover:bg-hs-gold hover:text-hs-black transition">Nearby</Link>
-          <Link href="/saved" className="px-4 py-2 rounded-full bg-hs-soft text-hs-cream text-xs font-semibold hover:bg-hs-gold hover:text-hs-black transition">Saved</Link>
-          <Link href="/join" className="px-4 py-2 rounded-full bg-hs-gold text-hs-black text-xs font-bold hover:bg-hs-gold-light transition">List Your Food</Link>
+        <div className="flex flex-wrap gap-2 mb-3">
+          <Link href="/nearby" className="px-3 py-1.5 rounded-full bg-hs-soft text-hs-cream text-xs font-semibold hover:bg-hs-gold hover:text-hs-black transition">Nearby</Link>
+          <Link href="/saved" className="px-3 py-1.5 rounded-full bg-hs-soft text-hs-cream text-xs font-semibold hover:bg-hs-gold hover:text-hs-black transition">Saved</Link>
+          <Link href="/join" className="px-3 py-1.5 rounded-full bg-hs-gold text-hs-black text-xs font-bold hover:bg-hs-gold-light transition">List Your Food</Link>
         </div>
         {children}
       </main>
@@ -451,38 +451,38 @@ export default function SwipePage() {
   return (
     <div className="h-[100dvh] bg-hs-ink flex flex-col overflow-hidden">
       <BrandHeader />
-      <main className="flex-1 flex flex-col max-w-md mx-auto w-full px-4 pt-2 pb-16">
+      <main className="flex-1 flex flex-col max-w-md mx-auto w-full px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
         <DiscoveryModeSwitch value={discoveryMode} onChange={onDiscoveryModeChange} />
-        <div className="flex items-center justify-between mb-1.5 shrink-0"><div className="flex items-center gap-2 text-hs-gray text-xs font-medium min-w-0"><span className="capitalize whitespace-nowrap">{feedTab.replace('-', ' ')}</span>{feedTab === 'nearby' && currentDish.distanceMiles != null && <span className="text-hs-gold">• {currentDish.distanceMiles} mi</span>}{loadingMore && <span aria-live="polite">• loading more</span>}</div><button onClick={() => setShowFilters(true)} className={`flex items-center justify-center min-w-[44px] min-h-[44px] px-2.5 rounded-full text-[11px] font-semibold transition border ${filters.cuisine || filters.dietary || filters.health || filters.priceRange ? 'bg-hs-gold text-hs-black border-hs-gold' : 'bg-hs-soft/60 text-hs-cream border-transparent hover:border-hs-gold/30'}`} aria-label="Filters"><FilterIcon size={12} /><span className="hidden sm:inline ml-1">Filters</span></button></div>
+        <div className="flex items-center justify-between mb-1 shrink-0"><div className="flex items-center gap-2 text-hs-gray text-xs font-medium min-w-0"><span className="capitalize whitespace-nowrap">{feedTab.replace('-', ' ')}</span>{feedTab === 'nearby' && currentDish.distanceMiles != null && <span className="text-hs-gold">• {currentDish.distanceMiles} mi</span>}{loadingMore && <span aria-live="polite">• loading more</span>}</div><button onClick={() => setShowFilters(true)} className={`flex items-center justify-center min-w-[44px] min-h-[44px] px-2.5 rounded-full text-[11px] font-semibold transition border ${filters.cuisine || filters.dietary || filters.health || filters.priceRange ? 'bg-hs-gold text-hs-black border-hs-gold' : 'bg-hs-soft/60 text-hs-cream border-transparent hover:border-hs-gold/30'}`} aria-label="Filters"><FilterIcon size={12} /><span className="hidden sm:inline ml-1">Filters</span></button></div>
         {!online && <div role="status" className="mb-2 rounded-xl bg-hs-red/10 px-3 py-2 text-center text-xs text-hs-red">Offline — authenticated choices stay on the card until saved.</div>}
         {swipeFailure && <div role="alert" className="mb-2 flex items-center gap-2 rounded-xl border border-hs-red/30 bg-hs-red/10 px-3 py-2 text-xs text-hs-cream"><span className="flex-1">{swipeFailure.message}</span>{swipeFailure.retryable ? <button onClick={retrySwipe} className="min-h-9 rounded-lg bg-hs-gold px-3 font-bold text-hs-black">Retry</button> : swipeFailure.kind === 'auth' ? <Link href="/auth?next=/swipe" className="font-bold text-hs-gold">Sign in</Link> : <button onClick={() => { setSwipeFailure(null); setPendingSwipe(null); setActionState('idle') }} className="font-bold text-hs-gold">Dismiss</button>}</div>}
-        <div className="relative h-[calc(100dvh-188px)] max-h-[720px] w-full mx-auto shrink-0">
-          {nextDish && <div key={`preview-${nextDish.id}`} className="absolute inset-x-[2%] top-[2%] bottom-[4%] rounded-[1.75rem] overflow-hidden bg-hs-graphite shadow-card scale-[0.97] opacity-40">{nextDish.videoUrl ? <FoodVideo src={nextDish.videoUrl} poster={nextDish.posterUrl || nextDish.imageUrl} className="w-full h-full" /> : <DishImage src={nextDish.imageUrl} alt="" sizes="(max-width: 480px) 92vw, 430px" quality={72} className="w-full h-full object-cover dish-image" />}</div>}
-          <article key={`current-${currentDish.id}`} className={`absolute inset-0 rounded-[1.75rem] overflow-hidden shadow-card-lg bg-hs-graphite select-none outline-none focus-visible:ring-2 focus-visible:ring-hs-gold ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`} style={{ transform: `translate3d(${dragX}px, 0, 0) rotate(${rotation}deg)`, transitionProperty: isDragging ? 'none' : 'transform, opacity', transitionDuration: '300ms', touchAction: 'pan-y' }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={(event) => finishPointer(event)} onPointerCancel={(event) => finishPointer(event, true)} onKeyDown={(event) => { if (event.key === 'ArrowLeft') commitSwipe('left'); if (event.key === 'ArrowRight') commitSwipe('right') }} tabIndex={0} aria-label={`${currentDish.dish} from ${currentDish.restaurant}. Use left arrow to pass or right arrow to want.`} aria-busy={actionState === 'persisting'} data-testid="swipe-card">
+        <div className="relative flex-1 min-h-0 w-full mx-auto">
+          {nextDish && <div key={`preview-${nextDish.id}`} className="absolute inset-x-[2%] top-[1%] bottom-[2%] rounded-[1.5rem] overflow-hidden bg-hs-graphite shadow-card scale-[0.97] opacity-40">{nextDish.videoUrl ? <FoodVideo src={nextDish.videoUrl} poster={nextDish.posterUrl || nextDish.imageUrl} className="w-full h-full" /> : <DishImage src={nextDish.imageUrl} alt="" sizes="(max-width: 480px) 92vw, 430px" quality={72} className="w-full h-full object-cover dish-image" />}</div>}
+          <article key={`current-${currentDish.id}`} className={`absolute inset-0 rounded-[1.5rem] overflow-hidden shadow-card-lg bg-hs-graphite select-none outline-none focus-visible:ring-2 focus-visible:ring-hs-gold ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`} style={{ transform: `translate3d(${dragX}px, 0, 0) rotate(${rotation}deg)`, transitionProperty: isDragging ? 'none' : 'transform, opacity', transitionDuration: '300ms', touchAction: 'pan-y' }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={(event) => finishPointer(event)} onPointerCancel={(event) => finishPointer(event, true)} onKeyDown={(event) => { if (event.key === 'ArrowLeft') commitSwipe('left'); if (event.key === 'ArrowRight') commitSwipe('right') }} tabIndex={0} aria-label={`${currentDish.dish} from ${currentDish.restaurant}. Use left arrow to pass or right arrow to want.`} aria-busy={actionState === 'persisting'} data-testid="swipe-card">
             {currentDish.videoUrl ? (
               <FoodVideo src={currentDish.videoUrl} poster={currentDish.posterUrl || currentDish.imageUrl} className="w-full h-full" preload autoPlay />
             ) : (
               <DishImage src={currentDish.imageUrl} alt={currentDish.dish} sizes="(max-width: 480px) calc(100vw - 32px), 448px" preload quality={84} className="w-full h-full object-cover dish-image" />
             )}
 
-            {dragX > 0 && <div className="absolute top-6 left-6 border-[3px] border-hs-gold text-hs-gold px-4 py-2 rounded-2xl font-black text-lg tracking-tight rotate-[-12deg] bg-hs-black/35 backdrop-blur-sm" style={{ opacity: gestureProgress }}>WANT IT</div>}
-            {dragX < 0 && <div className="absolute top-6 right-6 border-[3px] border-hs-red text-hs-red px-4 py-2 rounded-2xl font-black text-lg tracking-tight rotate-[12deg] bg-hs-black/35 backdrop-blur-sm" style={{ opacity: gestureProgress }}>PASS</div>}
+            {dragX > 0 && <div className="absolute top-5 left-5 border-[3px] border-hs-gold text-hs-gold px-3 py-1.5 rounded-xl font-black text-base tracking-tight rotate-[-12deg] bg-hs-black/35 backdrop-blur-sm" style={{ opacity: gestureProgress }}>WANT IT</div>}
+            {dragX < 0 && <div className="absolute top-5 right-5 border-[3px] border-hs-red text-hs-red px-3 py-1.5 rounded-xl font-black text-base tracking-tight rotate-[12deg] bg-hs-black/35 backdrop-blur-sm" style={{ opacity: gestureProgress }}>PASS</div>}
             {lastSwipe === 'right' && (
               <div className="absolute inset-0 bg-hs-gold/20 flex flex-col items-center justify-center gap-4">
-                <div className="bg-hs-gold text-hs-black text-3xl font-black px-6 py-3 rounded-2xl rotate-[-12deg] shadow-gold flex items-center gap-2">
+                <div className="bg-hs-gold text-hs-black text-2xl font-black px-5 py-2.5 rounded-2xl rotate-[-12deg] shadow-gold flex items-center gap-2">
                   Saved ♥️
                 </div>
                 {continueEarly && (
                   <button
                     onClick={advanceNow}
-                    className="mt-4 px-6 py-3 bg-hs-black/70 text-white border border-white/20 rounded-full font-bold text-sm backdrop-blur-sm hover:bg-hs-black"
+                    className="mt-4 px-5 py-2.5 bg-hs-black/70 text-white border border-white/20 rounded-full font-bold text-sm backdrop-blur-sm hover:bg-hs-black"
                   >
                     Continue →
                   </button>
                 )}
               </div>
             )}
-            {lastSwipe === 'left' && <div className="absolute inset-0 bg-hs-red/20 flex items-center justify-center"><div className="bg-hs-red text-white text-3xl font-black px-6 py-3 rounded-2xl rotate-[12deg] shadow-lg">PASS</div></div>}
+            {lastSwipe === 'left' && <div className="absolute inset-0 bg-hs-red/20 flex items-center justify-center"><div className="bg-hs-red text-white text-2xl font-black px-5 py-2.5 rounded-2xl rotate-[12deg] shadow-lg">PASS</div></div>}
             {currentDish.contentKind === 'community' && <div className="absolute top-3 left-3"><span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-black/30 text-white/75 backdrop-blur-sm border border-white/10">Community</span></div>}
             {currentDish.recipePreview && (
               <button
@@ -493,28 +493,28 @@ export default function SwipePage() {
                 <RecipeBadge recipeAvailable={currentDish.recipeAvailable} type={currentDish.recipePreview.recipe_type} price={currentDish.recipePreview.price} />
               </button>
             )}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pt-16 pb-5">
-              <div className="mb-3">
-                <h2 className="text-white text-[1.55rem] sm:text-[1.85rem] font-black leading-[1.1] tracking-tight mb-1 drop-shadow-lg">{currentDish.dish}</h2>
-                <p className="text-white/85 text-sm sm:text-base font-medium drop-shadow-md">{currentDish.restaurant}</p>
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/75 to-transparent px-4 pt-12 pb-4">
+              <div className="mb-2">
+                <h2 className="text-white text-[1.35rem] sm:text-[1.55rem] font-black leading-[1.1] tracking-tight mb-0.5 drop-shadow-lg">{currentDish.dish}</h2>
+                <p className="text-white/85 text-sm font-medium drop-shadow-md">{currentDish.restaurant}</p>
                 <p className="flex items-center gap-2 mt-1 text-white/60 text-xs font-medium">{locationLabel && <span className="truncate max-w-[140px] sm:max-w-[180px]">{locationLabel}</span>}{locationLabel && currentDish.priceRange && <span className="text-white/30">•</span>}{currentDish.priceRange && <span className="text-hs-gold">{currentDish.priceRange}</span>}</p>
               </div>
-              <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
                 {currentDish.seller?.id && user?.id && currentDish.seller?.owner_user_id !== user.id && (
                   <FollowButton followingType={currentDish.contentKind === 'community' ? 'user' : 'seller'} followingId={currentDish.seller.id} variant="compact" />
                 )}
               </div>
-              <div className="flex items-center justify-center gap-6">{continueEarly ? (
+              <div className="flex items-center justify-center gap-5">{continueEarly ? (
   <button
     onClick={advanceNow}
-    className="px-6 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm hover:bg-hs-gold-light transition"
+    className="px-5 py-2.5 bg-hs-gold text-hs-black rounded-full font-bold text-sm hover:bg-hs-gold-light transition"
   >
     Continue / Next →
   </button>
 ) : (
   <>
-    <IconButton label={`Pass on ${currentDish.dish}`} disabled={actionLock.current} onClick={() => commitSwipe('left')} className="w-16 h-16 sm:w-[72px] sm:h-[72px] bg-hs-red/10 border-2 border-hs-red text-hs-red shadow-lg backdrop-blur-sm hover:scale-105 hover:bg-hs-red hover:text-white transition active:scale-95"><PassIcon size={26} className="sm:w-[30px] sm:h-[30px]" /></IconButton>
-    <IconButton label={`Want ${currentDish.dish}`} disabled={actionLock.current} onClick={() => commitSwipe('right')} className="w-[72px] h-[72px] sm:w-20 sm:h-20 bg-hs-gold text-hs-black shadow-gold hover:scale-105 hover:bg-hs-gold-light transition active:scale-95"><WantItIcon size={32} className="sm:w-9 sm:h-9" /></IconButton>
+    <IconButton label={`Pass on ${currentDish.dish}`} disabled={actionLock.current} onClick={() => commitSwipe('left')} className="w-14 h-14 sm:w-16 sm:h-16 bg-hs-red/10 border-2 border-hs-red text-hs-red shadow-lg backdrop-blur-sm hover:scale-105 hover:bg-hs-red hover:text-white transition active:scale-95"><PassIcon size={24} className="sm:w-7 sm:h-7" /></IconButton>
+    <IconButton label={`Want ${currentDish.dish}`} disabled={actionLock.current} onClick={() => commitSwipe('right')} className="w-16 h-16 sm:w-[72px] sm:h-[72px] bg-hs-gold text-hs-black shadow-gold hover:scale-105 hover:bg-hs-gold-light transition active:scale-95"><WantItIcon size={30} className="sm:w-8 sm:h-8" /></IconButton>
   </>
 )}</div></div>
           </article>
