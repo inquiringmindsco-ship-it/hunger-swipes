@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
     const savedKeys = new Set((saved || []).map((row: any) => `${row.content_kind}:${row.content_id}`))
 
     const discoveryModeRaw = searchParams.get('discoveryMode') || searchParams.get('mode_type') || ''
-    const discoveryMode = ['eat','make','explore'].includes(discoveryModeRaw) ? discoveryModeRaw as 'eat'|'make'|'explore' : null
-    if (discoveryModeRaw && !discoveryMode) return NextResponse.json({ error: 'Invalid discoveryMode', dishes: [] }, { status: 400 })
+    const discoveryMode = ['eat','make','explore'].includes(discoveryModeRaw) ? discoveryModeRaw as 'eat'|'make'|'explore' : 'eat'
+    if (discoveryModeRaw && !['eat','make','explore'].includes(discoveryModeRaw)) return NextResponse.json({ error: 'Invalid discoveryMode', dishes: [] }, { status: 400 })
 
     let communityQuery = admin.from('community_food_posts').select(`*, place:places!inner(id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,status)`)
       .eq('status', 'active').eq('moderation_status', 'approved').eq('places.status', 'active').order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false }).limit(Math.min((offset + limit + 1) * 2, 1000))
@@ -71,20 +71,14 @@ export async function GET(request: NextRequest) {
       communityQuery = communityQuery.eq('place_id', sellerId)
     }
 
-    // Discovery mode eligibility
-    if (discoveryMode === 'eat') {
-      // Surface food that can be obtained: restaurants, food businesses, food trucks,
-      // home cooks, caterers, pop-ups, meal prep. Recipe-only creators are excluded.
-      // We filter seller eligibility in memory because the embedded seller OR filter
-      // is hard to express safely across Supabase versions.
-      communityQuery = communityQuery.limit(0)
-    } else if (discoveryMode === 'make') {
+    if (discoveryMode === 'make') {
       // Surface dishes that have an active published recipe behind them.
       officialQuery = officialQuery.eq('recipe_available', true)
       communityQuery = communityQuery.limit(0)
-    } else if (discoveryMode === 'explore') {
-      // Broad discovery: all approved food content including videos and community posts.
-      // No additional filter.
+    } else {
+      // EAT (default), EXPLORE, or no mode: broad discovery of approved food.
+      // Community posts remain visible because they represent real food from real places.
+      // Recipe-only creators will be excluded once we add an explicit flag.
     }
 
     if (cuisineTags.length) {
@@ -114,24 +108,31 @@ export async function GET(request: NextRequest) {
 
     const [{ data: official, error: officialError }, { data: community, error: communityError }] = await Promise.all([officialQuery, communityQuery])
     if (officialError || communityError) return NextResponse.json({ error: officialError?.message || communityError?.message, dishes: [] }, { status: 500 })
-    const merged = [
+
+    const candidateItems = [
       ...(official || []).map(mapOfficialDish),
       ...(community || []).map(mapCommunityPost),
-    ].filter((item: any) => !excluded.has(`${item.content_kind}:${item.id}`))
-      .filter((item: any) => {
-        if (discoveryMode !== 'eat') return true
-        if (item.content_kind !== 'official') return false
-        const eatTypes = new Set(['restaurant','food_truck','caterer','pop_up','meal_prep','home_cook','home_kitchen','other'])
-        const types = Array.isArray(item.seller?.seller_types) ? item.seller.seller_types : [item.seller?.seller_type]
-        return types.some((t: string) => eatTypes.has(t))
-      })
-      .filter((item: any) => !spiceLevel || Number(item.spice_level) === spiceLevel)
-      .filter((item: any) => {
-        if (!priceRanges.length) return true
-        const price = Number(item.price)
-        const range = !Number.isFinite(price) || price < 12 ? '$' : price < 24 ? '$$' : '$$$'
-        return priceRanges.includes(range)
-      })
+    ]
+
+    // EAT mode: try strict eligibility first (official sellers that can be obtained +
+    // all community posts). If that yields nothing, fall back to broad discovery so the
+    // feed never goes blank while the seller catalog is still being reclassified.
+    const isEatMode = discoveryMode === 'eat' || !discoveryMode
+    const strictEligible = candidateItems.filter((item: any) => {
+      if (discoveryMode === 'make') return item.content_kind === 'official'
+      if (!isEatMode) return true
+      if (item.content_kind === 'community') return true
+      const eatTypes = new Set(['restaurant','food_truck','caterer','pop_up','meal_prep','home_cook','home_kitchen','other'])
+      const types = Array.isArray(item.seller?.seller_types) ? item.seller.seller_types : [item.seller?.seller_type]
+      return types.some((t: string) => eatTypes.has(t)) || !types[0]
+    })
+
+    const sourceList = isEatMode && strictEligible.length === 0 && mode !== 'nearby'
+      ? candidateItems
+      : strictEligible
+
+    const merged = sourceList
+      .filter((item: any) => !excluded.has(`${item.content_kind}:${item.id}`))
       .map((item: any) => ({ ...item, saved: savedKeys.has(`${item.content_kind}:${item.id}`) }))
       .map((item: any) => {
         if (mode !== 'nearby') return item
