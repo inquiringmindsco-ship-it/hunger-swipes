@@ -13,6 +13,7 @@ import { DishImage } from '@/app/components/DishImage'
 import { useAuth } from '@/lib/auth'
 import { authFetch } from '@/lib/auth-fetch'
 import { formatOptionalFoodPrice } from '@/lib/food'
+import Head from 'next/head'
 
 interface HistoryItem {
   id: string
@@ -119,7 +120,12 @@ export default function HistoryPage() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-hs-ink pb-24">
+    <>
+      <Head>
+        <title>Swipe History — Hunger Swipes</title>
+        <meta name="description" content="Everything you swiped on Hunger Swipes." />
+      </Head>
+      <div className="min-h-screen bg-hs-ink pb-24">
       <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -178,10 +184,10 @@ export default function HistoryPage() {
                       }`}>
                         {item.content_kind === 'official' ? 'Official' : 'Community'}
                       </span>
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 shadow-sm ${
                         item.direction === 'right'
-                          ? 'bg-hs-success/20 text-hs-success'
-                          : 'bg-hs-red/20 text-hs-red'
+                          ? 'bg-hs-success text-hs-black'
+                          : 'bg-hs-red text-hs-black'
                       }`}>
                         {item.direction === 'right' ? <Heart size={10} /> : <X size={10} />}
                         {item.direction === 'right' ? 'Liked' : 'Passed'}
@@ -245,5 +251,6 @@ export default function HistoryPage() {
       </main>
       <MobileNav />
     </div>
+    </>
   )
 }

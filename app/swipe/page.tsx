@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { PassIcon, WantItIcon, FilterIcon, BrandMark } from '@/app/components/icons/HungerIcons'
+import { PassIcon, WantItIcon, FilterIcon, BrandMark, ReplayFoodIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
 import PlaceActions from '@/app/components/PlaceActions'
@@ -111,6 +111,8 @@ export default function SwipePage() {
   const [feedTab, setFeedTab] = useState<'for-you' | 'nearby' | 'trending'>('for-you')
   const { mode: discoveryMode, setMode: setDiscoveryMode, ready: discoveryModeReady } = useStoredDiscoveryMode('eat')
   const [recipeSheetRecipeId, setRecipeSheetRecipeId] = useState<string | null>(null)
+  const [replayMode, setReplayMode] = useState(false)
+  const [showReplayToast, setShowReplayToast] = useState(false)
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null)
 
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'ready' | 'denied' | 'unavailable'>('idle')
@@ -127,6 +129,7 @@ export default function SwipePage() {
   const [announcement, setAnnouncement] = useState('')
   const [continueEarly, setContinueEarly] = useState(false)
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const replayToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingAdvance = useRef<{ dish: FoodDish; direction: SwipeDirection; saved: boolean } | null>(null)
   const startPoint = useRef({ x: 0, y: 0 })
   const gestureIntent = useRef<GestureIntent>('undecided')
@@ -155,7 +158,7 @@ export default function SwipePage() {
     } catch { setSavedCount(0) }
   }, [])
 
-  const fetchDishes = useCallback(async ({ reset = false, nextFilters = filters, nextMode = feedTab, nextDiscoveryMode = discoveryMode }: { reset?: boolean; nextFilters?: TemporaryFilters; nextMode?: typeof feedTab; nextDiscoveryMode?: 'eat' | 'make' | 'explore' } = {}) => {
+  const fetchDishes = useCallback(async ({ reset = false, nextFilters = filters, nextMode = feedTab, nextDiscoveryMode = discoveryMode, replay = replayMode }: { reset?: boolean; nextFilters?: TemporaryFilters; nextMode?: typeof feedTab; nextDiscoveryMode?: 'eat' | 'make' | 'explore'; replay?: boolean } = {}) => {
     if (!preferencesReady || authLoading || !discoveryModeReady) return
     if (nextMode === 'nearby' && !coordinates) {
       setLoading(false)
@@ -171,6 +174,7 @@ export default function SwipePage() {
     }
     try {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE), mode: nextMode, offset: '0', discoveryMode: nextDiscoveryMode })
+      if (replay) params.set('replay', 'true')
       const cuisine = nextFilters.cuisine ? [nextFilters.cuisine] : preferences.cuisines
       const dietary = nextFilters.dietary ? [nextFilters.dietary] : preferences.dietary
       const health = nextFilters.health ? [nextFilters.health] : preferences.health
@@ -321,10 +325,27 @@ export default function SwipePage() {
   }
 
   const applyFilters = () => { setShowFilters(false); void fetchDishes({ reset: true, nextFilters: filters, nextMode: feedTab, nextDiscoveryMode: discoveryMode }) }
+  const clearFilters = () => {
+    setFilters(EMPTY_FILTERS)
+    setFeedTab('for-you')
+    setReplayMode(false)
+    setShowFilters(false)
+    void fetchDishes({ reset: true, nextFilters: EMPTY_FILTERS, nextMode: 'for-you', nextDiscoveryMode: discoveryMode })
+  }
   const changeMode = (mode: typeof feedTab) => { setFeedTab(mode); if (mode === 'nearby' && !coordinates && locationState === 'idle') requestLocation() }
   const onDiscoveryModeChange = (mode: 'eat' | 'make' | 'explore') => {
     setDiscoveryMode(mode)
+    setReplayMode(false)
     void fetchDishes({ reset: true, nextDiscoveryMode: mode })
+  }
+  const enableReplay = () => {
+    setReplayMode(true)
+    setCurrentIndex(0)
+    seenKeys.current.clear()
+    setShowReplayToast(true)
+    if (replayToastTimer.current) clearTimeout(replayToastTimer.current)
+    replayToastTimer.current = setTimeout(() => setShowReplayToast(false), 3000)
+    void fetchDishes({ reset: true, replay: true })
   }
   const currentDish = dishes[currentIndex]
   const nextDish = dishes[currentIndex + 1]
@@ -333,12 +354,13 @@ export default function SwipePage() {
 
   const BrandHeader = () => <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top"><div className="max-w-md mx-auto flex items-center justify-between"><Link href="/swipe" className="flex items-center gap-2 min-w-0 overflow-hidden"><BrandMark size={34} className="shrink-0" /><span className="font-bold text-base text-hs-cream tracking-tight whitespace-nowrap truncate block max-w-[170px] sm:max-w-none">Hunger Swipes</span></Link>{!user && <Link href="/auth" className="shrink-0 ml-3 text-sm font-semibold text-hs-gold hover:text-hs-gold-light transition whitespace-nowrap">Sign in</Link>}</div></header>
 
-  const DiscoverShell = ({ children }: { children: React.ReactNode }) => (
+  const DiscoverShell = ({ children, includeModeSwitch = true }: { children: React.ReactNode; includeModeSwitch?: boolean }) => (
     <div className="min-h-screen bg-hs-ink flex flex-col">
       <BrandHeader />
       <main className="flex-1 flex flex-col px-4 pt-6 pb-24 max-w-md mx-auto w-full">
         <h1 className="text-hs-cream text-2xl font-black tracking-tight mb-2">Discover food near you</h1>
         <p className="text-hs-gray text-sm mb-6">Swipe through real dishes from local food businesses and community food posts. Save what you want, pass on the rest.</p>
+        {includeModeSwitch && <DiscoveryModeSwitch value={discoveryMode} onChange={onDiscoveryModeChange} />}
         <div className="flex flex-wrap gap-2 mb-8">
           <Link href="/nearby" className="px-4 py-2 rounded-full bg-hs-soft text-hs-cream text-xs font-semibold hover:bg-hs-gold hover:text-hs-black transition">Nearby</Link>
           <Link href="/saved" className="px-4 py-2 rounded-full bg-hs-soft text-hs-cream text-xs font-semibold hover:bg-hs-gold hover:text-hs-black transition">Saved</Link>
@@ -366,8 +388,65 @@ export default function SwipePage() {
     </DiscoverShell>
   )
   if (!online && dishes.length === 0) return <div className="min-h-screen bg-hs-ink flex flex-col"><BrandHeader /><main className="flex-1"><OfflineState /></main><MobileNav /></div>
-  if (dishes.length === 0) return <div className="min-h-screen bg-hs-ink flex flex-col"><BrandHeader /><main className="flex-1"><EmptyState icon={<BrandMark size={56} />} title="No dishes match" body="Adjust your filters or check back when more food is published." action={<div className="flex gap-3"><button onClick={() => { setFilters(EMPTY_FILTERS); void fetchDishes({ reset: true, nextFilters: EMPTY_FILTERS }) }} className="px-6 py-3 bg-hs-soft text-hs-cream rounded-full font-semibold text-sm">Clear Filters</button><Link href="/join" className="px-6 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">List Your Food</Link></div>} /></main><MobileNav /></div>
-  if (!currentDish) return <div className="min-h-screen bg-hs-ink flex flex-col"><BrandHeader /><main className="flex-1"><EmptyState icon={<WantItIcon size={48} className="text-hs-gold" />} title="You’re all caught up" body={refillError ? 'More dishes could not be loaded.' : 'You’ve seen everything available for these filters.'} action={<div className="flex gap-3">{refillError && <button onClick={() => fetchDishes()} className="px-6 py-3 bg-hs-soft text-hs-cream rounded-full font-semibold text-sm">Retry</button>}<Link href="/saved" className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">View Saved ({savedCount})</Link></div>} /></main><MobileNav /></div>
+  if (dishes.length === 0) return <DiscoverShell includeModeSwitch>
+    <div className="flex-1 flex flex-col justify-center">
+      <EmptyState
+        icon={<BrandMark size={56} />}
+        title={replayMode ? 'Nothing to replay in this mode' : 'No dishes match'}
+        body={replayMode ? 'This mode has no dishes to replay right now.' : 'Adjust your filters or check back when more food is published.'}
+        action={
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => { setFilters(EMPTY_FILTERS); void fetchDishes({ reset: true, nextFilters: EMPTY_FILTERS }) }}
+              className="px-6 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm"
+            >
+              Clear Filters
+            </button>
+            {replayMode && (
+              <button
+                onClick={() => { setReplayMode(false); setCurrentIndex(0); void fetchDishes({ reset: true }) }}
+                className="px-6 py-3 bg-hs-soft text-hs-cream rounded-full font-semibold text-sm"
+              >
+                Back to Fresh Feed
+              </button>
+            )}
+            <Link href="/join" className="px-6 py-3 bg-hs-gold/10 text-hs-gold border border-hs-gold/30 rounded-full font-semibold text-sm">List Your Food</Link>
+          </div>
+        }
+      />
+    </div>
+  </DiscoverShell>
+  if (!currentDish) return <DiscoverShell includeModeSwitch>
+    <div className="flex-1 flex flex-col justify-center">
+      <EmptyState
+        icon={<WantItIcon size={48} className="text-hs-gold" />}
+        title={replayMode ? 'Replayed everything' : 'You’re all caught up'}
+        body={refillError ? 'More dishes could not be loaded.' : replayMode ? 'You’ve cycled through everything available for replay.' : 'You’ve seen everything available for these filters.'}
+        action={
+          <div className="flex flex-col gap-3">
+            {refillError && <button onClick={() => fetchDishes()} className="px-6 py-3 bg-hs-soft text-hs-cream rounded-full font-semibold text-sm">Retry</button>}
+            {!replayMode && (
+              <button
+                onClick={enableReplay}
+                className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm inline-flex items-center justify-center gap-2"
+              >
+                <ReplayFoodIcon size={18} /> Replay Food
+              </button>
+            )}
+            {replayMode && (
+              <button
+                onClick={() => { setReplayMode(false); setCurrentIndex(0); void fetchDishes({ reset: true }) }}
+                className="px-6 py-3 bg-hs-soft text-hs-cream rounded-full font-semibold text-sm"
+              >
+                Back to Fresh Feed
+              </button>
+            )}
+            <Link href="/saved" className="px-8 py-3 bg-hs-gold/10 text-hs-gold border border-hs-gold/30 rounded-full font-bold text-sm">View Saved ({savedCount})</Link>
+          </div>
+        }
+      />
+    </div>
+  </DiscoverShell>
 
   return (
     <div className="h-[100dvh] bg-hs-ink flex flex-col overflow-hidden">
@@ -450,8 +529,13 @@ export default function SwipePage() {
           onClose={() => setRecipeSheetRecipeId(null)}
         />
       )}
+      {showReplayToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-hs-gold text-hs-black text-sm font-bold shadow-lg">
+          Replaying food you’ve seen
+        </div>
+      )}
       {matchDish && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" role="status"><div className="bg-hs-charcoal rounded-[2rem] p-6 text-center border border-white/[0.08] shadow-card-lg w-full max-w-sm animate-bounce"><div className="w-16 h-16 rounded-full bg-hs-gold/10 flex items-center justify-center mx-auto mb-4 text-hs-gold"><WantItIcon size={40} /></div><h2 className="text-2xl font-black text-hs-cream mb-1">Saved</h2><p className="text-hs-gray text-sm mb-4">Added to your saved dishes.</p><p className="text-lg font-bold text-hs-cream">{matchDish.dish}</p><p className="text-hs-gray text-sm mb-5">{matchDish.restaurant}</p><div className="flex justify-center"><PlaceActions place={{ ...matchDish.seller, name: matchDish.seller.business_name, order_url: matchDish.seller.order_url || matchDish.seller.ordering_url }} /></div></div></div>}
-      <FilterSheet open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} onApply={applyFilters} mode={feedTab} onModeChange={changeMode} radius={radius} onRadiusChange={setRadius} locationState={locationState} onRequestLocation={requestLocation} />
+      <FilterSheet open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} onApply={applyFilters} onClear={clearFilters} mode={feedTab} onModeChange={changeMode} radius={radius} onRadiusChange={setRadius} locationState={locationState} onRequestLocation={requestLocation} />
       <MobileNav />
     </div>
   )

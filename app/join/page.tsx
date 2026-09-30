@@ -127,9 +127,8 @@ export default function JoinPage() {
 
     checkAuthAndSeller()
 
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(() => {}, () => {}, { enableHighAccuracy: false, timeout: 5000 })
-    }
+    // /join intentionally does NOT request browser location automatically.
+    // Location is only requested after the user explicitly chooses Nearby, Near Me, or Use My Location.
   }, [router])
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

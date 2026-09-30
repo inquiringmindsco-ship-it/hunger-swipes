@@ -15,6 +15,7 @@ import { DishImage } from '@/app/components/DishImage'
 import { useAuth } from '@/lib/auth'
 import { authFetch } from '@/lib/auth-fetch'
 import { formatOptionalFoodPrice } from '@/lib/food'
+import Head from 'next/head'
 
 interface SavedItem {
   id: string
@@ -118,7 +119,12 @@ export default function SavedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-hs-ink pb-24">
+    <>
+      <Head>
+        <title>Saved Dishes — Hunger Swipes</title>
+        <meta name="description" content="Food you want, saved from Hunger Swipes." />
+      </Head>
+      <div className="min-h-screen bg-hs-ink pb-24">
       <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -240,5 +246,6 @@ export default function SavedPage() {
       </main>
       <MobileNav />
     </div>
+    </>
   )
 }

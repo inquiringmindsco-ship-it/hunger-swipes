@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChefHat, X, AlertCircle } from 'lucide-react'
+import { useDialogA11y } from '@/lib/dialog-a11y'
 import { getAuthToken } from '@/lib/auth-fetch'
 import RecipePaymentForm from '@/app/components/RecipePaymentForm'
 
@@ -150,12 +151,14 @@ export default function RecipeUnlockSheet({ recipeId, dishId, sellerId, onClose 
     setState({ status: 'error', message: 'Payment succeeded, but the recipe is still processing. Reopen it in a moment.' })
   }
 
+  const containerRef = useDialogA11y(true, onClose)
+
   const Header = ({ title }: { title: string }) => (
     <div className="flex items-center justify-between mb-4">
-      <button onClick={onClose} className="w-10 h-10 rounded-full bg-hs-soft flex items-center justify-center text-hs-cream hover:bg-hs-graphite transition">
-        <X size={20} />
+      <button onClick={onClose} className="w-10 h-10 rounded-full bg-hs-soft flex items-center justify-center text-hs-cream hover:bg-hs-graphite transition focus:outline-none focus-visible:ring-2 focus-visible:ring-hs-gold">
+        <X size={20} aria-hidden="true" />
       </button>
-      <h2 className="text-lg font-bold text-hs-cream truncate px-2">{title}</h2>
+      <h2 id="recipe-sheet-title" className="text-lg font-bold text-hs-cream truncate px-2">{title}</h2>
       <div className="w-10" />
     </div>
   )
@@ -163,7 +166,14 @@ export default function RecipeUnlockSheet({ recipeId, dishId, sellerId, onClose 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col justify-end">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div className="relative bg-hs-charcoal rounded-t-[2rem] border-t border-white/[0.06] p-5 pb-8 safe-bottom max-h-[85vh] overflow-y-auto">
+      <div
+        ref={containerRef}
+        tabIndex={-1}
+        className="relative bg-hs-charcoal rounded-t-[2rem] border-t border-white/[0.06] p-5 pb-8 safe-bottom max-h-[85vh] overflow-y-auto outline-none"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="recipe-sheet-title"
+      >
         {state.status === 'loading' && (
           <div className="py-12 text-center">
             <div className="w-10 h-10 border-2 border-hs-gold border-t-transparent rounded-full animate-spin mx-auto mb-4" />

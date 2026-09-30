@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Plate, Globe, Flame, Dollar, Gear, ArrowRight, CheckLine, Leaf, Protein, Light, MapPin, Sparkle, Filter, Crown, Star, Rising, Close, Veggie as VeggieIcon, Rising as RisingIcon, FireIcon } from '@/app/components/HwIcon'
 import { ArrowLeft, Check, ChevronDown } from 'lucide-react'
 import { clearDiscoveryPreferences, DEFAULT_DISCOVERY_PREFERENCES, readDiscoveryPreferences, writeDiscoveryPreferences } from '@/lib/preferences'
+import Head from 'next/head'
 
 // ─── DIETARY ───
 const DIETARY = [
@@ -125,7 +126,12 @@ export default function PreferencesPage() {
   const totalSelected = (arr: string[]) => arr.length
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
+    <>
+      <Head>
+        <title>Your Preferences — Hunger Swipes</title>
+        <meta name="description" content="Set your dietary, cuisine, health, spice, and price filters." />
+      </Head>
+      <div className="min-h-screen bg-[#0A0A0A]">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 py-3.5">
@@ -366,5 +372,6 @@ export default function PreferencesPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

@@ -24,6 +24,24 @@ export async function POST(request: NextRequest) {
     let newVerification = ''
     if (targetType === 'seller') {
       if (action === 'approve') {
+        // Verify seller readiness before activation.
+        const { data: seller } = await admin.from('sellers').select('business_name,contact_name,contact_email,address,location_text,ordering_method,ordering_url,phone,pickup_available,delivery_available').eq('id', targetId).single()
+        if (!seller) return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
+        const missing = []
+        if (!seller.business_name?.trim()) missing.push('business name')
+        if (!seller.contact_name?.trim()) missing.push('contact name')
+        if (!seller.contact_email?.trim()) missing.push('contact email')
+        if (!seller.address?.trim()) missing.push('address')
+        if (!seller.location_text?.trim()) missing.push('location')
+        const orderingMethod = seller.ordering_method || 'none'
+        const hasOrderingUrl = orderingMethod === 'link' && seller.ordering_url?.trim()
+        const hasPhone = orderingMethod === 'phone' && seller.phone?.trim()
+        const hasInApp = orderingMethod === 'in_app'
+        const orderingReady = orderingMethod !== 'none' && (hasOrderingUrl || hasPhone || hasInApp)
+        if (!orderingReady) missing.push('ordering method (phone or link)')
+        const offersFulfillment = seller.pickup_available || seller.delivery_available
+        if (offersFulfillment && !orderingReady) missing.push('pickup/delivery requires an ordering phone or link')
+        if (missing.length) return NextResponse.json({ error: `Seller not ready: ${missing.join(', ')}` }, { status: 400 })
         newStatus = 'active'
         newVerification = 'approved'
       } else if (action === 'reject') {

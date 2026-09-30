@@ -9,6 +9,7 @@ import { BrandMark } from '@/app/components/icons/HungerIcons'
 import { useAuth } from '@/lib/auth'
 import { authFetch } from '@/lib/auth-fetch'
 import { LoadingState } from '@/app/components/ui/LoadingState'
+import Head from 'next/head'
 
 type Place = { id: string; name: string; location_text: string; address?: string; city?: string; state?: string; cuisine?: string; category?: string; claimed_status?: string; external_source?: string; distanceMiles?: number }
 
@@ -36,10 +37,27 @@ export default function CommunityPostPage() {
   useEffect(() => { if (!authLoading && !user) router.replace('/auth?next=/post') }, [authLoading, user, router])
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get('place') || ''
-    setRequestedPlaceId(requested); setPlaceId(requested)
+    setRequestedPlaceId(requested)
+    setPlaceId(requested)
+    if (requested) {
+      // Pre-load only the requested place from URL
+      setSearching(true)
+      fetch(`/api/places?id=${encodeURIComponent(requested)}`)
+        .then((response) => response.json())
+        .then((data) => { setPlaces(data.places || []) })
+        .catch(() => { setPlaces([]) })
+        .finally(() => { setSearching(false) })
+    } else {
+      setPlaces([])
+    }
   }, [])
   useEffect(() => {
     const timer = setTimeout(async () => {
+      // Do not dump the full place list before the user has typed or requested location.
+      if (!query.trim() && !coordinates) {
+        if (!requestedPlaceId) setPlaces([])
+        return
+      }
       setSearching(true)
       try {
         const params = new URLSearchParams({ limit: '30' })
@@ -112,7 +130,12 @@ export default function CommunityPostPage() {
   }
 
   return (
-    <div className="min-h-screen bg-hs-ink pb-24">
+    <>
+      <Head>
+        <title>Post a Dish — Hunger Swipes</title>
+        <meta name="description" content="Share a food photo from a real place on Hunger Swipes." />
+      </Head>
+      <div className="min-h-screen bg-hs-ink pb-24">
       <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
         <div className="max-w-md mx-auto flex items-center gap-2">
           <BrandMark size={28} />
@@ -136,14 +159,16 @@ export default function CommunityPostPage() {
             <label htmlFor="photo" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Photo</label>
             <label
               htmlFor="photo"
-              className="group relative flex aspect-[4/3] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[1.5rem] border border-dashed border-white/15 bg-hs-charcoal hover:border-hs-gold/40 transition"
+              tabIndex={0}
+              onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('photo')?.click() } }}
+              className="group relative flex aspect-[4/3] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[1.5rem] border border-dashed border-white/15 bg-hs-charcoal hover:border-hs-gold/40 focus-within:border-hs-gold focus-within:ring-2 focus-within:ring-hs-gold/50 transition"
             >
               {previewUrl ? (
-                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                <img src={previewUrl} alt={`Preview of ${dishName || 'food photo to post'}`} className="w-full h-full object-cover" />
               ) : (
                 <div className="flex flex-col items-center text-hs-gray group-hover:text-hs-cream transition">
                   <div className="w-14 h-14 rounded-full bg-hs-soft flex items-center justify-center mb-3">
-                    <Camera size={24} />
+                    <Camera size={24} aria-hidden="true" />
                   </div>
                   <p className="text-sm font-medium">Add food photo</p>
                   <p className="text-xs text-hs-muted mt-1">JPEG, PNG, WebP · max 5 MB</p>
@@ -191,9 +216,25 @@ export default function CommunityPostPage() {
               </button>
             </div>
 
-            <div className="max-h-64 space-y-2 overflow-y-auto scrollbar-hide">
+            <div className="max-h-64 space-y-2 overflow-y-auto scrollbar-hide rounded-2xl border border-white/[0.06] bg-hs-charcoal p-3">
               {searching ? (
                 <p className="text-sm text-hs-gray p-3">Searching…</p>
+              ) : places.length === 0 ? (
+                <div className="space-y-2 p-2">
+                  {!query.trim() && !coordinates && !requestedPlaceId && (
+                    <>
+                      <p className="text-sm text-hs-gray">Search by place name, food type, or area, or use your location.</p>
+                      <button
+                        type="button"
+                        onClick={useLocation}
+                        className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-hs-gold hover:text-hs-gold-light transition"
+                      >
+                        <LocateFixed size={16} /> Use my location
+                      </button>
+                    </>
+                  )}
+                  {(query.trim() || coordinates || requestedPlaceId) && <p className="text-sm text-hs-gray">No places found. Try a different search or add a new place below.</p>}
+                </div>
               ) : (
                 places.map(place => (
                   <button
@@ -314,5 +355,6 @@ export default function CommunityPostPage() {
       </main>
       <MobileNav />
     </div>
+    </>
   )
 }

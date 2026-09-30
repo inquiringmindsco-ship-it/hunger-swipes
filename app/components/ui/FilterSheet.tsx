@@ -1,7 +1,8 @@
 'use client'
 
-import { CloseIcon, FilterIcon, LocationIcon } from '@/app/components/icons/HungerIcons'
-import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES } from '@/lib/tags'
+import { useDialogA11y } from '@/lib/dialog-a11y'
+import { CloseIcon, FilterIcon, LocationIcon, ResetIcon } from '@/app/components/icons/HungerIcons'
+import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES, SPICE_LEVELS } from '@/lib/tags'
 
 interface FilterState {
   cuisine: string
@@ -17,6 +18,7 @@ interface FilterSheetProps {
   filters: FilterState
   onChange: (filters: FilterState) => void
   onApply: () => void
+  onClear: () => void
   mode: 'for-you' | 'nearby' | 'trending'
   onModeChange: (mode: 'for-you' | 'nearby' | 'trending') => void
   radius: number
@@ -32,37 +34,47 @@ const PRICE_OPTIONS = [
   { value: '$$$', label: '$$$' },
 ]
 
-export function FilterSheet({ open, onClose, filters, onChange, onApply, mode, onModeChange, radius, onRadiusChange, locationState, onRequestLocation }: FilterSheetProps) {
+export function FilterSheet({ open, onClose, filters, onChange, onApply, onClear, mode, onModeChange, radius, onRadiusChange, locationState, onRequestLocation }: FilterSheetProps) {
   if (!open) return null
 
+  const hasActiveFilters = Boolean(filters.cuisine || filters.dietary || filters.health || filters.priceRange || filters.spiceLevel)
+  const panelRef = useDialogA11y(open, onClose)
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-[60] flex flex-col justify-end">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative bg-hs-charcoal rounded-t-[2rem] border-t border-white/[0.06] p-5 pb-8 safe-bottom animate-slide-up">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        className="relative bg-hs-charcoal rounded-t-[2rem] border-t border-white/[0.06] p-5 pb-8 safe-bottom animate-slide-up flex flex-col max-h-[85vh] outline-none"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filter-sheet-title"
+      >
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2 text-hs-cream">
-            <FilterIcon size={20} />
-            <h2 className="text-lg font-bold">Discovery Filters</h2>
+            <FilterIcon size={20} aria-hidden="true" />
+            <h2 id="filter-sheet-title" className="text-lg font-bold">Discovery Filters</h2>
           </div>
           <button
             onClick={onClose}
             aria-label="Close filters"
-            className="w-10 h-10 rounded-full bg-hs-soft flex items-center justify-center text-hs-cream hover:bg-hs-graphite transition"
+            className="w-10 h-10 rounded-full bg-hs-soft flex items-center justify-center text-hs-cream hover:bg-hs-graphite transition focus:outline-none focus-visible:ring-2 focus-visible:ring-hs-gold"
           >
-            <CloseIcon size={20} />
+            <CloseIcon size={20} aria-hidden="true" />
           </button>
         </div>
 
-        <div className="space-y-6 max-h-[60vh] overflow-y-auto scrollbar-hide">
-          <section>
+        <div className="space-y-6 overflow-y-auto scrollbar-hide pr-1">
+          <section aria-label="Feed mode">
             <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Feed</label>
-            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Discovery feed mode">
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Discovery feed mode">
               {(['for-you', 'nearby', 'trending'] as const).map((value) => (
-                <button key={value} onClick={() => onModeChange(value)} aria-pressed={mode === value}
+                <button key={value} onClick={() => onModeChange(value)} role="radio" aria-checked={mode === value}
                   className={`min-h-11 rounded-xl px-2 text-xs font-bold capitalize ${mode === value ? 'bg-hs-gold text-hs-black' : 'bg-hs-soft text-hs-cream'}`}>
                   {value.replace('-', ' ')}
                 </button>
@@ -84,6 +96,25 @@ export function FilterSheet({ open, onClose, filters, onChange, onApply, mode, o
                 )}
               </div>
             )}
+          </section>
+
+          <section>
+            <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Spice Level</label>
+            <div className="flex flex-wrap gap-2">
+              {SPICE_LEVELS.map((level) => (
+                <button
+                  key={level.value}
+                  onClick={() => onChange({ ...filters, spiceLevel: filters.spiceLevel === level.value ? 0 : level.value })}
+                  className={`px-3 py-2 rounded-full text-xs font-semibold transition border ${
+                    filters.spiceLevel === level.value
+                      ? 'bg-hs-gold text-hs-black border-hs-gold'
+                      : 'bg-hs-soft text-hs-cream border-transparent hover:border-hs-gold/30'
+                  }`}
+                >
+                  {level.label}
+                </button>
+              ))}
+            </div>
           </section>
 
           <section>
@@ -165,12 +196,14 @@ export function FilterSheet({ open, onClose, filters, onChange, onApply, mode, o
 
         <div className="mt-6 pt-4 border-t border-white/[0.06] flex gap-3">
           <button
-            onClick={() => {
-              onChange({ cuisine: '', dietary: '', health: '', priceRange: '', spiceLevel: 0 })
-            }}
-            className="flex-1 py-3 rounded-xl bg-hs-soft text-hs-cream font-semibold text-sm hover:bg-hs-graphite transition"
+            onClick={onClear}
+            className={`flex-1 py-3 rounded-xl font-semibold text-sm transition inline-flex items-center justify-center gap-2 ${
+              hasActiveFilters
+                ? 'bg-hs-gold/10 text-hs-gold border border-hs-gold/30 hover:bg-hs-gold/20'
+                : 'bg-hs-soft text-hs-cream hover:bg-hs-graphite'
+            }`}
           >
-            Reset
+            <ResetIcon size={16} /> Clear Filters
           </button>
           <button
             onClick={onApply}

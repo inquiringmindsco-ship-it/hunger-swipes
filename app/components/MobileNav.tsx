@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth, getAuthToken } from '@/lib/auth'
 import { useEffect, useState } from 'react'
-import { DiscoverIcon, SavedIcon, PostIcon, SellIcon, ProfileIcon } from '@/app/components/icons/HungerIcons'
+import { DiscoverIcon, SavedIcon, PostIcon, SellIcon, ProfileIcon, ClockIcon } from '@/app/components/icons/HungerIcons'
 
 function SellerLink() {
   const pathname = usePathname() || ''
@@ -65,6 +65,7 @@ export default function MobileNav() {
     { href: '/swipe', label: 'Discover', icon: DiscoverIcon },
     { href: '/saved', label: 'Saved', icon: SavedIcon },
     { href: '/post', label: 'Post', icon: PostIcon },
+    { href: '/history', label: 'History', icon: ClockIcon },
   ]
 
   return (

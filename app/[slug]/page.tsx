@@ -26,6 +26,9 @@ async function fetchProfile(slug: string): Promise<any | null> {
   const normalized = slug.trim().toLowerCase().replace(/^@/, '')
   const admin = getSupabaseAdmin()
   if (!admin) return null
+  // Short-circuit if an active seller owns this exact slug.
+  const { data: sellerMatch } = await admin.from('sellers').select('id').ilike('slug', normalized).maybeSingle()
+  if (sellerMatch) return null
   const { data: handleRow } = await admin.from('handles').select('*').eq('handle', normalized).maybeSingle()
   if (!handleRow) return null
 
@@ -77,7 +80,17 @@ async function fetchProfile(slug: string): Promise<any | null> {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const profile = await fetchProfile(slug)
+  const normalized = slug.trim().toLowerCase().replace(/^@/, '')
+  const data = await fetchRestaurant(normalized)
+  if (data) {
+    const { restaurant } = data
+    return {
+      title: `${restaurant.business_name} on Hunger Swipes`,
+      description: restaurant.tagline || restaurant.description || `Discover ${restaurant.business_name} on Hunger Swipes.`,
+      alternates: { canonical: `/${restaurant.slug}` },
+    }
+  }
+  const profile = await fetchProfile(normalized)
   if (profile) {
     const title = `@${profile.handle} on Hunger Swipes`
     return {
@@ -86,22 +99,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       alternates: { canonical: `/${profile.handle}` },
     }
   }
-  const data = await fetchRestaurant(slug)
-  if (!data) return { title: 'Not found | Hunger Swipes' }
-  const { restaurant } = data
-  return {
-    title: `${restaurant.business_name} on Hunger Swipes`,
-    description: restaurant.tagline || restaurant.description || `Discover ${restaurant.business_name} on Hunger Swipes.`,
-    alternates: { canonical: `/${restaurant.slug}` },
-  }
+  return { title: 'Not found | Hunger Swipes' }
 }
 
 export default async function SlugPage({ params }: Props) {
   const { slug } = await params
-  const profile = await fetchProfile(slug)
+  const normalized = slug.trim().toLowerCase().replace(/^@/, '')
+  // A slug that resolves to an exact restaurant slug wins over a handle.
+  const restaurantData = await fetchRestaurant(normalized)
+  if (restaurantData) return <RestaurantClient restaurant={restaurantData.restaurant} dishes={restaurantData.dishes} />
+
+  const profile = await fetchProfile(normalized)
   if (profile) return <FoodProfileClient initialData={profile} />
 
-  const data = await fetchRestaurant(slug)
-  if (!data) notFound()
-  return <RestaurantClient restaurant={data.restaurant} dishes={data.dishes} />
+  notFound()
 }

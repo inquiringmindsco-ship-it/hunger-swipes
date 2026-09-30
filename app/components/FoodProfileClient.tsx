@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { ExternalLink } from 'lucide-react'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import MobileNav from '@/app/components/MobileNav'
 
@@ -26,9 +27,63 @@ interface ProfileData {
   }
 }
 
+function normalizeExternalUrl(raw: string | null | undefined, defaultProtocol = 'https://'): string | null {
+  if (!raw || typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  try {
+    // eslint-disable-next-line no-new
+    new URL(trimmed)
+    return trimmed
+  } catch {
+    // try with protocol
+    try {
+      // eslint-disable-next-line no-new
+      new URL(`${defaultProtocol}${trimmed}`)
+      return `${defaultProtocol}${trimmed}`
+    } catch {
+      return null
+    }
+  }
+}
+
+function safeExternalLink(href: string, label: string, icon?: React.ReactNode) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 rounded-xl bg-hs-soft px-4 py-3 text-sm font-semibold text-hs-cream hover:bg-hs-graphite transition"
+    >
+      {icon}
+      <span className="min-w-0 truncate">{label}</span>
+      <ExternalLink size={14} className="ml-auto shrink-0 text-hs-gray" />
+    </a>
+  )
+}
+
 export default function FoodProfileClient({ initialData }: { initialData: ProfileData }) {
   const [data] = useState<ProfileData>(initialData)
   const displayName = data.owner_type === 'seller' ? data.entity?.business_name : `@${data.handle}`
+
+  const website = normalizeExternalUrl(data.profile?.website_url)
+  const youtube = normalizeExternalUrl(data.profile?.youtube_url)
+  const instagram = data.profile?.instagram_handle?.trim()
+    ? normalizeExternalUrl(
+        data.profile!.instagram_handle!.startsWith('http')
+          ? data.profile!.instagram_handle
+          : `https://instagram.com/${data.profile!.instagram_handle!.replace(/^@/, '')}`,
+      )
+    : null
+  const tiktok = data.profile?.tiktok_handle?.trim()
+    ? normalizeExternalUrl(
+        data.profile!.tiktok_handle!.startsWith('http')
+          ? data.profile!.tiktok_handle
+          : `https://tiktok.com/@${data.profile!.tiktok_handle!.replace(/^@/, '')}`,
+      )
+    : null
+
+  const hasLinks = website || youtube || instagram || tiktok
 
   return (
     <div className="min-h-screen bg-hs-ink pb-24">
@@ -43,7 +98,7 @@ export default function FoodProfileClient({ initialData }: { initialData: Profil
         <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5">
           <div className="flex items-center gap-4">
             {data.profile?.profile_photo_url ? (
-              <img src={data.profile.profile_photo_url} alt="" className="w-16 h-16 rounded-full object-cover bg-hs-soft" />
+              <img src={data.profile.profile_photo_url} alt={`${displayName || 'Profile'} photo`} className="w-16 h-16 rounded-full object-cover bg-hs-soft" />
             ) : (
               <div className="w-16 h-16 rounded-full bg-hs-gold/10 flex items-center justify-center text-hs-gold text-xl font-black">
                 {displayName?.[0]?.toUpperCase() || '?'}
@@ -55,6 +110,15 @@ export default function FoodProfileClient({ initialData }: { initialData: Profil
             </div>
           </div>
           {data.profile?.bio && <p className="mt-4 text-sm text-hs-gray leading-relaxed">{data.profile.bio}</p>}
+
+          {hasLinks && (
+            <div className="mt-5 space-y-2">
+              {website && safeExternalLink(website, 'Website')}
+              {instagram && safeExternalLink(instagram, 'Instagram')}
+              {tiktok && safeExternalLink(tiktok, 'TikTok')}
+              {youtube && safeExternalLink(youtube, 'YouTube')}
+            </div>
+          )}
         </section>
 
         {data.dishes && data.dishes.length > 0 && (
@@ -63,7 +127,7 @@ export default function FoodProfileClient({ initialData }: { initialData: Profil
             <div className="grid grid-cols-2 gap-3">
               {data.dishes.map((dish: any) => (
                 <div key={dish.id} className="bg-hs-charcoal rounded-2xl overflow-hidden border border-white/[0.06]">
-                  {dish.photo_url && <img src={dish.photo_url} alt="" className="w-full h-28 object-cover" />}
+                  {dish.photo_url && <img src={dish.photo_url} alt={dish.name || dish.dish_name || 'Food photo'} className="w-full h-28 object-cover" />}
                   <div className="p-3">
                     <p className="text-xs font-bold text-hs-cream truncate">{dish.name || dish.dish_name}</p>
                   </div>

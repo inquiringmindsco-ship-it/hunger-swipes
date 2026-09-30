@@ -73,7 +73,16 @@ try {
   const sellerAResponse = await request('/api/sellers', {
     token: userA.token,
     method: 'POST',
-    body: { business_name: `Audit Seller A ${runId}`, seller_type: 'restaurant', location_text: 'Audit City' },
+    body: {
+      business_name: `Audit Seller A ${runId}`,
+      seller_type: 'restaurant',
+      location_text: 'Audit City',
+      address: '123 Audit St, Audit City',
+      contact_name: 'Audit A',
+      contact_email: `audit-a-${runId}@example.com`,
+      ordering_method: 'phone',
+      phone: '555-0100',
+    },
   })
   assert(sellerAResponse.status === 201, `A seller create returned ${sellerAResponse.status}`)
   const sellerA = sellerAResponse.payload.seller
@@ -192,6 +201,10 @@ try {
   const { data: recordedSwipe } = await admin.from('food_swipes').select('actor_id').eq('content_id', dishA.id).single()
   assert(swipe.status === 200 && saves.status === 200 && saves.payload.saved.some((saved) => saved.dish.id === dishA.id), 'Authenticated swipe/save regression')
   assert(anonymousSwipe.status === 401 && recordedSwipe.actor_id === userB.id, 'Client-controlled identity was accepted')
+  console.log('DEBUG swipe', swipe.status, swipe.payload)
+  console.log('DEBUG saves', saves.status, saves.payload)
+  console.log('DEBUG anonymousSwipe', anonymousSwipe.status, anonymousSwipe.payload)
+  console.log('DEBUG recordedSwipe', recordedSwipe)
   console.log('TEST F — PASS: Swipe/save uses the authenticated account and rejects anonymous identity spoofing')
 
   await userA.client.auth.signOut()

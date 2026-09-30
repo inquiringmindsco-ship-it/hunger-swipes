@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Phone, ExternalLink, MapPin, ChevronLeft, Heart, X, ShoppingBag, Clock, ChefHat, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { useDialogA11y } from '@/lib/dialog-a11y'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import { LoadingState } from '@/app/components/ui/LoadingState'
 import { EmptyState } from '@/app/components/ui/EmptyState'
@@ -58,7 +59,6 @@ export default function RestaurantClient({ restaurant: initialRestaurant, dishes
   const [currentIndex, setCurrentIndex] = useState(0)
   const [saved, setSaved] = useState<Set<string>>(new Set())
   const [showPicks, setShowPicks] = useState(false)
-  const [confirmed, setConfirmed] = useState(false)
   const swipeStartX = useRef<number | null>(null)
 
   useEffect(() => {
@@ -302,76 +302,110 @@ export default function RestaurantClient({ restaurant: initialRestaurant, dishes
       </main>
 
       {showPicks && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4">
-          <div className="w-full sm:max-w-md max-h-[85vh] bg-hs-ink rounded-t-[1.5rem] sm:rounded-[1.5rem] border border-white/[0.06] shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-              <h2 className="text-lg font-black text-hs-cream flex items-center gap-2">
-                <ShoppingBag size={20} className="text-hs-gold" /> My picks
-              </h2>
-              <button onClick={() => { setShowPicks(false); setConfirmed(false) }} className="text-hs-gray hover:text-hs-cream">
-                <X size={24} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-5 space-y-3 scrollbar-hide">
-              {savedList.length === 0 ? (
-                <div className="text-center py-8">
-                  <Heart size={40} className="text-hs-gray mx-auto mb-3" />
-                  <p className="text-hs-gray text-sm">You haven&apos;t picked anything yet. Swipe right on dishes you want.</p>
-                </div>
-              ) : (
-                savedList.map((dish) => (
-                  <div key={dish.id} className="flex items-center gap-3 bg-hs-charcoal border border-white/[0.06] rounded-xl p-3">
-                    {dish.photo_url ? (
-                      <img src={dish.photo_url} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0" />
-                    ) : (
-                      <div className="w-16 h-16 rounded-lg bg-hs-graphite flex items-center justify-center shrink-0">
-                        <ChefHat size={20} className="text-hs-gold" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-hs-cream truncate">{dish.name}</p>
-                      {dish.description && <p className="text-xs text-hs-gray line-clamp-1">{dish.description}</p>}
-                      <p className="text-sm text-hs-gold font-semibold mt-0.5">{dish.price > 0 ? `$${dish.price.toFixed(2)}` : 'Price varies'}</p>
-                    </div>
-                    <button
-                      onClick={() => toggleSaved(dish)}
-                      className="w-9 h-9 rounded-full bg-hs-soft flex items-center justify-center text-hs-gray hover:text-hs-red"
-                      aria-label="Remove"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-            <div className="p-5 border-t border-white/[0.06] space-y-3">
-              {savedList.length > 0 && <div className="flex items-center justify-between pb-1 text-sm"><span className="text-hs-gray">Estimated subtotal</span><strong className="text-lg text-hs-gold">${selectedTotal.toFixed(2)}</strong></div>}
-              {confirmed ? (
-                <div className="text-center py-2">
-                  <CheckCircle2 size={36} className="text-hs-success mx-auto mb-2" />
-                  <p className="text-hs-cream font-bold">Ordering opened</p>
-                  <p className="text-xs text-hs-gray mt-1">Complete payment with {restaurant.business_name}&apos;s ordering provider for final confirmation.</p>
-                </div>
-              ) : (
-                <>
-                  <button
-                    onClick={() => { orderAction(restaurant); if (orderReady) setConfirmed(true) }}
-                    disabled={savedList.length === 0 || !orderReady}
-                    className={`w-full py-3.5 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition ${savedList.length === 0 || !orderReady ? 'bg-hs-graphite text-hs-muted' : 'bg-hs-gold text-hs-black hover:bg-hs-gold-light'}`}
-                  >
-                    {restaurant.ordering_method === 'phone' && restaurant.phone ? <Phone size={18} /> : null}
-                    {restaurant.ordering_method === 'link' && restaurant.ordering_url ? <ExternalLink size={18} /> : null}
-                    {savedList.length === 0 ? 'Pick at least one dish' : !orderReady ? 'Ordering is not configured yet' : `Order ${savedList.length} item${savedList.length === 1 ? '' : 's'}`}
-                    {savedList.length > 0 && <ArrowRight size={18} />}
-                  </button>
-                  <p className="text-center text-xs text-hs-gray">{orderReady ? orderingText(restaurant) : `Ask ${restaurant.business_name} how to place your order.`}</p>
-                  <p className="text-center text-[11px] text-hs-muted">Prices are confirmed by the restaurant&apos;s ordering provider.</p>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <PicksDialog
+          restaurant={restaurant}
+          savedList={savedList}
+          selectedTotal={selectedTotal}
+          orderReady={Boolean(orderReady)}
+          orderAction={orderAction}
+          toggleSaved={toggleSaved}
+          orderingText={orderingText}
+          onClose={() => setShowPicks(false)}
+        />
       )}
+    </div>
+  )
+}
+
+function PicksDialog({ restaurant, savedList, selectedTotal, orderReady, orderAction, toggleSaved, orderingText, onClose }: {
+  restaurant: Restaurant
+  savedList: Dish[]
+  selectedTotal: number
+  orderReady: boolean
+  orderAction: (r: Restaurant) => void
+  toggleSaved: (dish: Dish) => void
+  orderingText: (r: Restaurant) => string
+  onClose: () => void
+}) {
+  const ref = useDialogA11y(true, onClose)
+  const [confirmed, setConfirmed] = useState(false)
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="picks-title"
+    >
+      <div
+        ref={ref}
+        tabIndex={-1}
+        className="w-full sm:max-w-md max-h-[85vh] bg-hs-ink rounded-t-[1.5rem] sm:rounded-[1.5rem] border border-white/[0.06] shadow-2xl flex flex-col outline-none"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+          <h2 id="picks-title" className="text-lg font-black text-hs-cream flex items-center gap-2">
+            <ShoppingBag size={20} className="text-hs-gold" /> My picks
+          </h2>
+          <button onClick={onClose} className="text-hs-gray hover:text-hs-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-hs-gold rounded-full p-1">
+            <X size={24} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-3 scrollbar-hide">
+          {savedList.length === 0 ? (
+            <div className="text-center py-8">
+              <Heart size={40} className="text-hs-gray mx-auto mb-3" />
+              <p className="text-hs-gray text-sm">You haven&apos;t picked anything yet. Swipe right on dishes you want.</p>
+            </div>
+          ) : (
+            savedList.map((dish) => (
+              <div key={dish.id} className="flex items-center gap-3 bg-hs-charcoal border border-white/[0.06] rounded-xl p-3">
+                {dish.photo_url ? (
+                  <img src={dish.photo_url} alt={dish.name || 'Dish'} className="w-16 h-16 rounded-lg object-cover shrink-0" />
+                ) : (
+                  <div className="w-16 h-16 rounded-lg bg-hs-graphite flex items-center justify-center shrink-0">
+                    <ChefHat size={20} className="text-hs-gold" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-hs-cream truncate">{dish.name}</p>
+                  {dish.description && <p className="text-xs text-hs-gray line-clamp-1">{dish.description}</p>}
+                  <p className="text-sm text-hs-gold font-semibold mt-0.5">{dish.price > 0 ? `$${dish.price.toFixed(2)}` : 'Price varies'}</p>
+                </div>
+                <button
+                  onClick={() => toggleSaved(dish)}
+                  className="w-9 h-9 rounded-full bg-hs-soft flex items-center justify-center text-hs-gray hover:text-hs-red focus:outline-none focus-visible:ring-2 focus-visible:ring-hs-gold"
+                  aria-label={`Remove ${dish.name}`}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="p-5 border-t border-white/[0.06] space-y-3">
+          {savedList.length > 0 && <div className="flex items-center justify-between pb-1 text-sm"><span className="text-hs-gray">Estimated subtotal</span><strong className="text-lg text-hs-gold">${selectedTotal.toFixed(2)}</strong></div>}
+          {confirmed ? (
+            <div className="text-center py-2">
+              <CheckCircle2 size={36} className="text-hs-success mx-auto mb-2" />
+              <p className="text-hs-cream font-bold">Ordering opened</p>
+              <p className="text-xs text-hs-gray mt-1">Complete payment with {restaurant.business_name}&apos;s ordering provider for final confirmation.</p>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => { orderAction(restaurant); if (orderReady) setConfirmed(true) }}
+                disabled={savedList.length === 0 || !orderReady}
+                className={`w-full py-3.5 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-hs-gold ${savedList.length === 0 || !orderReady ? 'bg-hs-graphite text-hs-muted' : 'bg-hs-gold text-hs-black hover:bg-hs-gold-light'}`}
+              >
+                {restaurant.ordering_method === 'phone' && restaurant.phone ? <Phone size={18} /> : null}
+                {restaurant.ordering_method === 'link' && restaurant.ordering_url ? <ExternalLink size={18} /> : null}
+                {savedList.length === 0 ? 'Pick at least one dish' : !orderReady ? 'Ordering is not configured yet' : `Order ${savedList.length} item${savedList.length === 1 ? '' : 's'}`}
+                {savedList.length > 0 && <ArrowRight size={18} />}
+              </button>
+              <p className="text-center text-xs text-hs-gray">{orderReady ? orderingText(restaurant) : `Ask ${restaurant.business_name} how to place your order.`}</p>
+              <p className="text-center text-[11px] text-hs-muted">Prices are confirmed by the restaurant&apos;s ordering provider.</p>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

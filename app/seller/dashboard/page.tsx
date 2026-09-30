@@ -13,6 +13,31 @@ import MobileNav from '@/app/components/MobileNav'
 import { LoadingState } from '@/app/components/ui/LoadingState'
 import { EmptyState } from '@/app/components/ui/EmptyState'
 import { ImageFallback } from '@/app/components/ui/ImageFallback'
+import Head from 'next/head'
+
+function readinessChecklist(seller: any) {
+  const checks = []
+  const has = (v: any) => typeof v === 'string' && v.trim().length > 0
+  checks.push({ label: 'Business name', ok: has(seller.business_name) })
+  checks.push({ label: 'Contact name', ok: has(seller.contact_name) })
+  checks.push({ label: 'Contact email', ok: has(seller.contact_email) })
+  checks.push({ label: 'Address', ok: has(seller.address) })
+  checks.push({ label: 'Display location', ok: has(seller.location_text) })
+  const orderingMethod = seller.ordering_method || 'none'
+  const hasOrderingUrl = orderingMethod === 'link' && has(seller.ordering_url)
+  const hasPhone = orderingMethod === 'phone' && has(seller.phone)
+  const hasInApp = orderingMethod === 'in_app'
+  const orderingReady = orderingMethod !== 'none' && (hasOrderingUrl || hasPhone || hasInApp)
+  checks.push({ label: 'Ordering method configured', ok: orderingReady, detail: orderingMethod === 'none' ? 'Choose phone, link, or in-app ordering' : undefined })
+  const offersFulfillment = seller.pickup_available || seller.delivery_available
+  if (offersFulfillment && !orderingReady) {
+    checks.push({ label: 'Pickup / delivery must have ordering method', ok: false, detail: 'Add a phone or order link before offering pickup/delivery' })
+  } else {
+    checks.push({ label: 'Pickup / delivery settings', ok: true })
+  }
+  const allReady = checks.every((c) => c.ok)
+  return { allReady, checks }
+}
 
 export default function SellerDashboardPage() {
   const router = useRouter()
@@ -190,8 +215,16 @@ export default function SellerDashboardPage() {
   const statusColor = seller.status === 'active' ? 'text-hs-success' : seller.status === 'suspended' ? 'text-hs-red' : 'text-hs-gold'
   const statusBg = seller.status === 'active' ? 'bg-hs-success/10 border-hs-success/20' : seller.status === 'suspended' ? 'bg-hs-red/10 border-hs-red/20' : 'bg-hs-gold/10 border-hs-gold/20'
 
+  const readiness = readinessChecklist(seller)
+  const publishedDish = dishes.find((d: any) => d.status === 'active' && d.availability === 'available' && d.photo_url)
+
   return (
-    <div className="min-h-screen bg-hs-ink pb-24">
+    <>
+      <Head>
+        <title>Seller Dashboard — Hunger Swipes</title>
+        <meta name="description" content="Manage your seller listing, dishes, and performance." />
+      </Head>
+      <div className="min-h-screen bg-hs-ink pb-24">
       <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -199,12 +232,18 @@ export default function SellerDashboardPage() {
             <span className="font-bold text-base text-hs-cream tracking-tight">Dashboard</span>
           </div>
           <div className="flex items-center gap-2">
-            <Link
-              href={seller?.slug ? `/${seller.slug}` : '/swipe'}
-              className="text-xs text-hs-gray hover:text-hs-cream flex items-center gap-1 transition"
-            >
-              <ExternalLink size={14} /> Preview
-            </Link>
+            {seller?.slug && publishedDish ? (
+              <Link
+                href={`/${seller.slug}`}
+                className="text-xs text-hs-gray hover:text-hs-cream flex items-center gap-1 transition"
+              >
+                <ExternalLink size={14} /> Preview
+              </Link>
+            ) : (
+              <span className="text-xs text-hs-muted flex items-center gap-1" title={seller?.slug ? 'Add a published dish to preview your public listing' : 'Complete seller setup to get a public page'}>
+                <ExternalLink size={14} /> Preview unavailable
+              </span>
+            )}
             <button
               onClick={logout}
               className="inline-flex min-h-11 items-center gap-1.5 text-xs text-hs-gray hover:text-hs-cream transition"
@@ -216,7 +255,7 @@ export default function SellerDashboardPage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-5">
-        {/* Status */}
+        {/* Status + readiness */}
         <div className={`rounded-[1.5rem] p-4 flex items-center justify-between border ${statusBg}`}>
           <div className="flex items-center gap-2">
             <StatusIcon size={20} className={statusColor} aria-hidden="true" />
@@ -228,6 +267,29 @@ export default function SellerDashboardPage() {
             <p className="text-xs text-hs-gold">Pending verification</p>
           )}
         </div>
+
+        {!readiness.allReady && (
+          <section className="bg-hs-gold/10 border border-hs-gold/20 rounded-[1.5rem] p-5">
+            <h2 className="text-sm font-bold text-hs-cream mb-3">Complete your seller setup</h2>
+            <p className="text-xs text-hs-gray mb-3">Your public listing cannot go live until these are filled in.</p>
+            <ul className="space-y-2">
+              {readiness.checks.map((check) => (
+                <li key={check.label} className="flex items-start gap-2 text-sm">
+                  <span className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${check.ok ? 'bg-hs-success text-hs-black' : 'bg-hs-red/20 text-hs-red'}`}>
+                    {check.ok ? '✓' : '!'}
+                  </span>
+                  <span className={check.ok ? 'text-hs-cream' : 'text-hs-cream'}>
+                    {check.label}
+                    {check.detail && <span className="block text-xs text-hs-gray mt-0.5">{check.detail}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <Link href="/seller/profile" className="mt-4 block w-full py-3 rounded-xl bg-hs-gold text-hs-black text-sm font-bold text-center hover:bg-hs-gold-light transition">
+              Finish seller setup
+            </Link>
+          </section>
+        )}
 
         {/* Business summary */}
         <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5">
@@ -494,5 +556,6 @@ export default function SellerDashboardPage() {
       </main>
       <MobileNav />
     </div>
+    </>
   )
 }

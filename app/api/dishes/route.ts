@@ -38,8 +38,10 @@ export async function GET(request: NextRequest) {
       admin.from('food_swipes').select('content_kind,content_id').eq('actor_id', user.id),
       admin.from('saved_food').select('content_kind,content_id').eq('actor_id', user.id),
     ]) : [{ data: [] }, { data: [] }]
+    const replay = searchParams.get('replay') === 'true'
     const excluded = new Set((swiped || []).map((row: any) => `${row.content_kind}:${row.content_id}`))
     for (const key of excludedByClient) excluded.add(key)
+    if (replay) { excluded.clear(); for (const key of excludedByClient) excluded.add(key) }
     const savedKeys = new Set((saved || []).map((row: any) => `${row.content_kind}:${row.content_id}`))
 
     const discoveryModeRaw = searchParams.get('discoveryMode') || searchParams.get('mode_type') || ''
@@ -127,7 +129,7 @@ export async function GET(request: NextRequest) {
       return types.some((t: string) => eatTypes.has(t)) || !types[0]
     })
 
-    const sourceList = isEatMode && strictEligible.length === 0 && mode !== 'nearby'
+    const sourceList = isEatMode && strictEligible.length === 0 && mode !== 'nearby' && !replay
       ? candidateItems
       : strictEligible
 
