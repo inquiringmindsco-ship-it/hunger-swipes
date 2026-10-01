@@ -1,4 +1,4 @@
-export const CONTENT_KINDS = ['official', 'community'] as const
+export const CONTENT_KINDS = ['official', 'community', 'place_staging'] as const
 export type ContentKind = (typeof CONTENT_KINDS)[number]
 
 export function normalizeContentKind(value: unknown): ContentKind | null {
@@ -47,6 +47,43 @@ export function isOwnedManagedPhotoUrl(value: unknown, userId: string) {
     return url.pathname.startsWith(prefix)
   } catch {
     return false
+  }
+}
+
+export function mapPlaceStagingCard(place: any, candidate: any) {
+  return {
+    id: place.id,
+    content_kind: 'place_staging' as const,
+    name: candidate?.dish_name || `Menu favorites at ${place.name}`,
+    description: `Starter food from ${place.name}`,
+    photo_url: place.temporary_staging_place_image_url,
+    price: null,
+    category: place.cuisine || place.category || 'Food',
+    tags: place.cuisine ? [place.cuisine] : [],
+    impressions: 0,
+    right_swipes: 0,
+    left_swipes: 0,
+    created_at: place.created_at,
+    status: 'active',
+    moderation_status: 'approved',
+    seller: {
+      id: place.id,
+      business_name: place.name,
+      seller_type: 'restaurant',
+      location_text: place.location_text || '',
+      address: place.address || null,
+      city: place.city || null,
+      state: place.state || null,
+      latitude: place.latitude ?? null,
+      longitude: place.longitude ?? null,
+      phone: place.phone || null,
+      website: place.website || null,
+      order_url: place.order_url || null,
+      ordering_url: place.order_url || null,
+      ordering_method: 'none',
+      status: 'active',
+      verification_status: 'community',
+    },
   }
 }
 

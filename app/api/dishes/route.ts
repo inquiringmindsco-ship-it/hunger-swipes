@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
-import { boundedLimit, isOwnedManagedPhotoUrl, mapCommunityPost, mapOfficialDish } from '@/lib/food'
+import { boundedLimit, isOwnedManagedPhotoUrl, mapCommunityPost, mapOfficialDish, mapPlaceStagingCard } from '@/lib/food'
 import { haversineMiles } from '@/lib/geo'
 
 export async function GET(request: NextRequest) {
@@ -111,9 +111,44 @@ export async function GET(request: NextRequest) {
     const [{ data: official, error: officialError }, { data: community, error: communityError }] = await Promise.all([officialQuery, communityQuery])
     if (officialError || communityError) return NextResponse.json({ error: officialError?.message || communityError?.message, dishes: [] }, { status: 500 })
 
+    // Place-backed starter cards: active places with a temporary staging image that
+    // do not already have an active official dish representing them. This gives
+    // unclaimed restaurant starter imagery a swipeable food card without fabricating
+    // a seller record or a fake community post.
+    let placeStagingItems: any[] = []
+    if (discoveryMode !== 'make') {
+      let placeStagingQuery = admin
+        .from('places')
+        .select(`
+          id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,category,cuisine,hours,claimed_status,temporary_staging_place_image_url,created_at,
+          candidate:place_image_candidates!inner(id,dish_name,image_url,source_url,source_type,rights_status,usage_status,notes)
+        `)
+        .eq('status', 'active')
+        .not('temporary_staging_place_image_url', 'is', null)
+        .eq('place_image_candidates.usage_status', 'temporary_staging')
+      if (mode === 'nearby' && Number.isFinite(lat) && Number.isFinite(lng)) {
+        const latitudeDelta = radius / 69
+        const longitudeDelta = radius / (69 * Math.max(Math.cos(lat * Math.PI / 180), 0.01))
+        placeStagingQuery = placeStagingQuery
+          .gte('latitude', lat - latitudeDelta)
+          .lte('latitude', lat + latitudeDelta)
+          .gte('longitude', lng - longitudeDelta)
+          .lte('longitude', lng + longitudeDelta)
+      }
+      const { data: placeRows, error: placeError } = await placeStagingQuery.limit(200)
+      if (placeError) console.error('place staging query error', placeError)
+      else {
+        const representedPlaceIds = new Set((official || []).map((d: any) => d.place_id).filter(Boolean))
+        placeStagingItems = (placeRows || [])
+          .filter((row: any) => !representedPlaceIds.has(row.id))
+          .map((row: any) => mapPlaceStagingCard(row, row.candidate?.[0] || row.candidate))
+      }
+    }
+
     const candidateItems = [
       ...(official || []).map(mapOfficialDish),
       ...(community || []).map(mapCommunityPost),
+      ...placeStagingItems,
     ]
 
     // EAT mode: try strict eligibility first (official sellers that can be obtained +

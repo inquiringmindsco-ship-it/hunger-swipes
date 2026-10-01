@@ -24,7 +24,6 @@ export default function PlaceImage({
   const [photo, setPhoto] = useState<any>(null);
   const [photoResolved, setPhotoResolved] = useState(!enabled);
   const effectiveUrl = approvedImageUrl || stagingImageUrl || null;
-  const isStaging = Boolean(stagingImageUrl && effectiveUrl === stagingImageUrl);
 
   useEffect(() => {
     if (!enabled || effectiveUrl || !container.current) return;
@@ -64,19 +63,12 @@ export default function PlaceImage({
       className={`relative overflow-hidden bg-gradient-to-br from-[#2a201c] to-[#151515] ${className}`}
     >
       {effectiveUrl ? (
-        <>
-          <img
-            src={effectiveUrl}
-            alt={`${name} place`}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-          {isStaging && (
-            <div className="absolute inset-x-0 top-0 bg-black/60 px-2 py-1 text-[10px] text-white/80">
-              Reference image — source retained; reuse rights not confirmed.
-            </div>
-          )}
-        </>
+        <img
+          src={effectiveUrl}
+          alt={`${name} place`}
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
       ) : photo?.photoUrl ? (
         <img
           src={photo.photoUrl}

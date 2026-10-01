@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
-import { mapCommunityPost, mapOfficialDish, normalizeContentKind } from '@/lib/food'
+import { mapCommunityPost, mapOfficialDish, mapPlaceStagingCard, normalizeContentKind } from '@/lib/food'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,14 +14,20 @@ export async function GET(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     const officialIds = (rows || []).filter((r: any) => r.content_kind === 'official').map((r: any) => r.content_id)
     const communityIds = (rows || []).filter((r: any) => r.content_kind === 'community').map((r: any) => r.content_id)
-    const [officialResult, communityResult] = await Promise.all([
+    const placeStagingIds = (rows || []).filter((r: any) => r.content_kind === 'place_staging').map((r: any) => r.content_id)
+    const [officialResult, communityResult, placeStagingResult] = await Promise.all([
       officialIds.length ? admin.from('dishes').select(`*,seller:sellers!inner(id,business_name,seller_type,location_text,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status)`).in('id', officialIds).eq('status', 'active').eq('sellers.status', 'active') : Promise.resolve({ data: [], error: null }),
       communityIds.length ? admin.from('community_food_posts').select(`*,place:places!inner(id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,status)`).in('id', communityIds).eq('status', 'active').eq('moderation_status', 'approved').eq('places.status', 'active') : Promise.resolve({ data: [], error: null }),
+      placeStagingIds.length ? admin.from('places').select(`
+        id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,category,cuisine,hours,claimed_status,temporary_staging_place_image_url,created_at,
+        candidate:place_image_candidates!inner(id,dish_name,image_url,source_url,source_type,rights_status,usage_status,notes)
+      `).in('id', placeStagingIds).eq('status', 'active').not('temporary_staging_place_image_url', 'is', null) : Promise.resolve({ data: [], error: null }),
     ])
-    if (officialResult.error || communityResult.error) return NextResponse.json({ error: officialResult.error?.message || communityResult.error?.message }, { status: 500 })
+    if (officialResult.error || communityResult.error || placeStagingResult.error) return NextResponse.json({ error: officialResult.error?.message || communityResult.error?.message || placeStagingResult.error?.message }, { status: 500 })
     const content = new Map<string, any>()
     for (const dish of officialResult.data || []) content.set(`official:${dish.id}`, mapOfficialDish(dish))
     for (const post of communityResult.data || []) content.set(`community:${post.id}`, mapCommunityPost(post))
+    for (const place of placeStagingResult.data || []) content.set(`place_staging:${place.id}`, mapPlaceStagingCard(place, place.candidate?.[0] || place.candidate))
     const saved = (rows || []).map((row: any) => ({ id: `${row.content_kind}:${row.content_id}`, content_kind: row.content_kind, dish: content.get(`${row.content_kind}:${row.content_id}`) })).filter((row: any) => row.dish)
     return NextResponse.json({ saved })
   } catch (error: any) {
