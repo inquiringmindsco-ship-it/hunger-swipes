@@ -87,6 +87,20 @@ test('atomic swipe migration preserves duplicate and save semantics', () => {
   assert.match(migration, /else[\s\S]*delete from saved_food/)
 })
 
+test('Ferguson image rollout keeps unlicensed candidates private and community heroes moderated', () => {
+  const migration = readFileSync(new URL('../supabase/migrations/032_ferguson_image_rollout.sql', import.meta.url), 'utf8')
+  const adminRoute = readFileSync(new URL('../app/api/admin/place-image-candidates/route.ts', import.meta.url), 'utf8')
+  assert.match(migration, /alter table public\.place_image_candidates enable row level security/)
+  assert.doesNotMatch(migration, /create policy[\s\S]+place_image_candidates/i)
+  assert.match(migration, /rights_status[\s\S]+permission_required/)
+  assert.match(migration, /sync_approved_community_place_image/)
+  assert.match(migration, /set status = 'hidden', operational_status = 'closed'/)
+  assert.match(migration, /86ef4d72-792b-417b-bbd2-ff7c2be77fbb/)
+  assert.match(migration, /b623fbc3-25d3-468e-b7fc-220b1b5fdba5/)
+  assert.match(adminRoute, /rightsConfirmed !== true/)
+  assert.match(adminRoute, /approved_owner_place_image_url/)
+})
+
 test('recipe economics produce the configured 20 percent application fee', () => {
   assert.deepEqual(computeRecipeEcon(499, 20), { platformFeeCents: 100, creatorPayoutCents: 399, platformFeePercent: 20, creatorSharePercent: 80 })
   assert.deepEqual(computeRecipeEcon(999, 20), { platformFeeCents: 200, creatorPayoutCents: 799, platformFeePercent: 20, creatorSharePercent: 80 })

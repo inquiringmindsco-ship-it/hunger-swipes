@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { safeRemoveStoredImage } from '@/lib/storage-cleanup'
+import { replaceRemovedCommunityPlaceImage } from '@/lib/place-images'
 
 function checkAdmin(request: NextRequest) {
   const secret = request.headers.get('x-admin-secret') || ''
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   const { data: post, error: postError } = await admin
     .from('community_food_posts')
-    .select('id, photo_url, moderation_status')
+    .select('id, place_id, photo_url, moderation_status')
     .eq('id', postId)
     .single()
   if (postError || !post) return NextResponse.json({ error: postError?.message || 'Post not found' }, { status: 404 })
@@ -70,6 +71,12 @@ export async function POST(request: NextRequest) {
     decision_source: 'manual',
     reason: reason || 'Admin removed photo',
   })
+
+  try {
+    await replaceRemovedCommunityPlaceImage(admin, post.place_id, post.photo_url)
+  } catch (error) {
+    console.error('community place image replacement failed', error)
+  }
 
   const cleanup = await safeRemoveStoredImage(post.photo_url)
 

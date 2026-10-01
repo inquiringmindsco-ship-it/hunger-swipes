@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
 import { boundedLimit, isOwnedManagedPhotoUrl, mapCommunityPost } from '@/lib/food'
 import { classifyFoodImage, computeImageFingerprint, hammingDistance, ModerationResult } from '@/lib/moderation'
+import { promoteApprovedCommunityPlaceImage } from '@/lib/place-images'
 
 const DUPLICATE_HAMMING_THRESHOLD = 8
 
@@ -153,6 +154,14 @@ export async function POST(request: NextRequest) {
       perceptual_hash: perceptualHash || null,
       rejected: finalStatus === 'rejected',
     })
+  }
+
+  if (finalStatus === 'approved') {
+    try {
+      await promoteApprovedCommunityPlaceImage(admin, place.id, data.photo_url)
+    } catch (error) {
+      console.error('community place image promotion failed', error)
+    }
   }
 
   return NextResponse.json({ post: mapCommunityPost(data) }, { status: 201 })

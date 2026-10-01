@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { promoteApprovedCommunityPlaceImage } from '@/lib/place-images'
 
 function checkAdmin(request: NextRequest) {
   const secret = request.headers.get('x-admin-secret') || ''
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
 
   const { data: post, error: postError } = await admin
     .from('community_food_posts')
-    .select('id, moderation_status')
+    .select('id, moderation_status, place_id, photo_url')
     .eq('id', postId)
     .single()
   if (postError || !post) return NextResponse.json({ error: postError?.message || 'Post not found' }, { status: 404 })
@@ -88,6 +89,14 @@ export async function POST(request: NextRequest) {
     decision_source: 'manual',
     reason: reason || (action === 'approve' ? 'Admin approved' : 'Admin rejected'),
   })
+
+  if (action === 'approve') {
+    try {
+      await promoteApprovedCommunityPlaceImage(admin, post.place_id, post.photo_url)
+    } catch (error) {
+      console.error('community place image promotion failed', error)
+    }
+  }
 
   return NextResponse.json({ success: true, postId, newStatus })
 }
