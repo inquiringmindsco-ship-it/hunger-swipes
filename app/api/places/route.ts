@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const admin = getSupabaseAdmin()
   if (!admin) return NextResponse.json({ error: 'Database not configured', places: [] }, { status: 503 })
   const limit = boundedLimit(params.get('limit'), 25, 100)
-  let query = admin.from('places').select('id,name,place_type,location_text,address,city,state,postal_code,latitude,longitude,phone,website,order_url,category,cuisine,hours,operational_status,external_source,external_source_id,claimed_status,claimed_seller_id,source,google_place_id,approved_owner_place_image_url,approved_community_place_image_url').eq('status', 'active').limit(limit)
+  let query = admin.from('places').select('id,name,place_type,location_text,address,city,state,postal_code,latitude,longitude,phone,website,order_url,category,cuisine,hours,operational_status,external_source,external_source_id,claimed_status,claimed_seller_id,source,google_place_id,approved_owner_place_image_url,approved_community_place_image_url,temporary_staging_place_image_url').eq('status', 'active').limit(limit)
   if (params.get('id')) query = query.eq('id', params.get('id')!)
   const search = params.get('q')?.trim()
   if (search) {
@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
   const longitude = Number(params.get('lng'))
   const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude) && params.has('lat') && params.has('lng')
   const places = (data || []).map((row: any) => {
-    const { google_place_id, approved_owner_place_image_url, approved_community_place_image_url, ...place } = row
-    const approved_place_image_url = approved_owner_place_image_url || approved_community_place_image_url || null
+    const { google_place_id, approved_owner_place_image_url, approved_community_place_image_url, temporary_staging_place_image_url, ...place } = row
+    const approved_place_image_url = approved_owner_place_image_url || approved_community_place_image_url || temporary_staging_place_image_url || null
     const publicPlace = { ...place, approved_place_image_url, google_photo_enabled: Boolean(!approved_place_image_url && process.env.GOOGLE_PLACES_API_KEY && google_place_id) }
     if (!hasCoordinates || place.latitude == null || place.longitude == null) return publicPlace
     const latRadians = (latitude + Number(place.latitude)) * Math.PI / 360

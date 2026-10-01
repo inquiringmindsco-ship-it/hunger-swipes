@@ -101,6 +101,18 @@ test('Ferguson image rollout keeps unlicensed candidates private and community h
   assert.match(adminRoute, /approved_owner_place_image_url/)
 })
 
+test('Ferguson staging images are distinct from approved/licensed images and preserve source metadata', () => {
+  const migration = readFileSync(new URL('../supabase/migrations/033_ferguson_staging_images.sql', import.meta.url), 'utf8')
+  const adminRoute = readFileSync(new URL('../app/api/admin/place-image-candidates/route.ts', import.meta.url), 'utf8')
+  assert.match(migration, /temporary_staging_place_image_url/)
+  assert.match(migration, /usage_status/)
+  assert.match(migration, /temporary_staging/)
+  assert.match(migration, /Source retained/)
+  assert.doesNotMatch(migration, /rights_status\s*=\s*'approved'/)
+  assert.match(adminRoute, /stage/)
+  assert.match(adminRoute, /unstage/)
+})
+
 test('recipe economics produce the configured 20 percent application fee', () => {
   assert.deepEqual(computeRecipeEcon(499, 20), { platformFeeCents: 100, creatorPayoutCents: 399, platformFeePercent: 20, creatorSharePercent: 80 })
   assert.deepEqual(computeRecipeEcon(999, 20), { platformFeeCents: 200, creatorPayoutCents: 799, platformFeePercent: 20, creatorSharePercent: 80 })

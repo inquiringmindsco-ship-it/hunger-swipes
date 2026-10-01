@@ -27,6 +27,7 @@ type Place = {
   external_source?: string;
   google_photo_enabled?: boolean;
   approved_place_image_url?: string;
+  temporary_staging_place_image_url?: string;
 };
 
 export default function NearbyPage() {
@@ -143,6 +144,7 @@ export default function NearbyPage() {
                     placeId={place.id}
                     enabled={place.google_photo_enabled}
                     approvedImageUrl={place.approved_place_image_url}
+                    stagingImageUrl={place.temporary_staging_place_image_url}
                     name={place.name}
                   className="h-36"
                 />

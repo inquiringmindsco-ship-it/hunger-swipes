@@ -8,12 +8,14 @@ export default function PlaceImage({
   placeId,
   enabled,
   approvedImageUrl,
+  stagingImageUrl,
   name,
   className = "",
 }: {
   placeId: string;
   enabled?: boolean;
   approvedImageUrl?: string | null;
+  stagingImageUrl?: string | null;
   name: string;
   className?: string;
 }) {
@@ -21,8 +23,11 @@ export default function PlaceImage({
   const [visible, setVisible] = useState(false);
   const [photo, setPhoto] = useState<any>(null);
   const [photoResolved, setPhotoResolved] = useState(!enabled);
+  const effectiveUrl = approvedImageUrl || stagingImageUrl || null;
+  const isStaging = Boolean(stagingImageUrl && effectiveUrl === stagingImageUrl);
+
   useEffect(() => {
-    if (!enabled || approvedImageUrl || !container.current) return;
+    if (!enabled || effectiveUrl || !container.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -34,7 +39,8 @@ export default function PlaceImage({
     );
     observer.observe(container.current);
     return () => observer.disconnect();
-  }, [enabled, approvedImageUrl]);
+  }, [enabled, effectiveUrl]);
+
   useEffect(() => {
     if (!visible || !enabled) return;
     const controller = new AbortController();
@@ -51,18 +57,26 @@ export default function PlaceImage({
       });
     return () => controller.abort();
   }, [visible, enabled, placeId]);
+
   return (
     <div
       ref={container}
       className={`relative overflow-hidden bg-gradient-to-br from-[#2a201c] to-[#151515] ${className}`}
     >
-      {approvedImageUrl ? (
-        <img
-          src={approvedImageUrl}
-          alt={`${name} place`}
-          className="h-full w-full object-cover"
-          loading="lazy"
-        />
+      {effectiveUrl ? (
+        <>
+          <img
+            src={effectiveUrl}
+            alt={`${name} place`}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+          {isStaging && (
+            <div className="absolute inset-x-0 top-0 bg-black/60 px-2 py-1 text-[10px] text-white/80">
+              Reference image — source retained; reuse rights not confirmed.
+            </div>
+          )}
+        </>
       ) : photo?.photoUrl ? (
         <img
           src={photo.photoUrl}
