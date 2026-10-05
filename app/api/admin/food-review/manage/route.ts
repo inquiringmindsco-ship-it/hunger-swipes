@@ -2,14 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { safeRemoveStoredImage } from '@/lib/storage-cleanup'
 import { replaceRemovedCommunityPlaceImage } from '@/lib/place-images'
-
-function checkAdmin(request: NextRequest) {
-  const secret = request.headers.get('x-admin-secret') || ''
-  return secret === process.env.ADMIN_SECRET
-}
+import { getAdminPrincipal } from '@/lib/admin-auth'
 
 export async function GET(request: NextRequest) {
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await getAdminPrincipal(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
@@ -32,10 +28,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const principal = await getAdminPrincipal(request)
+  if (!principal) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
-  const { postId, action, reason, adminUserId } = body
+  const { postId, action, reason } = body
   if (!postId || !['remove'].includes(action)) {
     return NextResponse.json({ error: 'postId and action=remove required' }, { status: 400 })
   }
@@ -56,7 +53,7 @@ export async function POST(request: NextRequest) {
       status: 'removed',
       moderation_status: 'removed',
       deleted_at: new Date().toISOString(),
-      deleted_by: adminUserId || null,
+      deleted_by: principal.userId,
       deletion_reason: reason || 'admin_removal',
     })
     .eq('id', postId)
@@ -67,7 +64,7 @@ export async function POST(request: NextRequest) {
     community_post_id: postId,
     previous_status: post.moderation_status,
     new_status: 'removed',
-    moderator_id: adminUserId || null,
+    moderator_id: principal.userId,
     decision_source: 'manual',
     reason: reason || 'Admin removed photo',
   })

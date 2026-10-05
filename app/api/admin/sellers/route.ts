@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
-
-function checkAdmin(request: NextRequest) {
-  const secret = request.headers.get('x-admin-secret') || ''
-  return secret === process.env.ADMIN_SECRET
-}
+import { checkAdmin } from '@/lib/admin-auth'
 
 export async function GET(request: NextRequest) {
-  if (!checkAdmin(request)) {
+  if (!(await checkAdmin(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
@@ -28,7 +24,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
@@ -61,7 +57,7 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const { sellerId, ownerEmail } = await request.json()
     if (!sellerId || !ownerEmail?.trim()) return NextResponse.json({ error: 'Seller and owner email are required' }, { status: 400 })

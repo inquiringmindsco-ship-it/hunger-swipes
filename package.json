@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "tsc --noEmit",
     "test": "node --test --experimental-strip-types tests/foundation.test.ts",
+    "test:phase2b": "node --test --experimental-strip-types tests/phase2b.test.ts",
     "test:ui": "vitest run",
     "test:ui:watch": "vitest",
     "test:e2e": "playwright test",

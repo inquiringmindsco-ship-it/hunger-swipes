@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { deleteFoodMedia } from '@/lib/storage-cleanup'
-
-function checkAdmin(request: NextRequest) {
-  const secret = request.headers.get('x-admin-secret') || ''
-  if (secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  return null
-}
+import { checkAdmin } from '@/lib/admin-auth'
 
 export async function GET(request: NextRequest) {
-  const denied = checkAdmin(request)
-  if (denied) return denied
+  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
     const admin = getSupabaseAdmin()
@@ -31,8 +23,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const denied = checkAdmin(request)
-  if (denied) return denied
+  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
     const { searchParams } = new URL(request.url)
@@ -57,8 +48,7 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const denied = checkAdmin(request)
-  if (denied) return denied
+  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
     const { searchParams } = new URL(request.url)

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Loader2, ThumbsDown, ThumbsUp, Trash2, X, AlertCircle } from 'lucide-react'
+import { adminFetch } from '@/lib/admin-fetch'
 
 function timeAgo(date: string) {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
@@ -55,10 +56,9 @@ export default function FoodReviewPage() {
   const touchStartX = useRef(0)
 
   const load = useCallback(async () => {
-    if (!secret) return
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/food-review?status=pending_review&limit=50', {
+      const res = await adminFetch('/api/admin/food-review?status=pending_review&limit=50', {
         headers: { 'x-admin-secret': secret },
       })
       const data = await res.json()
@@ -74,6 +74,10 @@ export default function FoodReviewPage() {
   }, [secret])
 
   useEffect(() => {
+    adminFetch('/api/admin/session').then((response) => setAuthenticated(response.ok)).catch(() => setAuthenticated(false))
+  }, [])
+
+  useEffect(() => {
     if (authenticated) load()
   }, [authenticated, load])
 
@@ -82,7 +86,7 @@ export default function FoodReviewPage() {
     if (!post || deciding) return
     setDeciding(true)
     try {
-      const res = await fetch('/api/admin/food-review', {
+      const res = await adminFetch('/api/admin/food-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify({ postId: post.id, action, reason: action === 'reject' ? 'Admin rejected via Food Review' : undefined }),
@@ -102,7 +106,7 @@ export default function FoodReviewPage() {
     if (!post || deciding) return
     setDeciding(true)
     try {
-      const res = await fetch('/api/admin/food-review/manage', {
+      const res = await adminFetch('/api/admin/food-review/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify({ postId: post.id, action: 'remove', reason: removeReason || 'other' }),

@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
-
-function checkAdmin(request: NextRequest) {
-  const secret = request.headers.get('x-admin-secret') || ''
-  return secret === process.env.ADMIN_SECRET
-}
+import { checkAdmin } from '@/lib/admin-auth'
 
 export async function GET(request: NextRequest) {
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const admin = getSupabaseAdmin()
     if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
@@ -23,7 +19,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const body = await request.json()
     const admin = getSupabaseAdmin()

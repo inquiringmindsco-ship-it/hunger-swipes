@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, Search, Trash2, AlertCircle, CheckCircle, XCircle, HelpCircle } from 'lucide-react'
+import { adminFetch } from '@/lib/admin-fetch'
 
 function timeAgo(date: string) {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
@@ -52,11 +53,10 @@ export default function FoodReviewManagePage() {
   const [rowReasons, setRowReasons] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
-    if (!secret) return
     setLoading(true)
     try {
       const qs = statusFilter ? `?status=${encodeURIComponent(statusFilter)}&limit=200` : '?limit=200'
-      const res = await fetch(`/api/admin/food-review/manage${qs}`, {
+      const res = await adminFetch(`/api/admin/food-review/manage${qs}`, {
         headers: { 'x-admin-secret': secret },
       })
       const data = await res.json()
@@ -70,6 +70,10 @@ export default function FoodReviewManagePage() {
   }, [secret, statusFilter])
 
   useEffect(() => {
+    adminFetch('/api/admin/session').then((response) => setAuthenticated(response.ok)).catch(() => setAuthenticated(false))
+  }, [])
+
+  useEffect(() => {
     if (authenticated) load()
   }, [authenticated, load])
 
@@ -78,7 +82,7 @@ export default function FoodReviewManagePage() {
     if (!reason) return
     setRemovingId(id)
     try {
-      const res = await fetch('/api/admin/food-review/manage', {
+      const res = await adminFetch('/api/admin/food-review/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify({ postId: id, action: 'remove', reason }),

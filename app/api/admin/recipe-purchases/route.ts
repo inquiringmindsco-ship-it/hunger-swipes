@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { assertTestMode, getStripe } from '@/lib/stripe'
-
-function checkAdmin(request: NextRequest) {
-  const secret = request.headers.get('x-admin-secret') || ''
-  return secret === process.env.ADMIN_SECRET
-}
+import { checkAdmin } from '@/lib/admin-auth'
 
 export async function GET(request: NextRequest) {
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const { searchParams } = new URL(request.url)
     const limit = Math.min(Number(searchParams.get('limit')) || 100, 200)
@@ -29,7 +25,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
     const body = await request.json()
     const { purchase_id, reason } = body

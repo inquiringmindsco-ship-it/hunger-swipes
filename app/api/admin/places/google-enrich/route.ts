@@ -1,16 +1,10 @@
-import { timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { findHighConfidenceGooglePlace } from '@/lib/google-places'
-
-function isAdmin(request: NextRequest) {
-  const provided = Buffer.from(request.headers.get('x-admin-secret') || '')
-  const expected = Buffer.from(process.env.ADMIN_SECRET || '')
-  return expected.length > 0 && provided.length === expected.length && timingSafeEqual(provided, expected)
-}
+import { checkAdmin } from '@/lib/admin-auth'
 
 export async function POST(request: NextRequest) {
-  if (!isAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const apiKey = process.env.GOOGLE_PLACES_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'GOOGLE_PLACES_API_KEY is not configured', configured: false }, { status: 503 })
   const body = await request.json().catch(() => ({}))

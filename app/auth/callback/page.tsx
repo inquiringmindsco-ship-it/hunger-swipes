@@ -18,8 +18,10 @@ function CallbackContent() {
       try {
         if (typeof window === 'undefined') return
         const params = new URLSearchParams(window.location.search)
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
         const code = params.get('code')
-        const next = safeNextRoute(params.get('next'))
+        const tokenHash = hashParams.get('token_hash')
+        const next = safeNextRoute(params.get('next') || hashParams.get('next'))
 
         const supabase = getSupabase()
         if (!supabase) {
@@ -34,6 +36,15 @@ function CallbackContent() {
             router.replace(`/auth?error=${encodeURIComponent(error.message)}`)
             return
           }
+        }
+
+        if (tokenHash) {
+          const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' })
+          if (error) {
+            router.replace(`/auth?error=${encodeURIComponent(error.message)}`)
+            return
+          }
+          window.history.replaceState(null, '', `/auth/callback?next=${encodeURIComponent(next)}`)
         }
 
         const { data: { session } } = await supabase.auth.getSession()

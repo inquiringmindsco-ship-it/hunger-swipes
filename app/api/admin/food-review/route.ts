@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { promoteApprovedCommunityPlaceImage } from '@/lib/place-images'
-
-function checkAdmin(request: NextRequest) {
-  const secret = request.headers.get('x-admin-secret') || ''
-  return secret === process.env.ADMIN_SECRET
-}
+import { getAdminPrincipal } from '@/lib/admin-auth'
 
 export async function GET(request: NextRequest) {
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await getAdminPrincipal(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status') || 'pending_review'
@@ -49,10 +45,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const principal = await getAdminPrincipal(request)
+  if (!principal) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
-  const { postId, action, reason, adminUserId } = body
+  const { postId, action, reason } = body
   if (!postId || !['approve', 'reject'].includes(action)) {
     return NextResponse.json({ error: 'postId and action (approve|reject) required' }, { status: 400 })
   }
@@ -74,7 +71,7 @@ export async function POST(request: NextRequest) {
     .update({
       moderation_status: newStatus,
       moderated_at: new Date().toISOString(),
-      moderated_by: adminUserId || null,
+      moderated_by: principal.userId,
       moderation_reason: reason || (action === 'approve' ? 'Admin approved' : 'Admin rejected'),
     })
     .eq('id', postId)
@@ -85,7 +82,7 @@ export async function POST(request: NextRequest) {
     community_post_id: postId,
     previous_status: post.moderation_status,
     new_status: newStatus,
-    moderator_id: adminUserId || null,
+    moderator_id: principal.userId,
     decision_source: 'manual',
     reason: reason || (action === 'approve' ? 'Admin approved' : 'Admin rejected'),
   })

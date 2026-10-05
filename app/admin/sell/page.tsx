@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, Eye, Shield, Trash2, XCircle, Play } from 'lucide-react'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
+import { adminFetch } from '@/lib/admin-fetch'
 
 export default function SellAdminPage() {
   const [secret, setSecret] = useState('')
@@ -19,14 +20,13 @@ export default function SellAdminPage() {
   const login = () => { if (secret) setAuthenticated(true) }
 
   const load = async () => {
-    if (!secret) return
     setLoading(true)
     setError('')
     try {
       const [sRes, rRes, mRes] = await Promise.all([
-        fetch('/api/admin/sellers', { headers: { 'x-admin-secret': secret } }),
-        fetch('/api/admin/recipes', { headers: { 'x-admin-secret': secret } }),
-        fetch('/api/admin/media', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/admin/sellers', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/admin/recipes', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/admin/media', { headers: { 'x-admin-secret': secret } }),
       ])
       const s = await sRes.json()
       const r = await rRes.json()
@@ -43,11 +43,14 @@ export default function SellAdminPage() {
   }
 
   useEffect(() => { if (authenticated) load() }, [authenticated, secret])
+  useEffect(() => {
+    adminFetch('/api/admin/session').then((response) => setAuthenticated(response.ok)).catch(() => setAuthenticated(false))
+  }, [])
 
   const toggleSellerStatus = async (seller: any, status: string) => {
     setActionId(seller.id)
     try {
-      const res = await fetch(`/api/admin/sellers?id=${seller.id}`, {
+      const res = await adminFetch(`/api/admin/sellers?id=${seller.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify({ status }),
@@ -61,7 +64,7 @@ export default function SellAdminPage() {
   const updateRecipe = async (recipe: any, patch: any) => {
     setActionId(recipe.id)
     try {
-      const res = await fetch(`/api/admin/recipes?id=${recipe.id}`, {
+      const res = await adminFetch(`/api/admin/recipes?id=${recipe.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify(patch),
@@ -75,7 +78,7 @@ export default function SellAdminPage() {
   const updateMedia = async (item: any, patch: any) => {
     setActionId(item.id)
     try {
-      const res = await fetch(`/api/admin/media?id=${item.id}`, {
+      const res = await adminFetch(`/api/admin/media?id=${item.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify(patch),

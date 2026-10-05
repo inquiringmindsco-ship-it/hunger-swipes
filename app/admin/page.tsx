@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowUpRight, CheckCircle2, Eye, Heart, RefreshCw, Shield, Trash2, XCircle, Search, QrCode, ExternalLink, Store, Wallet, Camera } from 'lucide-react'
 import { PassIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
+import { adminFetch } from '@/lib/admin-fetch'
 
 interface Submission {
   id: string
@@ -38,19 +39,24 @@ function AdminContent() {
   const [redemptionUsers, setRedemptionUsers] = useState<any[]>([])
   const [redemptionLoading, setRedemptionLoading] = useState(false)
 
-  const login = () => {
+  const login = async () => {
     if (secret) setAuthenticated(true)
   }
 
+  useEffect(() => {
+    adminFetch('/api/admin/session')
+      .then((response) => setAuthenticated(response.ok))
+      .catch(() => setAuthenticated(false))
+  }, [])
+
   const loadData = async () => {
-    if (!secret) return
     setLoading(true)
     setError('')
     try {
       const [sellersRes, dishesRes, subRes] = await Promise.all([
-        fetch('/api/admin/sellers', { headers: { 'x-admin-secret': secret } }),
-        fetch('/api/admin/dishes', { headers: { 'x-admin-secret': secret } }),
-        fetch('/api/admin/business-submissions', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/admin/sellers', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/admin/dishes', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/admin/business-submissions', { headers: { 'x-admin-secret': secret } }),
       ])
       const sellersData = await sellersRes.json()
       const dishesData = await dishesRes.json()
@@ -70,12 +76,11 @@ function AdminContent() {
   }
 
   const loadSwipeBucks = async () => {
-    if (!secret) return
     setSwipeBucksLoading(true)
     try {
       const [configRes, statsRes] = await Promise.all([
-        fetch('/api/swipe-bucks/config', { headers: { 'x-admin-secret': secret } }),
-        fetch('/api/swipe-bucks/stats', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/swipe-bucks/config', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/swipe-bucks/stats', { headers: { 'x-admin-secret': secret } }),
       ])
       const configData = await configRes.json()
       const statsData = await statsRes.json()
@@ -89,14 +94,13 @@ function AdminContent() {
   }
 
   const loadRedemption = async () => {
-    if (!secret) return
     setRedemptionLoading(true)
     try {
       const [configRes, statsRes, restaurantsRes, usersRes] = await Promise.all([
-        fetch('/api/swipe-bucks/redemption/config', { headers: { 'x-admin-secret': secret } }),
-        fetch('/api/swipe-bucks/redemption/stats', { headers: { 'x-admin-secret': secret } }),
-        fetch('/api/swipe-bucks/redemption/restaurants', { headers: { 'x-admin-secret': secret } }),
-        fetch('/api/swipe-bucks/redemption/users', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/swipe-bucks/redemption/config', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/swipe-bucks/redemption/stats', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/swipe-bucks/redemption/restaurants', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/swipe-bucks/redemption/users', { headers: { 'x-admin-secret': secret } }),
       ])
       const [configData, statsData, restaurantsData, usersData] = await Promise.all([
         configRes.json(), statsRes.json(), restaurantsRes.json(), usersRes.json(),
@@ -128,7 +132,7 @@ function AdminContent() {
     const key = `${targetType}:${targetId}:${action}`
     setActionLoading(key)
     try {
-      const res = await fetch('/api/admin/suspend', {
+      const res = await adminFetch('/api/admin/suspend', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +156,7 @@ function AdminContent() {
   const updateSubmissionStatus = async (id: string, status: string) => {
     setActionLoading(`submission:${id}:${status}`)
     try {
-      const res = await fetch('/api/admin/business-submissions', {
+      const res = await adminFetch('/api/admin/business-submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify({ id, status }),
@@ -188,7 +192,7 @@ function AdminContent() {
     if (!ownerEmail) return
     setActionLoading(`owner:${seller.id}`)
     try {
-      const response = await fetch('/api/admin/sellers', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret }, body: JSON.stringify({ sellerId: seller.id, ownerEmail }) })
+      const response = await adminFetch('/api/admin/sellers', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret }, body: JSON.stringify({ sellerId: seller.id, ownerEmail }) })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Could not assign owner')
       await loadData()
@@ -204,6 +208,10 @@ function AdminContent() {
             <Shield size={24} className="text-[#FF5722]" />
             <h1 className="text-xl font-bold">Hunger Swipes Admin</h1>
           </div>
+          <Link href="/auth?next=/admin" className="mb-4 block rounded-xl bg-[#FF5722] px-4 py-3 text-center font-bold text-white">
+            Sign in as an authorized owner
+          </Link>
+          <p className="mb-3 text-center text-xs text-white/50">Temporary compatibility access</p>
           <input
             type="password"
             value={secret}
@@ -524,7 +532,7 @@ function SwipeBucksAdmin({ secret, config, stats, loading, onUpdate }: { secret:
   const saveConfig = async () => {
     setSaving(true)
     try {
-      const res = await fetch('/api/swipe-bucks/config', {
+      const res = await adminFetch('/api/swipe-bucks/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify(edit),
@@ -540,7 +548,7 @@ function SwipeBucksAdmin({ secret, config, stats, loading, onUpdate }: { secret:
   const submitManual = async () => {
     setManualLoading(true)
     try {
-      const res = await fetch('/api/swipe-bucks/manual', {
+      const res = await adminFetch('/api/swipe-bucks/manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify({
@@ -737,7 +745,7 @@ function RedemptionAdmin({ secret, config, stats, restaurants, users, loading, o
   const saveConfig = async () => {
     setSaving(true)
     try {
-      const res = await fetch('/api/swipe-bucks/redemption/config', {
+      const res = await adminFetch('/api/swipe-bucks/redemption/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify(edit),
@@ -753,7 +761,7 @@ function RedemptionAdmin({ secret, config, stats, restaurants, users, loading, o
   const doOverride = async () => {
     if (!overrideTarget || !overrideReason.trim()) return
     try {
-      const res = await fetch('/api/swipe-bucks/redemption/override', {
+      const res = await adminFetch('/api/swipe-bucks/redemption/override', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
         body: JSON.stringify({ ...overrideTarget, reason: overrideReason }),

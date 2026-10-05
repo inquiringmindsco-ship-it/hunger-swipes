@@ -1,22 +1,12 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { checkAdmin } from "@/lib/admin-auth";
 
 const STAGING_NOTICE =
   "Temporary staging image. Source retained. Reuse rights have not been independently confirmed. Replace with an owner-supplied, licensed, or approved community image when available.";
 
-function isAdmin(request: NextRequest) {
-  const provided = Buffer.from(request.headers.get("x-admin-secret") || "");
-  const expected = Buffer.from(process.env.ADMIN_SECRET || "");
-  return (
-    expected.length > 0 &&
-    provided.length === expected.length &&
-    timingSafeEqual(provided, expected)
-  );
-}
-
 export async function GET(request: NextRequest) {
-  if (!isAdmin(request))
+  if (!(await checkAdmin(request)))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const admin = getSupabaseAdmin();
   if (!admin)
@@ -50,7 +40,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isAdmin(request))
+  if (!(await checkAdmin(request)))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json().catch(() => ({}));
   if (

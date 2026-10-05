@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
-
-function checkAdmin(request: NextRequest) {
-  const secret = request.headers.get('x-admin-secret') || ''
-  return secret === process.env.ADMIN_SECRET
-}
+import { getAdminPrincipal } from '@/lib/admin-auth'
 
 export async function POST(request: NextRequest) {
-  if (!checkAdmin(request)) {
+  const principal = await getAdminPrincipal(request)
+  if (!principal) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
     const body = await request.json()
-    const { targetType, targetId, action, reason, adminId } = body
+    const { targetType, targetId, action, reason } = body
     if (!['seller', 'dish'].includes(targetType) || !targetId || !['activate', 'suspend', 'remove', 'restore', 'approve', 'reject'].includes(action)) {
       return NextResponse.json({ error: 'Invalid targetType or action' }, { status: 400 })
     }
@@ -68,7 +65,7 @@ export async function POST(request: NextRequest) {
       target_id: targetId,
       action,
       reason: reason || null,
-      admin_id: adminId || null,
+      admin_id: principal.userId,
     })
 
     return NextResponse.json({ success: true, targetType, targetId, newStatus })

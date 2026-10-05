@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { hashStaffPin } from '@/lib/staff-auth'
-
-const ADMIN_SECRET = process.env.ADMIN_SECRET
+import { checkAdmin } from '@/lib/admin-auth'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth = request.headers.get('x-admin-secret') || ''
-    if (auth !== ADMIN_SECRET) {
+    if (!(await checkAdmin(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
