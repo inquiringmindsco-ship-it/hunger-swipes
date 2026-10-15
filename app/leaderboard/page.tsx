@@ -1,5 +1,6 @@
 'use client'
 
+import { apiFetch } from '@/lib/auth-fetch'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Flame, Trophy } from 'lucide-react'
@@ -9,7 +10,7 @@ export default function LeaderboardPage() {
   const [foods, setFoods] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   useEffect(() => {
-    fetch('/api/dishes?mode=trending&limit=20').then(r => r.json()).then(data => setFoods(data.dishes || [])).finally(() => setLoading(false))
+    apiFetch('/api/dishes?mode=trending&limit=20').then(r => r.json()).then(data => setFoods(data.dishes || [])).finally(() => setLoading(false))
   }, [])
   return <div className="min-h-screen bg-[#0D0D0D] text-white">
     <header className="border-b border-white/10 px-4 py-5"><div className="mx-auto flex max-w-2xl items-center justify-between"><Link href="/" className="flex items-center gap-2"><BrandMark size={34} /><span className="font-black">HungerSwipes</span></Link><Link href="/post" className="text-sm font-bold text-[#FF5722]">Post food</Link></div></header>

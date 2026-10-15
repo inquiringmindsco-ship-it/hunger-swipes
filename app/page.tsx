@@ -10,6 +10,7 @@ import {
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import { Monitor, Smartphone } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
+import { isNativeApp } from '@/lib/capacitor'
 
 // ============================================================
 // SPLASH SCREEN — animated logo on load
@@ -388,9 +389,11 @@ export default function AppShell() {
   const [showSplash, setShowSplash] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile')
+  const [isNative, setIsNative] = useState(false)
 
   useEffect(() => {
     setMounted(true)
+    setIsNative(isNativeApp())
     // Check if we've shown splash before
     const hasSeenSplash = sessionStorage.getItem('hungerswipes_splash')
     if (hasSeenSplash) {
@@ -422,8 +425,9 @@ export default function AppShell() {
 
   return (
     <>
-      {/* Desktop toggle (hidden on narrow production mobile) */}
-      <div className="fixed top-4 right-4 z-[60] hidden sm:flex items-center gap-2">
+      {/* Desktop toggle (hidden on narrow production mobile and in native app) */}
+      {!isNative && (
+        <div className="fixed top-4 right-4 z-[60] hidden sm:flex items-center gap-2">
         <button
           onClick={toggleView}
           className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur border border-white/15 rounded-full text-xs font-semibold text-gray-600 hover:text-white hover:bg-white/15 transition"
@@ -442,6 +446,7 @@ export default function AppShell() {
           )}
         </button>
       </div>
+      )}
 
       {/* App wrapper — mobile or desktop */}
       <div className={`min-h-screen bg-[#0A0A0A] text-white transition-all duration-300 ${

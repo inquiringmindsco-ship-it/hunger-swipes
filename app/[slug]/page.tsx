@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
-import { notFound } from 'next/navigation'
 import RestaurantClient, { Restaurant, Dish } from './RestaurantClient'
 import FoodProfileClient from '@/app/components/FoodProfileClient'
+import SlugClientLoader from './SlugClientLoader'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 const PUBLIC_FIELDS = 'id,slug,business_name,tagline,description,logo_url,hero_url,location_text,address,phone,hours_text,ordering_method,ordering_url,website_url,pickup_available,delivery_available,status,verification_status'
@@ -32,7 +32,6 @@ async function fetchProfile(slug: string): Promise<any | null> {
   const { data: handleRow } = await admin.from('handles').select('*').eq('handle', normalized).maybeSingle()
   if (!handleRow) return null
 
-  const isOwn = false // server-side public fetch; private counts omitted
   let profile: any = null
   let entity: any = null
   let dishes: any[] = []
@@ -78,6 +77,11 @@ async function fetchProfile(slug: string): Promise<any | null> {
   }
 }
 
+export async function generateStaticParams() {
+  // The Capacitor iOS app needs a static shell; client routing takes over.
+  return [{ slug: 'preview' }]
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const normalized = slug.trim().toLowerCase().replace(/^@/, '')
@@ -99,7 +103,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       alternates: { canonical: `/${profile.handle}` },
     }
   }
-  return { title: 'Not found | Hunger Swipes' }
+  return { title: 'Hunger Swipes' }
 }
 
 export default async function SlugPage({ params }: Props) {
@@ -112,5 +116,7 @@ export default async function SlugPage({ params }: Props) {
   const profile = await fetchProfile(normalized)
   if (profile) return <FoodProfileClient initialData={profile} />
 
-  notFound()
+  // For the static-export fallback (and any unmatched slug in the iOS app),
+  // hand off to the client loader so the page still works in Capacitor.
+  return <SlugClientLoader />
 }

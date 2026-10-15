@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowRight, CheckCircle2, ExternalLink, Hand, MapPin, Phone, Search, Smartphone, Upload, ChevronRight, Utensils, ChefHat, ScrollText } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { authFetch } from '@/lib/auth-fetch'
+import { apiFetch } from '@/lib/auth-fetch'
 import { getSupabase } from '@/lib/supabase'
 import { BrandMark, GetItIcon, SellerTypeIcon, WantItIcon } from '@/app/components/icons/HungerIcons'
 import { LoadingState } from '@/app/components/ui/LoadingState'
@@ -92,7 +93,7 @@ export default function JoinPage() {
 
     // Record scan if this page was opened via a seller's QR
     if (ref) {
-      fetch('/api/referrals', {
+      apiFetch('/api/referrals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ seller_id: ref, event_type: 'scan' }),

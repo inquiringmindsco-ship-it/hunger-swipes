@@ -1,5 +1,6 @@
 'use client'
 
+import { apiFetch } from '@/lib/auth-fetch'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ForkFlame, MapPin, Dollar, Star, Verified, Heart, ArrowRight, Fork, Trophy, Bookmark, StarFilled } from '@/app/components/HwIcon'
@@ -39,7 +40,7 @@ export default function VendorsPage() {
 
   async function fetchVendors() {
     try {
-      const res = await fetch('/api/vendors')
+      const res = await apiFetch('/api/vendors')
       const data = await res.json()
       setVendors(data.vendors || [])
     } catch {

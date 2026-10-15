@@ -15,6 +15,7 @@ import { DishImage } from '@/app/components/DishImage'
 import FoodVideo from '@/app/components/FoodVideo'
 import { useAuth } from '@/lib/auth'
 import { authFetch, optionalAuthFetch } from '@/lib/auth-fetch'
+import { hapticSwipe } from '@/lib/haptics'
 import { DEFAULT_DISCOVERY_PREFERENCES, readDiscoveryPreferences, type DiscoveryPreferences } from '@/lib/preferences'
 import { committedDirection, isSystemEdgeStart, sampleGesture, type GestureIntent, type SwipeDirection } from '@/lib/swipe-engine'
 import { persistSwipe, type SwipeWriteResult } from '@/lib/swipe-persistence'
@@ -278,6 +279,7 @@ export default function SwipePage() {
   }, [finishAdvance])
 
   const commitSwipe = useCallback((direction: SwipeDirection) => {
+    void hapticSwipe(direction)
     const dish = dishes[currentIndex]
     if (!dish || actionLock.current) return
     if (!user && direction === 'right') {

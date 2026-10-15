@@ -1,5 +1,6 @@
 'use client'
 
+import { apiFetch } from '@/lib/auth-fetch'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Fork, Comment, ForkFlame } from '@/app/components/HwIcon'
@@ -34,7 +35,7 @@ export default function SocialFeedPage() {
 
   const fetchMoods = async () => {
     try {
-      const res = await fetch('/api/social/mood')
+      const res = await apiFetch('/api/social/mood')
       const data = await res.json()
       if (data.moods) {
         setMoods(data.moods)
@@ -51,7 +52,7 @@ export default function SocialFeedPage() {
     
     setPosting(true)
     try {
-      const res = await fetch('/api/social/mood', {
+      const res = await apiFetch('/api/social/mood', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
