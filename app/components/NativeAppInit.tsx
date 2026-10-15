@@ -5,7 +5,7 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { Keyboard } from '@capacitor/keyboard'
 import { isNativeApp } from '@/lib/capacitor'
-import { initPushNotifications, listenToPushNotifications } from '@/lib/push-notifications'
+import { initPushNotifications } from '@/lib/push-notifications'
 import { initDeepLinks } from '@/lib/deep-links'
 
 export default function NativeAppInit() {
@@ -33,8 +33,7 @@ export default function NativeAppInit() {
       }
 
       try {
-        await initPushNotifications()
-        listenToPushNotifications()
+        initPushNotifications()
       } catch {
         // Push notification plugin may not be configured.
       }

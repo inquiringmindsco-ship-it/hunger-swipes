@@ -17,8 +17,14 @@
 - [x] Native app initialization: status bar, keyboard, splash screen, push registration, deep links
 - [x] Account deletion UI + API endpoint
 - [x] Handoff documentation package
+- [x] Push notification listeners registered on app launch (permission requested from Account → Notifications)
+- [x] Account deletion UI + API endpoint (`/api/account/delete`)
+- [x] Apple App Site Association file added at `/.well-known/apple-app-site-association`
+- [x] Handoff documentation package
 - [x] TypeScript lint passes (`npm run lint`)
+- [x] Standard web build passes (`npm run build`)
 - [x] iOS static export builds successfully (`npm run build:ios`)
+- [x] Unit/UI tests pass (`npm test`, `npm run test:ui`)
 
 ## ⏳ Requires Codex / Apple Developer Account
 

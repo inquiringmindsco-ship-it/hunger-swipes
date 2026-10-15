@@ -1,6 +1,7 @@
 'use client'
 
 import { apiFetch, authFetch } from '@/lib/auth-fetch'
+import { requestPushPermission } from '@/lib/push-notifications'
 import Link from 'next/link'
 import { useAuth, signOut, getAuthToken } from '@/lib/auth'
 import { useEffect, useState } from 'react'
@@ -406,10 +407,13 @@ export default function AccountPage() {
 
         <Section title="Account">
           <Row
-            onClick={() => setToast('Notifications coming soon')}
+            onClick={async () => {
+              const granted = await requestPushPermission()
+              setToast(granted ? 'Push notifications enabled' : 'Push notifications disabled')
+            }}
             icon={<Bell size={18} />}
             label="Notifications"
-            detail="Coming soon"
+            detail="Tap to enable"
           />
           <div className="h-px bg-white/[0.06]" />
           <Row

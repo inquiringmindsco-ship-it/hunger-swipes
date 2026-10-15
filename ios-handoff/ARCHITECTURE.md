@@ -55,6 +55,18 @@ Next.js `output: 'export'` cannot include API Routes or dynamic routes without `
 
 The exported static bundle lives in `dist/` and is copied into `ios/App/App/public` by `npx cap sync ios`.
 
+## How deep links work
+
+The app handles `https://hungerswipes.com/*` links via the Capacitor App plugin. Apple requires an App Site Association file served at `/.well-known/apple-app-site-association`; this file is included in the web app at `app/.well-known/apple-app-site-association/route.ts`. Codex must replace the `TEAM_ID` placeholder with the real Apple Team ID.
+
+## Native push notification behavior
+
+The app attaches push listeners on launch but does **not** request permission immediately (to avoid App Store rejection). Users can enable notifications from **Account → Notifications**.
+
+## Account deletion
+
+The app provides in-app account deletion at **Account → Delete Account**. It calls `DELETE /api/account/delete`, which removes the Supabase auth user and anonymizes related records. The endpoint is part of the web API and must be deployed to production before native users can delete accounts.
+
 ## API routing in the native app
 
 The web app uses relative paths like `/api/dishes`. Inside the Capacitor WebView the app loads from `capacitor://localhost`, so relative API calls would 404. `lib/api-url.ts` and `lib/auth-fetch.ts` detect native mode and prefix paths with `NEXT_PUBLIC_API_BASE_URL`, which points to `https://hungerswipes.com` in the native build.

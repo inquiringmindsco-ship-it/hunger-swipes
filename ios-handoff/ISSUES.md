@@ -8,9 +8,10 @@
 
 ## Functional gaps
 
-1. **Push notification server**: The app registers for APNS tokens, but no server-side push-sending infrastructure exists yet.
-2. **Universal links domain verification**: The app listens for `hungerswipes.com` links, but Apple requires the domain verification file to be served.
-3. **Sign in with Apple**: Not implemented. If Apple rejects the auth flow because it lacks Apple ID sign-in, it must be added.
+1. **Apple Team ID placeholder**: `app/.well-known/apple-app-site-association/route.ts` contains `TEAM_ID.com.inquiringminds.hungerswipes`. Replace `TEAM_ID` with the real Apple Team ID before deploying the website to production.
+2. **Push notification server**: The app registers for APNS tokens, but no server-side push-sending infrastructure exists yet. Permission is user-initiated from Account → Notifications.
+3. **Universal links domain verification**: AASA file is in place, but Apple must verify it at `https://hungerswipes.com/.well-known/apple-app-site-association` after production deploy.
+4. **Sign in with Apple**: Not implemented. Not required because auth is email/password + magic link only.
 4. **Offline mode**: The app detects offline state but does not queue swipes/uploads for later sync.
 5. **Camera upload polish**: Only the `/post` page has the Capacitor Camera picker integrated. Other upload pages still use the file input fallback, which works in the WebView but is less native-feeling.
 
