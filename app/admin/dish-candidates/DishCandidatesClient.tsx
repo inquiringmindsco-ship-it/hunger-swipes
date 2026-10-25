@@ -19,6 +19,8 @@ type Candidate = {
 
 type Live = {
   stagedPlaces: Array<{ id: string; name: string; city?: string }>
+  stagedInDb?: number
+  stagedShownInDiscover?: number
   communityApproved: number
   officialDishes: number
 }
@@ -103,7 +105,7 @@ export default function DishCandidatesClient() {
       {live && (
         <section style={{ display: 'flex', gap: 10, margin: '14px 0', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ background: '#101c14', border: '1px solid #1d5c38', padding: '8px 14px', borderRadius: 10, fontSize: 12 }}>
-            LIVE NOW: <b style={{ color: '#2ecc71' }}>{live.communityApproved}</b> community dish cards · <b>{live.stagedPlaces.length}</b> staged dishes · <b>{live.officialDishes}</b> official dishes
+            LIVE IN DISCOVER: <b style={{ color: '#2ecc71' }}>{live.communityApproved}</b> community cards + <b>{live.stagedShownInDiscover ?? 0}</b> staged · (staged in DB: <b>{live.stagedInDb ?? live.stagedPlaces.length}</b> — remainder gated: rights not documented) · official: <b>{live.officialDishes}</b>
           </div>
           {selected.size > 0 && (
             <>
