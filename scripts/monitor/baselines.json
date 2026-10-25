@@ -1,26 +1,46 @@
 {
   "_rollback": {
     "command": "vercel rollback <previous-good-dpl-id>   # run in a project-linked directory; see IMG-DEV.md rollback section",
-    "hunger-swipes_current_prod_dpl": "dpl_8DZkCsn5XsFK54DDmuQgV57AwAL2"
+    "hunger-swipes_current_prod_dpl": "dpl_8DZkCsn5XsFK54DDmuQgV57AwAL2",
+    "hunger_swipes_current_prod_dpl": "dpl_5K12pLiFCYEbN9EGPszrgeY8FFF9",
+    "hunger_swipes_pre_release_dpl": "dpl_8DZkCsn5XsFK54DDmuQgV57AwAL2"
   },
   "hunger-swipes": {
     "baseUrl": "https://hungerswipes.com",
     "minDiscoverCards": 7,
     "baselineNote": "minDiscoverCards mirrors the verified 2026-10-25 eligible-card count (7 community cards). Update ONLY with an owner-approved production change.",
-    "routes": ["/", "/swipe", "/nearby", "/auth", "/account"]
+    "routes": [
+      "/",
+      "/swipe",
+      "/nearby",
+      "/auth",
+      "/account"
+    ]
   },
   "img-main": {
     "baseUrl": "https://www.imglikeness.com",
-    "routes": ["/", "/p2p", "/p2p/discover", "/sentinel/app", "/sentinel/activity"]
+    "routes": [
+      "/",
+      "/p2p",
+      "/p2p/discover",
+      "/sentinel/app",
+      "/sentinel/activity"
+    ]
   },
   "proud-2-pay": {
     "baseUrl": "https://www.imglikeness.com",
     "note": "P2P consumer app lives inside the IMG platform at /p2p/* — covered by img-main routes; no separate deployment.",
-    "routes": ["/p2p/card", "/p2p/messages"]
+    "routes": [
+      "/p2p/card",
+      "/p2p/messages"
+    ]
   },
   "ask-sentinel": {
     "baseUrl": "https://www.imglikeness.com",
     "note": "Embedded surface under /sentinel/* verified; standalone deployment (ask-sentinel repo branch sentinel/appify) has NO verified production URL — owner to confirm.",
-    "routes": ["/sentinel/ask"]
-  }
+    "routes": [
+      "/sentinel/ask"
+    ]
+  },
+  "_deployProjectId": "prj_gAUC095yIt7cxxXhHMqhUEqSUkOo"
 }
