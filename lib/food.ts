@@ -17,6 +17,84 @@ export function formatOptionalFoodPrice(value: unknown) {
   return Number.isFinite(price) && price > 0 ? `$${price.toFixed(2)}` : null
 }
 
+const FOOD_FAMILIES: Array<[string, RegExp]> = [
+  ['pizza', /\b(pizza|pepperoni|calzone)\b/],
+  ['burger', /\b(burger|cheeseburger|hamburger|slider)\b/],
+  ['taco', /\b(taco|tacos|quesadilla|nachos)\b/],
+  ['burrito', /\b(burrito|chimichanga)\b/],
+  ['wings', /\b(wing|wings|buffalo)\b/],
+  ['sandwich', /\b(sandwich|sub|hoagie|panini|wrap)\b/],
+  ['bbq', /\b(bbq|barbecue|brisket|ribs|pulled pork)\b/],
+  ['chicken', /\b(chicken|tenders|fried chicken)\b/],
+  ['seafood', /\b(fish|shrimp|salmon|seafood|crab|lobster)\b/],
+  ['pasta', /\b(pasta|spaghetti|lasagna|alfredo|mac and cheese|macaroni)\b/],
+  ['noodles', /\b(noodle|noodles|ramen|pho)\b/],
+  ['salad', /\b(salad|greens)\b/],
+  ['soup', /\b(soup|stew|chili)\b/],
+  ['breakfast', /\b(breakfast|pancake|waffle|omelet|omelette|french toast)\b/],
+  ['dessert', /\b(dessert|cake|cookie|brownie|pie|ice cream|donut|doughnut)\b/],
+]
+
+export function foodVarietyKey(item: any): string {
+  const text = [item?.name, item?.category, ...(Array.isArray(item?.tags) ? item.tags : [])]
+    .filter(Boolean).join(' ').toLowerCase().replace(/[^a-z0-9\s]/g, ' ')
+  const family = FOOD_FAMILIES.find(([, pattern]) => pattern.test(text))
+  if (family) return family[0]
+  return text.split(/\s+/).filter((token) => token.length > 2 && !['the', 'and', 'with', 'plate', 'combo', 'special'].includes(token)).slice(0, 2).join('-') || 'food'
+}
+
+/** Keep similar dishes and the same seller apart when alternatives exist. */
+export function diversifyFoodOrder<T extends { seller?: { id?: string } }>(items: T[]): T[] {
+  const remaining = [...items]
+  const result: T[] = []
+  while (remaining.length) {
+    const previous = result[result.length - 1]
+    if (!previous) { result.push(remaining.shift()!); continue }
+    const previousKey = foodVarietyKey(previous)
+    const previousSeller = previous.seller?.id || ''
+    let index = remaining.findIndex((item) => foodVarietyKey(item) !== previousKey && (!previousSeller || item.seller?.id !== previousSeller))
+    if (index < 0) index = remaining.findIndex((item) => foodVarietyKey(item) !== previousKey)
+    if (index < 0) index = remaining.findIndex((item) => !previousSeller || item.seller?.id !== previousSeller)
+    if (index < 0) index = 0
+    result.push(remaining.splice(index, 1)[0])
+  }
+  return result
+}
+
+/**
+ * Build one Discover deck page deterministically (pure, side-effect free).
+ * - excludedKeys: cards hidden for THIS session (client-pass exclusions only)
+ * - seenKeys: historical swipes — they no longer hide anything; unseen cards lead,
+ *   seen cards follow, so a fresh session replays the full eligible catalog
+ * - replay: new-session mode; ignores seen/unseen ordering and diversifies across all
+ * The builder mutates nothing and never drops history: visibility is a read-time rule.
+ */
+export function buildDiscoverDeck<T extends { content_kind: string; id: string }>(
+  items: T[],
+  opts: { excludedKeys: Set<string>; seenKeys: Set<string>; replay: boolean; sort: (a: T, b: T) => number },
+): T[] {
+  const keyOf = (item: T) => `${item.content_kind}:${item.id}`
+  const seenIds = new Set<string>()
+  const visible = items.filter((item) => {
+    const k = keyOf(item)
+    if (opts.excludedKeys.has(k) || seenIds.has(k)) return false
+    seenIds.add(k)
+    return true
+  })
+  const ranked = visible.slice().sort((a, b) => {
+    if (!opts.replay) {
+      const aSeen = opts.seenKeys.has(keyOf(a)) ? 1 : 0
+      const bSeen = opts.seenKeys.has(keyOf(b)) ? 1 : 0
+      if (aSeen !== bSeen) return aSeen - bSeen
+    }
+    return opts.sort(a, b)
+  })
+  if (opts.replay) return diversifyFoodOrder(ranked as any) as T[]
+  const unseen = ranked.filter((item) => !opts.seenKeys.has(keyOf(item)))
+  const seen = ranked.filter((item) => opts.seenKeys.has(keyOf(item)))
+  return [...diversifyFoodOrder(unseen as any), ...diversifyFoodOrder(seen as any)] as T[]
+}
+
 export function isHttpsUrl(value: unknown) {
   if (typeof value !== 'string') return false
   try {
