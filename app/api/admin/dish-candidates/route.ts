@@ -9,39 +9,13 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 // - Unpublish nulls the display fields only — the underlying record is preserved.
 // All actions append an audit row to catalog_review_audit (existing service-role table).
 
-const VALIDATION_URL = '/images-validation.json' // served statically; per-id image_ok from 2026-10-25 run
 
-type ValidationMap = Record<string, string>
-let validationCache: ValidationMap | null = null
-async function validation(): Promise<ValidationMap> {
-  if (validationCache) return validationCache
-  try {
-    const { readFileSync } = await import('node:fs')
-    const csv = readFileSync(new URL('../../../reports/place-image-research/2026-10-25-179-validation.csv', import.meta.url), 'utf8')
-    const rows = csv.split('\n').slice(1)
-    const map: ValidationMap = {}
-    for (const line of rows) {
-      if (!line.trim()) continue
-      const cells = line.match(/"((?:[^"]|"")*)"/g) || []
-      const [id, , , , , , usage, , imageOk] = cells.map((c) => c.slice(1, -1))
-      map[id] = `${usage || ''}${usage && imageOk ? '/' : ''}${imageOk || ''}`
-    }
-    validationCache = map
-    return map
-  } catch {
-    return {}
-  }
-}
-
-function bucketOf(row: any, imageOk: boolean): { bucket: 'A' | 'B' | 'C'; reason: string } {
-  const rightsApproved = row.rights_status === 'approved'
-  const rightsRejected = row.rights_status === 'rejected'
-  if (rightsRejected) return { bucket: 'C', reason: 'rejected by owner/admin' }
+function bucketOf(row: any) {
+  if (row.rights_status === 'rejected') return { bucket: 'C', reason: 'rejected by owner/admin' }
   if (!row.place?.status || row.place.status !== 'active') return { bucket: 'C', reason: 'place not active' }
-  if (!imageOk) return { bucket: 'C', reason: 'image unreachable/broken' }
-  if (row.usage_status === 'temporary_staging') return { bucket: 'A', reason: `live (rights ${row.rights_status})` }
-  if (rightsApproved) return { bucket: 'A', reason: 'rights documented — ready to stage' }
-  return { bucket: 'B', reason: 'awaiting owner decision on image rights' }
+  if (row.usage_status === 'temporary_staging' && row.rights_status !== 'approved') return { bucket: 'C', reason: 'staged in DB but hidden from Discover — image rights not documented (validation CSV 2026-10-25)' }
+  if (row.rights_status === 'approved') return { bucket: 'A', reason: row.usage_status === 'temporary_staging' ? 'live' : 'rights documented — ready to publish' }
+  return { bucket: 'B', reason: 'owner decision needed on image rights (reachability in validation CSV 2026-10-25)' }
 }
 
 export async function GET(request: NextRequest) {
@@ -51,7 +25,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const q = (searchParams.get('q') || '').toLowerCase()
   const filter = searchParams.get('filter') || 'all'
-  const val = await validation()
 
   const { data, error } = await db
     .from('place_image_candidates')
@@ -60,19 +33,17 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const livePlaces = await db.from('places').select('id,name,city,temporary_staging_place_image_url').eq('status', 'active').not('temporary_staging_place_image_url', 'is', null)
-  const community = await db.from('community_food_posts').select('id,status,moderation_status,place_id,dish_name,image_url,created_at').eq('status', 'active')
+  const community = await db.from('community_food_posts').select('id,status,moderation_status,place_id,created_at').eq('status','active')
   const official = await db.from('dishes').select('id,name,status', { count: 'exact', head: true }).eq('status', 'active')
 
   const items = (data || []).map((row: any) => {
-    const status = String((val[row.id] || '').split('/').pop() || '')
-    const imageOk = row.usage_status === 'temporary_staging' ? true : status === 'ok'
-    const b = bucketOf(row, imageOk)
+    const b = bucketOf(row)
     return {
       id: row.id, dish_name: row.dish_name, image_url: row.image_url, source_url: row.source_url,
       source_type: row.source_type, rights_status: row.rights_status, usage_status: row.usage_status || null,
       notes: row.notes || '', updated_at: row.updated_at,
       place: row.place && { id: row.place.id, name: row.place.name, city: row.place.city, state: row.place.state, status: row.place.status, cuisine: row.place.cuisine || row.place.category || null, staged: Boolean(row.place.temporary_staging_place_image_url) },
-      image_ok: imageOk, bucket: b.bucket, bucket_reason: b.reason,
+      bucket: b.bucket, bucket_reason: b.reason,
     }
   })
 
@@ -84,15 +55,18 @@ export async function GET(request: NextRequest) {
     return `${r.place?.name || ''} ${r.dish_name} ${r.place?.city || ''} ${r.source_type}`.toLowerCase().includes(q)
   })
 
+  const liveDished = (community.data || []).filter((p: any) => p.moderation_status === 'approved').length
+  const stagedInDb = (livePlaces.data || []).length
+  const stagedApproved = items.filter((i) => i.usage_status === 'temporary_staging' && i.rights_status === 'approved').length
   const counts = {
     total: items.length,
     A: items.filter((i) => i.bucket === 'A').length,
     B: items.filter((i) => i.bucket === 'B').length,
     C: items.filter((i) => i.bucket === 'C').length,
-    livePublished: (livePlaces.data || []).length,
+    // livePublished = cards actually served by Discover (community + rights-approved staged). Staged-but-unverified rows are NEVER counted here.
+    livePublished: liveDished + stagedApproved,
   }
-  const liveDished = (community.data || []).filter((p: any) => p.moderation_status === 'approved').length
-  return NextResponse.json({ items: filtered, counts, live: { stagedPlaces: livePlaces.data || [], communityApproved: liveDished, officialDishes: official.count || 0 } })
+  return NextResponse.json({ items: filtered, counts, live: { stagedPlaces: livePlaces.data || [], stagedInDb: stagedInDb, stagedShownInDiscover: stagedApproved, communityApproved: liveDished, officialDishes: official.count || 0, discoverLiveCards: liveDished + stagedApproved } })
 }
 
 async function audit(db: any, actor: string, action: string, targetStagingIds: string[], reviewReason: string, before: any, after: any) {
