@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
-import { boundedLimit, isOwnedManagedPhotoUrl, mapCommunityPost, mapOfficialDish, mapPlaceStagingCard } from '@/lib/food'
+import { boundedLimit, buildDiscoverDeck, diversifyFoodOrder, isOwnedManagedPhotoUrl, mapCommunityPost, mapOfficialDish, mapPlaceStagingCard } from '@/lib/food'
 import { haversineMiles } from '@/lib/geo'
 
 export async function GET(request: NextRequest) {
@@ -39,9 +39,12 @@ export async function GET(request: NextRequest) {
       admin.from('saved_food').select('content_kind,content_id').eq('actor_id', user.id),
     ]) : [{ data: [] }, { data: [] }]
     const replay = searchParams.get('replay') === 'true'
-    const excluded = new Set((swiped || []).map((row: any) => `${row.content_kind}:${row.content_id}`))
-    for (const key of excludedByClient) excluded.add(key)
-    if (replay) { excluded.clear(); for (const key of excludedByClient) excluded.add(key) }
+    // A new app session should show the whole eligible catalog again. Historical
+    // swipes are used only to put unseen food first; client exclusions prevent a
+    // card from repeating during the current pass through the deck. Swipe history
+    // and Swipe Bucks accounting stay untouched: this is a read-time visibility rule.
+    const swipedKeys = new Set((swiped || []).map((row: any) => `${row.content_kind}:${row.content_id}`))
+    const excluded = new Set(excludedByClient)
     const savedKeys = new Set((saved || []).map((row: any) => `${row.content_kind}:${row.content_id}`))
 
     const discoveryModeRaw = searchParams.get('discoveryMode') || searchParams.get('mode_type') || ''
@@ -125,6 +128,10 @@ export async function GET(request: NextRequest) {
         `)
         .eq('status', 'active')
         .not('temporary_staging_place_image_url', 'is', null)
+        // Starters display only when the candidate's imaging rights are documented.
+        // All Ferguson-era candidates are rights_status='permission_required', so the
+        // deck shows zero of them until the owner/admin explicitly approves rights.
+        .eq('place_image_candidates.rights_status', 'approved')
         .eq('place_image_candidates.usage_status', 'temporary_staging')
       if (mode === 'nearby' && Number.isFinite(lat) && Number.isFinite(lng)) {
         const latitudeDelta = radius / 69
@@ -151,6 +158,7 @@ export async function GET(request: NextRequest) {
       ...placeStagingItems,
     ]
 
+
     // EAT mode: try strict eligibility first (official sellers that can be obtained +
     // all community posts). If that yields nothing, fall back to broad discovery so the
     // feed never goes blank while the seller catalog is still being reclassified.
@@ -168,7 +176,7 @@ export async function GET(request: NextRequest) {
       ? candidateItems
       : strictEligible
 
-    const merged = sourceList
+    const ranked = sourceList
       .filter((item: any) => !excluded.has(`${item.content_kind}:${item.id}`))
       .map((item: any) => ({ ...item, saved: savedKeys.has(`${item.content_kind}:${item.id}`) }))
       .map((item: any) => {
@@ -178,12 +186,21 @@ export async function GET(request: NextRequest) {
         if (!Number.isFinite(itemLat) || !Number.isFinite(itemLng)) return null
         return { ...item, distance_miles: Math.round(haversineMiles(lat, lng, itemLat, itemLng) * 10) / 10 }
       })
-      .filter((item: any) => item && (mode !== 'nearby' || item.distance_miles <= radius))
-      .sort((a: any, b: any) => mode === 'trending'
+      .filter((item: any): item is NonNullable<typeof item> => Boolean(item))
+      .filter((item: any) => mode !== 'nearby' || item.distance_miles <= radius)
+
+    // Deck assembly: session exclusions drop cards for this pass only; historical
+    // swipes order unseen cards ahead of seen ones without hiding anything.
+    const merged = buildDiscoverDeck(ranked, {
+      excludedKeys: new Set(),
+      seenKeys: swipedKeys,
+      replay,
+      sort: (a: any, b: any) => mode === 'trending'
         ? (b.right_swipes || 0) - (a.right_swipes || 0)
         : mode === 'nearby'
           ? a.distance_miles - b.distance_miles
-        : new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          : new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    })
     const page = merged.slice(offset, offset + limit + 1)
     const result = page.slice(0, limit)
 
