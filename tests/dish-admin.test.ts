@@ -27,11 +27,12 @@ test('every admin action appends to the existing audit table (no migration neede
   assert.match(route, /async function audit/)
 })
 
-test('validation cache drives bucket A/B/C (usable → owner review; broken → blocked)', () => {
-  assert.match(route, /image unreachable\/broken/)
-  assert.match(route, /awaiting owner decision on image rights/)
+test('bucket doctrine: staged-but-unverified is BLOCKED, not live', () => {
+  const fn = readFileSync(new URL('../app/api/admin/dish-candidates/route.ts', import.meta.url), 'utf8')
+  assert.match(fn, /staged in DB but hidden from Discover/)
+  assert.match(fn, /owner decision needed on image rights/)
+  assert.doesNotMatch(fn, /validation\(\)/)
 })
-
 test('live dish set recomputed from database state per request (no cached publishing)', () => {
   assert.match(route, /temporary_staging_place_image_url/)
   assert.doesNotMatch(route, /revalidate/)
