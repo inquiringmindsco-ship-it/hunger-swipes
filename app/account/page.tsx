@@ -1,5 +1,7 @@
 'use client'
 
+import { apiFetch, authFetch } from '@/lib/auth-fetch'
+import { requestPushPermission } from '@/lib/push-notifications'
 import Link from 'next/link'
 import { useAuth, signOut, getAuthToken } from '@/lib/auth'
 import { useEffect, useState } from 'react'
@@ -118,6 +120,8 @@ export default function AccountPage() {
   const [postToDelete, setPostToDelete] = useState<string | null>(null)
   const [deletingPost, setDeletingPost] = useState<string | null>(null)
   const [toast, setToast] = useState('')
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   useEffect(() => {
     if (!toast) return
@@ -145,10 +149,10 @@ export default function AccountPage() {
     }
     getAuthToken().then((token) =>
       Promise.all([
-        fetch('/api/sellers?mine=true', {
+        apiFetch('/api/sellers?mine=true', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }).then((r) => r.json()),
-        fetch('/api/community-posts?mine=true', {
+        apiFetch('/api/community-posts?mine=true', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }).then((r) => r.json()),
       ])
@@ -167,7 +171,7 @@ export default function AccountPage() {
     setDeletingPost(id)
     try {
       const token = await getAuthToken()
-      const res = await fetch(`/api/community-posts/${id}`, {
+      const res = await apiFetch(`/api/community-posts/${id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -178,6 +182,26 @@ export default function AccountPage() {
       }
     } finally {
       setDeletingPost(null)
+    }
+  }
+
+  const deleteAccount = async () => {
+    setDeletingAccount(true)
+    try {
+      const res = await authFetch('/api/account/delete', { method: 'DELETE' })
+      if (res.ok) {
+        await signOut()
+        window.location.href = '/'
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setToast(data.error || 'Could not delete account')
+        setShowDeleteAccount(false)
+      }
+    } catch {
+      setToast('Could not delete account')
+      setShowDeleteAccount(false)
+    } finally {
+      setDeletingAccount(false)
     }
   }
 
@@ -383,10 +407,13 @@ export default function AccountPage() {
 
         <Section title="Account">
           <Row
-            onClick={() => setToast('Notifications coming soon')}
+            onClick={async () => {
+              const granted = await requestPushPermission()
+              setToast(granted ? 'Push notifications enabled' : 'Push notifications disabled')
+            }}
             icon={<Bell size={18} />}
             label="Notifications"
-            detail="Coming soon"
+            detail="Tap to enable"
           />
           <div className="h-px bg-white/[0.06]" />
           <Row
@@ -407,6 +434,13 @@ export default function AccountPage() {
             label="Sign Out"
             danger
           />
+          <div className="h-px bg-white/[0.06]" />
+          <Row
+            onClick={() => setShowDeleteAccount(true)}
+            icon={<Trash2 size={18} />}
+            label="Delete Account"
+            danger
+          />
         </Section>
 
         {toast && (
@@ -422,6 +456,19 @@ export default function AccountPage() {
             onDelete={() => postToDelete && deletePost(postToDelete)}
             deleting={deletingPost === postToDelete}
           />
+        )}
+
+        {showDeleteAccount && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/80 p-4" onClick={() => !deletingAccount && setShowDeleteAccount(false)}>
+            <div className="bg-hs-charcoal border border-white/10 rounded-t-2xl sm:rounded-2xl p-5 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <h2 className="font-bold text-hs-cream mb-2">Delete your account?</h2>
+              <p className="text-sm text-hs-gray mb-5">This permanently removes your account, profile, and community posts. This cannot be undone.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setShowDeleteAccount(false)} disabled={deletingAccount} className="py-4 rounded-xl bg-white/5 text-hs-cream font-semibold active:bg-white/10 disabled:opacity-50">Cancel</button>
+                <button onClick={deleteAccount} disabled={deletingAccount} className="py-4 rounded-xl bg-hs-red text-white font-bold disabled:opacity-50">{deletingAccount ? 'Deleting…' : 'Delete Account'}</button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
       <div style={{ display: postToDelete ? 'none' : 'block' }}>

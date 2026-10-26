@@ -1,5 +1,6 @@
 'use client'
 
+import { apiFetch } from '@/lib/auth-fetch'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -66,7 +67,7 @@ export default function CreatorUpgradePage() {
     setIsSubmitting(true)
 
     try {
-      const res = await fetch('/api/verification', {
+      const res = await apiFetch('/api/verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

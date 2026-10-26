@@ -1,5 +1,6 @@
 'use client'
 
+import { apiFetch } from '@/lib/auth-fetch'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -53,7 +54,7 @@ export default function BusinessClient() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/business-submissions', {
+      const res = await apiFetch('/api/business-submissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

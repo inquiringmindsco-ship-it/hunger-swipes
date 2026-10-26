@@ -1,5 +1,6 @@
 'use client'
 
+import { apiFetch } from '@/lib/auth-fetch'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth, getAuthToken } from '@/lib/auth'
@@ -19,7 +20,7 @@ function SellerLink() {
       return
     }
     getAuthToken().then((token) =>
-      fetch('/api/sellers?mine=true', {
+      apiFetch('/api/sellers?mine=true', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
         .then((r) => r.json())

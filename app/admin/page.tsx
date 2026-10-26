@@ -2,10 +2,11 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, CheckCircle2, Eye, Heart, RefreshCw, Shield, Trash2, XCircle, Search, QrCode, ExternalLink, Store, Wallet, Camera } from 'lucide-react'
+import { ArrowUpRight, CheckCircle2, Eye, Heart, RefreshCw, Shield, Trash2, XCircle, Search, QrCode, ExternalLink, Store, Wallet, Camera, UtensilsCrossed } from 'lucide-react'
 import { PassIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import { adminFetch } from '@/lib/admin-fetch'
+import { ImagePreviewModal } from '@/app/components/admin/ImagePreviewModal'
 
 interface Submission {
   id: string
@@ -24,8 +25,10 @@ function AdminContent() {
   const [authenticated, setAuthenticated] = useState(false)
   const [sellers, setSellers] = useState<any[]>([])
   const [dishes, setDishes] = useState<any[]>([])
+  const [recipes, setRecipes] = useState<any[]>([])
+  const [communityReviewCount, setCommunityReviewCount] = useState(0)
   const [submissions, setSubmissions] = useState<Submission[]>([])
-  const [tab, setTab] = useState<'sellers' | 'dishes' | 'submissions' | 'swipe_bucks' | 'redemption' | 'food_review'>('sellers')
+  const [tab, setTab] = useState<'approvals' | 'sellers' | 'dishes' | 'submissions' | 'swipe_bucks' | 'redemption' | 'food_review' | 'food_intake'>('approvals')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -38,6 +41,7 @@ function AdminContent() {
   const [redemptionRestaurants, setRedemptionRestaurants] = useState<any[]>([])
   const [redemptionUsers, setRedemptionUsers] = useState<any[]>([])
   const [redemptionLoading, setRedemptionLoading] = useState(false)
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null)
 
   const login = async () => {
     if (secret) setAuthenticated(true)
@@ -53,20 +57,26 @@ function AdminContent() {
     setLoading(true)
     setError('')
     try {
-      const [sellersRes, dishesRes, subRes] = await Promise.all([
+      const [sellersRes, dishesRes, recipesRes, subRes, communityRes] = await Promise.all([
         adminFetch('/api/admin/sellers', { headers: { 'x-admin-secret': secret } }),
         adminFetch('/api/admin/dishes', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/admin/recipes', { headers: { 'x-admin-secret': secret } }),
         adminFetch('/api/admin/business-submissions', { headers: { 'x-admin-secret': secret } }),
+        adminFetch('/api/admin/food-review?status=pending_review&limit=1', { headers: { 'x-admin-secret': secret } }),
       ])
       const sellersData = await sellersRes.json()
       const dishesData = await dishesRes.json()
+      const recipesData = await recipesRes.json()
       const subData = await subRes.json()
-      if (sellersData.error || dishesData.error || subData.error) {
-        setError(sellersData.error || dishesData.error || subData.error)
+      const communityData = await communityRes.json()
+      if (sellersData.error || dishesData.error || recipesData.error || subData.error || communityData.error) {
+        setError(sellersData.error || dishesData.error || recipesData.error || subData.error || communityData.error)
       } else {
         setSellers(sellersData.sellers || [])
         setDishes(dishesData.dishes || [])
+        setRecipes(recipesData.recipes || [])
         setSubmissions(subData.submissions || [])
+        setCommunityReviewCount(communityData.counts?.needs_review || 0)
       }
     } catch {
       setError('Failed to load admin data')
@@ -174,6 +184,26 @@ function AdminContent() {
     }
   }
 
+  const reviewRecipeBundle = async (recipe: any, approve: boolean) => {
+    setActionLoading(`recipe:${recipe.id}:${approve ? 'approve' : 'reject'}`)
+    try {
+      const res = await adminFetch(`/api/admin/recipes?id=${recipe.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify(approve
+          ? { status: 'active', published: true, reviewBundle: true }
+          : { status: 'removed', published: false, reviewBundle: true }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || 'Review failed')
+      await loadData()
+    } catch (reason: any) {
+      setError(reason.message || 'Review failed')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hungerswipes.com'
 
   const filteredSellers = sellers.filter((s) => {
@@ -186,6 +216,14 @@ function AdminContent() {
   })
 
   const renees = sellers.find((s) => s.slug?.toLowerCase() === 'renees')
+  const pendingRecipes = recipes.filter((recipe) => recipe.status === 'pending_review' || (!recipe.published && recipe.status !== 'removed'))
+  const pendingRecipeDishIds = new Set(pendingRecipes.map((recipe) => recipe.dish_id))
+  const pendingRecipeSellerIds = new Set(pendingRecipes.map((recipe) => recipe.dish?.seller?.id).filter(Boolean))
+  const pendingSellers = sellers.filter((seller) =>
+    (seller.status === 'pending_review' || seller.verification_status === 'pending') && !pendingRecipeSellerIds.has(seller.id)
+  )
+  const pendingDishes = dishes.filter((dish) => dish.status === 'pending' && !pendingRecipeDishIds.has(dish.id))
+  const pendingApprovalCount = pendingSellers.length + pendingRecipes.length + pendingDishes.length + communityReviewCount
 
   const assignOwner = async (seller: any) => {
     const ownerEmail = window.prompt(`Enter the Hunger Swipes account email that should manage ${seller.business_name}:`)
@@ -277,6 +315,12 @@ function AdminContent() {
 
         <div className="flex flex-wrap gap-2 mb-4">
           <button
+            onClick={() => setTab('approvals')}
+            className={`min-h-11 px-4 py-2 rounded-full text-sm font-bold ${tab === 'approvals' ? 'bg-[#D4AF37] text-black' : 'bg-[#D4AF37]/10 text-[#D4AF37]'}`}
+          >
+            Needs Approval ({pendingApprovalCount})
+          </button>
+          <button
             onClick={() => setTab('sellers')}
             className={`px-4 py-2 rounded-full text-sm font-semibold ${tab === 'sellers' ? 'bg-[#FF5722] text-white' : 'bg-white/5 text-gray-400'}`}
           >
@@ -301,6 +345,12 @@ function AdminContent() {
             <Camera size={16} /> Food Review
           </button>
           <button
+            onClick={() => setTab('food_intake')}
+            className={`px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center gap-1.5 ${tab === 'food_intake' ? 'bg-[#FF5722] text-white' : 'bg-white/5 text-gray-400'}`}
+          >
+            <UtensilsCrossed size={16} /> Food Intake
+          </button>
+          <button
             onClick={() => setTab('redemption')}
             className={`px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center gap-1.5 ${tab === 'redemption' ? 'bg-[#FF5722] text-white' : 'bg-white/5 text-gray-400'}`}
           >
@@ -323,6 +373,114 @@ function AdminContent() {
 
         {loading ? (
           <p className="text-gray-400">Loading...</p>
+        ) : tab === 'approvals' ? (
+          <div className="space-y-6">
+            {pendingApprovalCount === 0 && (
+              <div className="rounded-2xl border border-[#10B981]/20 bg-[#10B981]/10 p-6 text-center">
+                <CheckCircle2 className="mx-auto mb-2 text-[#10B981]" size={30} />
+                <p className="font-bold">Approval queue is clear</p>
+                <p className="mt-1 text-sm text-gray-400">New sellers, food, recipes, and community photos will appear here.</p>
+              </div>
+            )}
+
+            {pendingRecipes.length > 0 && (
+              <section>
+                <h2 className="mb-3 text-lg font-black">Food + recipe submissions ({pendingRecipes.length})</h2>
+                <div className="space-y-3">
+                  {pendingRecipes.map((recipe) => {
+                    const image = recipe.photo_url || recipe.dish?.photo_url || '/placeholder-dish.png'
+                    return (
+                      <article key={recipe.id} className="rounded-2xl border border-[#D4AF37]/25 bg-white/[0.03] p-4">
+                        <div className="flex items-start gap-3">
+                          <button type="button" onClick={() => setPreviewImage({ src: image, alt: recipe.title })} className="relative min-h-24 min-w-24 overflow-hidden rounded-xl" aria-label={`View full image for ${recipe.title}`}>
+                            <img src={image} alt={recipe.title} className="h-24 w-24 object-cover" />
+                            <span className="absolute inset-x-0 bottom-0 bg-black/75 py-1 text-[10px] font-bold">View full</span>
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold">{recipe.title}</p>
+                            <p className="text-sm text-gray-400">Food card: {recipe.dish?.name || 'Attached dish'}</p>
+                            <p className="mt-1 text-xs text-[#D4AF37]">One approval publishes both to MAKE.</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            disabled={actionLoading === `recipe:${recipe.id}:reject`}
+                            onClick={() => reviewRecipeBundle(recipe, false)}
+                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-red-500/15 px-4 py-3 text-sm font-bold text-red-400 disabled:opacity-50"
+                          >
+                            <XCircle size={19} /> Reject
+                          </button>
+                          <button
+                            type="button"
+                            disabled={actionLoading === `recipe:${recipe.id}:approve`}
+                            onClick={() => reviewRecipeBundle(recipe, true)}
+                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#10B981] px-4 py-3 text-sm font-black text-black disabled:opacity-50"
+                          >
+                            <CheckCircle2 size={19} /> Approve both
+                          </button>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {pendingDishes.length > 0 && (
+              <section>
+                <h2 className="mb-3 text-lg font-black">Food submissions ({pendingDishes.length})</h2>
+                <div className="space-y-3">
+                  {pendingDishes.map((dish) => {
+                    const image = dish.photo_url || '/placeholder-dish.png'
+                    return (
+                      <article key={dish.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                        <div className="flex items-start gap-3">
+                          <button type="button" onClick={() => setPreviewImage({ src: image, alt: dish.name })} className="relative min-h-24 min-w-24 overflow-hidden rounded-xl" aria-label={`View full image for ${dish.name}`}>
+                            <img src={image} alt={dish.name} className="h-24 w-24 object-cover" />
+                            <span className="absolute inset-x-0 bottom-0 bg-black/75 py-1 text-[10px] font-bold">View full</span>
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold">{dish.name}</p>
+                            <p className="text-sm text-gray-400">{dish.seller?.business_name || 'Unknown seller'} · ${Number(dish.price || 0).toFixed(2)}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <button type="button" onClick={() => doAction('dish', dish.id, 'remove', 'Admin rejected')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-red-500/15 px-4 py-3 text-sm font-bold text-red-400"><XCircle size={19} /> Reject</button>
+                          <button type="button" onClick={() => doAction('dish', dish.id, 'activate')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#10B981] px-4 py-3 text-sm font-black text-black"><CheckCircle2 size={19} /> Approve</button>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {pendingSellers.length > 0 && (
+              <section>
+                <h2 className="mb-3 text-lg font-black">Seller profiles ({pendingSellers.length})</h2>
+                <div className="space-y-3">
+                  {pendingSellers.map((seller) => (
+                    <article key={seller.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <p className="font-bold">{seller.business_name}</p>
+                      <p className="text-sm text-gray-400">{seller.seller_type?.replace('_', ' ')} · {seller.location_text || 'No public location'}</p>
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <button type="button" onClick={() => doAction('seller', seller.id, 'reject', 'Does not meet requirements')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-red-500/15 px-4 py-3 text-sm font-bold text-red-400"><XCircle size={19} /> Reject</button>
+                        <button type="button" onClick={() => doAction('seller', seller.id, 'approve')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#10B981] px-4 py-3 text-sm font-black text-black"><CheckCircle2 size={19} /> Approve</button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {communityReviewCount > 0 && (
+              <Link href="/admin/food-review" className="flex min-h-16 items-center justify-between rounded-2xl border border-[#FF5722]/30 bg-[#FF5722]/10 p-4 font-bold text-[#FF8A65]">
+                <span>{communityReviewCount} community food photo{communityReviewCount === 1 ? '' : 's'} need review</span>
+                <span>Review →</span>
+              </Link>
+            )}
+          </div>
         ) : tab === 'sellers' ? (
           <div className="space-y-3">
             {filteredSellers.map((seller) => (
@@ -399,7 +557,10 @@ function AdminContent() {
             {dishes.map((dish) => (
               <div key={dish.id} className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
                 <div className="flex items-start gap-3">
-                  <img src={dish.photo_url || '/placeholder-dish.png'} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                  <button type="button" onClick={() => setPreviewImage({ src: dish.photo_url || '/placeholder-dish.png', alt: dish.name })} className="relative min-h-20 min-w-20 overflow-hidden rounded-xl" aria-label={`View full image for ${dish.name}`}>
+                    <img src={dish.photo_url || '/placeholder-dish.png'} alt={dish.name} className="h-20 w-20 object-cover" />
+                    <span className="absolute inset-x-0 bottom-0 bg-black/75 py-1 text-[10px] font-bold">View full</span>
+                  </button>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold truncate">{dish.name}</p>
                     <p className="text-sm text-gray-400 truncate">
@@ -414,7 +575,7 @@ function AdminContent() {
                   <div className="flex gap-1 shrink-0">
                     {dish.status !== 'active' && (
                       <IconButton
-                        label={`Activate ${dish.name}`}
+                        label={`${dish.status === 'pending' ? 'Approve' : 'Activate'} ${dish.name}`}
                         onClick={() => doAction('dish', dish.id, 'activate')}
                         disabled={actionLoading === `dish:${dish.id}:activate`}
                         className="rounded-lg bg-[#10B981]/20 text-[#10B981]"
@@ -494,10 +655,26 @@ function AdminContent() {
         ) : null}
 
         {tab === 'swipe_bucks' && <SwipeBucksAdmin secret={secret} config={swipeBucksConfig} stats={swipeBucksStats} loading={swipeBucksLoading} onUpdate={loadSwipeBucks} />}
+        {tab === 'food_intake' && (
+          <div className="space-y-4">
+            <p className="text-gray-400 text-sm">
+              Add new places, dish images, and image URL candidates. Use this for owner-provided photos, menu scans, or temporary staging images.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/admin/food-intake"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-[#FF5722] text-white rounded-xl font-bold"
+              >
+                Open Food Intake →
+              </Link>
+            </div>
+          </div>
+        )}
+
         {tab === 'food_review' && (
           <div className="space-y-4">
             <p className="text-gray-400 text-sm">
-              Review and manage community food photos. Only approved photos appear in Discover and earn Swipe Bucks.
+              Review and manage community food photos. Only approved photos appear in Discover. Posting does not earn Swipe Bucks.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -516,6 +693,7 @@ function AdminContent() {
           </div>
         )}
       </main>
+      {previewImage && <ImagePreviewModal src={previewImage.src} alt={previewImage.alt} onClose={() => setPreviewImage(null)} />}
     </div>
   )
 }
@@ -598,13 +776,12 @@ function SwipeBucksAdmin({ secret, config, stats, loading, onUpdate }: { secret:
               Active
             </label>
           </div>
+          <p className="text-sm text-gray-400">
+            Swipe Bucks are purchase-only. Posts, swipes, saves, and clicks do not earn rewards.
+          </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
-              { key: 'right_swipe_cents', label: 'Right swipe' },
-              { key: 'save_cents', label: 'Save/match' },
-              { key: 'click_cents', label: 'Order click' },
               { key: 'verified_order_cents', label: 'Verified order' },
-              { key: 'first_photo_cents', label: 'First photo bonus' },
             ].map((f) => (
               <label key={f.key} className="block text-sm">
                 <span className="text-gray-400">{f.label} (¢)</span>

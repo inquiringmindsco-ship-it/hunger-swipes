@@ -1,6 +1,7 @@
 'use client'
 
 import { getSupabase } from '@/lib/supabase'
+import { getApiUrl } from '@/lib/api-url'
 
 export async function getAuthToken(): Promise<string | null> {
   const supabase = getSupabase()
@@ -13,6 +14,12 @@ export async function getAuthToken(): Promise<string | null> {
   }
 }
 
+function resolveInput(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return getApiUrl(input)
+  if (input instanceof URL) return input.toString()
+  return getApiUrl(input.toString())
+}
+
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   const supabase = getSupabase()
   if (!supabase) throw new Error('Authentication is not configured')
@@ -22,7 +29,7 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
 
   const headers = new Headers(init.headers)
   headers.set('Authorization', `Bearer ${session.access_token}`)
-  return fetch(input, { ...init, headers })
+  return fetch(resolveInput(input), { ...init, headers })
 }
 
 export async function optionalAuthFetch(input: RequestInfo | URL, init: RequestInit = {}) {
@@ -36,5 +43,13 @@ export async function optionalAuthFetch(input: RequestInfo | URL, init: RequestI
       // Optional session lookup must never block anonymous public requests.
     }
   }
-  return fetch(input, { ...init, headers })
+  return fetch(resolveInput(input), { ...init, headers })
+}
+
+/**
+ * Plain fetch wrapper that resolves API paths for the native app.
+ * Use this for fetch('/api/...') calls in client components.
+ */
+export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return fetch(resolveInput(input), init)
 }

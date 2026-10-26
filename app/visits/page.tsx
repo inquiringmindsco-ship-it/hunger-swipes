@@ -1,5 +1,6 @@
 'use client'
 
+import { apiFetch } from '@/lib/auth-fetch'
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -41,7 +42,7 @@ interface PointsData {
 async function loadMatches(): Promise<MatchPhoto[]> {
   try {
     const eaterId = getEaterId()
-    const res = await fetch(`/api/saves?eaterId=${encodeURIComponent(eaterId)}`)
+    const res = await apiFetch(`/api/saves?eaterId=${encodeURIComponent(eaterId)}`)
     const data = await res.json()
     if (!res.ok) return []
     return (data.saved || []).map((item: any) => ({
@@ -110,7 +111,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
 
   const fetchPoints = async () => {
     try {
-      const res = await fetch('/api/visits/points?userId=mock-user')
+      const res = await apiFetch('/api/visits/points?userId=mock-user')
       const data = await res.json()
       if (data.points) {
         setPointsData(data.points)
@@ -121,7 +122,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
   const fetchVerifications = async (photoId?: string) => {
     try {
       const params = photoId ? `?photoId=${photoId}` : ''
-      const res = await fetch(`/api/visits${params}`)
+      const res = await apiFetch(`/api/visits${params}`)
       const data = await res.json()
       if (data.verifications) {
         setExistingVerifications(data.verifications)
@@ -232,7 +233,7 @@ function VisitsContent({ photoIdParam }: { photoIdParam: string | null }) {
       const points = verificationType ? getPointsForType(verificationType) : 5
       const badge = verificationType ? getTrustBadgeFromType(verificationType) : 1
 
-      const res = await fetch('/api/visits', {
+      const res = await apiFetch('/api/visits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

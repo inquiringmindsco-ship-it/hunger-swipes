@@ -7,7 +7,8 @@ import { Camera, Check, LocateFixed, MapPin, Search, ChevronRight } from 'lucide
 import MobileNav from '@/app/components/MobileNav'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import { useAuth } from '@/lib/auth'
-import { authFetch } from '@/lib/auth-fetch'
+import { authFetch, apiFetch } from '@/lib/auth-fetch'
+import { pickImage } from '@/lib/image-picker'
 import { LoadingState } from '@/app/components/ui/LoadingState'
 import Head from 'next/head'
 
@@ -42,7 +43,7 @@ export default function CommunityPostPage() {
     if (requested) {
       // Pre-load only the requested place from URL
       setSearching(true)
-      fetch(`/api/places?id=${encodeURIComponent(requested)}`)
+      apiFetch(`/api/places?id=${encodeURIComponent(requested)}`)
         .then((response) => response.json())
         .then((data) => { setPlaces(data.places || []) })
         .catch(() => { setPlaces([]) })
@@ -65,13 +66,20 @@ export default function CommunityPostPage() {
         if (query.trim()) params.set('q', query.trim())
         if (coordinates) { params.set('lat', String(coordinates.lat)); params.set('lng', String(coordinates.lng)) }
         const endpoint = coordinates && !query.trim() && !requestedPlaceId ? `/api/nearby?lat=${coordinates.lat}&lng=${coordinates.lng}&radius=15` : `/api/places?${params}`
-        const response = await fetch(endpoint)
+        const response = await apiFetch(endpoint)
         const data = await response.json()
         setPlaces(data.places || [])
       } catch { setPlaces([]) } finally { setSearching(false) }
     }, query ? 300 : 0)
     return () => clearTimeout(timer)
   }, [query, coordinates, requestedPlaceId])
+
+  async function handlePickPhoto(source?: 'camera' | 'photos' | 'prompt') {
+    const picked = await pickImage({ source: source || 'prompt' })
+    if (!picked) return
+    setFile(picked.file)
+    setPreviewUrl(picked.previewUrl)
+  }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0] || null
@@ -156,7 +164,10 @@ export default function CommunityPostPage() {
 
         <form onSubmit={submit} className="space-y-6">
           <section>
-            <label htmlFor="photo" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Photo</label>
+            <label onClick={() => handlePickPhoto()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handlePickPhoto() } }} className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Photo</label>
             <label
               htmlFor="photo"
               tabIndex={0}

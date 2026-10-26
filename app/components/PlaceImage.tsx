@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from '@/lib/auth-fetch'
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Camera, Coins } from "lucide-react";
@@ -44,7 +45,7 @@ export default function PlaceImage({
     if (!visible || !enabled) return;
     const controller = new AbortController();
     setPhotoResolved(false);
-    fetch(`/api/places/${encodeURIComponent(placeId)}/google-photo`, {
+    apiFetch(`/api/places/${encodeURIComponent(placeId)}/google-photo`, {
       signal: controller.signal,
       cache: "no-store",
     })
