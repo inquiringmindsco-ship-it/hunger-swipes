@@ -17,6 +17,7 @@ test('owner admin authorization uses a verified Supabase identity and explicit a
   assert.match(adminAuth, /ownerEmails\(\)\.has\(email\)/)
   assert.match(sellerRoute, /await checkAdmin\(request\)/)
   assert.match(adminUi, /adminFetch\('\/api\/admin\/session'\)/)
+  assert.match(adminUi, /href="\/admin\/dish-candidates"/)
 })
 
 test('legacy shared secret remains a timing-safe compatibility fallback', () => {

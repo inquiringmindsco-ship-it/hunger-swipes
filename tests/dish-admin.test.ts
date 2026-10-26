@@ -44,8 +44,35 @@ test('validation cache file is present and parseable (179 rows)', () => {
   assert.ok(rows.length >= 180, `expected header + 179 rows, got ${rows.length}`)
 })
 
-test('console exists and gates admin access by secret + no credentials embedded', () => {
+test('console uses the authenticated owner session and contains no embedded credentials', () => {
   const client = readFileSync(new URL('../app/admin/dish-candidates/DishCandidatesClient.tsx', import.meta.url), 'utf8')
-  assert.match(route, /checkAdmin/)
+  assert.match(route, /getAdminPrincipal/)
+  assert.match(client, /adminFetch\('\/api\/admin\/session'\)/)
+  assert.match(client, /\/auth\?next=\/admin\/dish-candidates/)
+  assert.doesNotMatch(client, /adminSecret|x-admin-secret|NEXT_PUBLIC_ADMIN_SECRET_HEADER/)
   assert.doesNotMatch(client, /secret\s*=\s*['"][^'"]{8,}/) // no hard-coded secrets
+})
+
+test('ordinary users cannot use owner controls', () => {
+  assert.match(route, /if \(!principal\).*Unauthorized/)
+  assert.match(route, /principal\.kind !== 'owner'/)
+  assert.match(route, /Image replacement requires an authenticated owner account/)
+})
+
+test('mobile Dish Manager supports full preview and large owner actions', () => {
+  const client = readFileSync(new URL('../app/admin/dish-candidates/DishCandidatesClient.tsx', import.meta.url), 'utf8')
+  assert.match(client, /ImagePreviewModal/)
+  assert.match(client, /Replace image/)
+  assert.match(client, /Approve rights/)
+  assert.match(client, /Publish/)
+  assert.match(client, /Unpublish/)
+  assert.match(client, /Reject/)
+  assert.match(client, /min-h-12/)
+})
+
+test('owner image replacements remain managed, rights-documented, and audited', () => {
+  assert.match(route, /isOwnedManagedPhotoUrl\(imageUrl, principal\.userId\)/)
+  assert.match(route, /permission_evidence/)
+  assert.match(route, /source_type: 'owner_upload'/)
+  assert.match(route, /audit\(db, actor, 'replace_image'/)
 })

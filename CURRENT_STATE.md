@@ -44,6 +44,16 @@ Updated: 2026-10-26
 5. Immediately verify production Discover, 15-second confirmation, tiled Profile, complete Post, navigation, Saved, History, images, and dish administration.
 6. If a critical check fails, roll back to `dpl_BFMGBx2FwTLmnvt6d5LvPf3x2cme` while a corrected candidate is prepared.
 
+## Owner Dish Manager access candidate
+
+- Stacked branch: `codex/owner-dish-manager-access` (based on the verified Build 15 recovery candidate).
+- `/admin/dish-candidates` now uses the same verified Supabase session and server-side `HUNGER_SWIPES_OWNER_EMAILS` allowlist as `/admin`; it no longer asks the owner for a separate secret.
+- The production allowlist setting exists but was empty when verified on October 26. Before deployment, set it securely to the confirmed existing owner account; never commit that value or expose it through a `NEXT_PUBLIC_` variable.
+- The mobile Dish Manager includes full-image preview, rights approval, publish, reject, emergency unpublish, and owner-uploaded image replacement. Replacement images must be in the signed-in owner's managed storage and include permission evidence.
+- Every mutation still writes the existing catalog audit log. Ordinary authenticated users and sellers receive `401` and never see the owner controls.
+- A visible Dish Manager link is present on `/admin`.
+- Access-specific browser coverage passes at 320×568; the complete browser suite passes 35/35 with the protected Supabase environment loaded.
+
 ## Preserved work
 
 - The dirty `/Users/sentinel/Documents/hunger-swipes` checkout remains intact; no uncommitted catalog or agent work was discarded.
