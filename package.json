@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "test": "node --test --experimental-strip-types tests/foundation.test.ts",
+    "test": "node --test --experimental-strip-types tests/foundation.test.ts tests/discover-recovery.test.ts tests/discover-protection.test.ts tests/dish-admin.test.ts tests/launch-recovery.test.ts",
     "test:phase2b": "node --test --experimental-strip-types tests/phase2b.test.ts",
     "test:ui": "vitest run",
     "test:ui:watch": "vitest",

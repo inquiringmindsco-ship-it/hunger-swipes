@@ -22,8 +22,8 @@ jobs:
         run: npm ci
       - name: Typecheck (lint gate — matches local practice)
         run: npx tsc --noEmit
-      - name: Unit suites (foundation + discover recovery + protection fixtures)
-        run: node --test --experimental-strip-types tests/foundation.test.ts tests/discover-recovery.test.ts tests/discover-protection.test.ts
+      - name: Unit suites (foundation + launch recovery + protection fixtures)
+        run: npm test
       - name: Production build (no real credentials required)
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co

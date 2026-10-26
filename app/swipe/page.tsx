@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { PassIcon, WantItIcon, FilterIcon, BrandMark, ReplayFoodIcon } from '@/app/components/icons/HungerIcons'
 import { IconButton } from '@/app/components/ui/IconButton'
 import MobileNav from '@/app/components/MobileNav'
-import PlaceActions from '@/app/components/PlaceActions'
 import { FilterSheet } from '@/app/components/ui/FilterSheet'
 import { EmptyState } from '@/app/components/ui/EmptyState'
 import { ErrorState } from '@/app/components/ui/ErrorState'
@@ -51,6 +49,7 @@ interface TemporaryFilters { cuisine: string; dietary: string; health: string; p
 const EMPTY_FILTERS: TemporaryFilters = { cuisine: '', dietary: '', health: '', priceRange: '', spiceLevel: 0 }
 const PAGE_SIZE = 20
 const REFILL_AT = 5
+const RIGHT_SWIPE_COUNTDOWN_SECONDS = 5
 
 function priceToRange(price?: number): string {
   if (!price && price !== 0) return '$'
@@ -94,7 +93,6 @@ function mapDish(dish: any): FoodDish {
 }
 
 export default function SwipePage() {
-  const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const [dishes, setDishes] = useState<FoodDish[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -126,9 +124,8 @@ export default function SwipePage() {
   const [swipeFailure, setSwipeFailure] = useState<SwipeWriteResult | null>(null)
   const [pendingSwipe, setPendingSwipe] = useState<{ dish: FoodDish; direction: SwipeDirection } | null>(null)
   const [matchDish, setMatchDish] = useState<FoodDish | null>(null)
+  const [matchCountdown, setMatchCountdown] = useState(RIGHT_SWIPE_COUNTDOWN_SECONDS)
   const [announcement, setAnnouncement] = useState('')
-  const [continueEarly, setContinueEarly] = useState(false)
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const replayToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingAdvance = useRef<{ dish: FoodDish; direction: SwipeDirection; saved: boolean } | null>(null)
   const startPoint = useRef({ x: 0, y: 0 })
@@ -243,30 +240,37 @@ export default function SwipePage() {
     if (!pending) { actionLock.current = false; return }
     const { dish, direction, saved } = pending
     if (saved && direction === 'right') {
-      setSavedCount((count) => count + 1); setMatchDish(dish); window.setTimeout(() => setMatchDish(null), 1800)
+      setSavedCount((count) => count + 1)
     }
-    setAnnouncement(direction === 'right' ? `${dish.dish} saved` : `${dish.dish} passed`)
+    setAnnouncement(direction === 'right' ? `${dish.dish} ${saved ? 'saved' : 'previewed'}` : `${dish.dish} passed`)
     setCurrentIndex((index) => index + 1)
-    setDragX(0); setGestureProgress(0); setLastSwipe(null); setPendingSwipe(null); setSwipeFailure(null); setActionState('idle'); setContinueEarly(false)
+    setDragX(0); setGestureProgress(0); setLastSwipe(null); setPendingSwipe(null); setSwipeFailure(null); setActionState('idle')
+    setMatchDish(null); setMatchCountdown(RIGHT_SWIPE_COUNTDOWN_SECONDS)
     pendingAdvance.current = null
-    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null }
     actionLock.current = false
   }, [])
 
   const finishAdvance = useCallback((dish: FoodDish, direction: SwipeDirection, saved: boolean) => {
     pendingAdvance.current = { dish, direction, saved }
     if (direction === 'right') {
-      setContinueEarly(true)
-      if (holdTimer.current) clearTimeout(holdTimer.current)
-      holdTimer.current = setTimeout(() => doAdvance(), 5000)
+      setDragX(0)
+      setGestureProgress(0)
+      setLastSwipe(null)
+      setMatchCountdown(RIGHT_SWIPE_COUNTDOWN_SECONDS)
+      setMatchDish(dish)
     } else {
       doAdvance()
     }
   }, [doAdvance])
 
-  const advanceNow = useCallback(() => {
-    doAdvance()
-  }, [doAdvance])
+  useEffect(() => {
+    if (!matchDish) return
+    const timer = window.setTimeout(() => {
+      if (matchCountdown <= 1) doAdvance()
+      else setMatchCountdown((seconds) => seconds - 1)
+    }, 1000)
+    return () => window.clearTimeout(timer)
+  }, [doAdvance, matchCountdown, matchDish])
 
   const persistAndAdvance = useCallback(async (dish: FoodDish, direction: SwipeDirection) => {
     setActionState('persisting')
@@ -280,21 +284,12 @@ export default function SwipePage() {
   const commitSwipe = useCallback((direction: SwipeDirection) => {
     const dish = dishes[currentIndex]
     if (!dish || actionLock.current) return
-    if (!user && direction === 'right') {
-      // Keep the card exit visually consistent with the button/gesture path before
-      // sending an unauthenticated user to sign up.
-      actionLock.current = true
-      setPendingSwipe({ dish, direction }); setSwipeFailure(null); setLastSwipe(direction); setActionState('exiting')
-      setDragX(Math.max(window.innerWidth, 480))
-      window.setTimeout(() => router.push('/auth?mode=signup&next=/swipe'), 350)
-      return
-    }
     actionLock.current = true
     setPendingSwipe({ dish, direction }); setSwipeFailure(null); setLastSwipe(direction); setActionState('exiting')
     setDragX((direction === 'right' ? 1 : -1) * Math.max(window.innerWidth, 480))
     if (!user) { window.setTimeout(() => finishAdvance(dish, direction, false), 350); return }
     void persistAndAdvance(dish, direction)
-  }, [currentIndex, dishes, finishAdvance, persistAndAdvance, router, user])
+  }, [currentIndex, dishes, finishAdvance, persistAndAdvance, user])
 
   const retrySwipe = useCallback(() => {
     if (!pendingSwipe || actionLock.current) return
@@ -458,7 +453,7 @@ export default function SwipePage() {
         {swipeFailure && <div role="alert" className="mb-2 flex items-center gap-2 rounded-xl border border-hs-red/30 bg-hs-red/10 px-3 py-2 text-xs text-hs-cream"><span className="flex-1">{swipeFailure.message}</span>{swipeFailure.retryable ? <button onClick={retrySwipe} className="min-h-9 rounded-lg bg-hs-gold px-3 font-bold text-hs-black">Retry</button> : swipeFailure.kind === 'auth' ? <Link href="/auth?next=/swipe" className="font-bold text-hs-gold">Sign in</Link> : <button onClick={() => { setSwipeFailure(null); setPendingSwipe(null); setActionState('idle') }} className="font-bold text-hs-gold">Dismiss</button>}</div>}
         <div className="relative flex-1 min-h-0 w-full mx-auto">
           {nextDish && <div key={`preview-${nextDish.id}`} className="absolute inset-x-[2%] top-[1%] bottom-[2%] rounded-[1.5rem] overflow-hidden bg-hs-graphite shadow-card scale-[0.97] opacity-40">{nextDish.videoUrl ? <FoodVideo src={nextDish.videoUrl} poster={nextDish.posterUrl || nextDish.imageUrl} className="w-full h-full" /> : <DishImage src={nextDish.imageUrl} alt="" sizes="(max-width: 480px) 92vw, 430px" quality={72} className="w-full h-full object-cover dish-image" />}</div>}
-          <article key={`current-${currentDish.id}`} className={`absolute inset-0 rounded-[1.5rem] overflow-hidden shadow-card-lg bg-hs-graphite select-none outline-none focus-visible:ring-2 focus-visible:ring-hs-gold ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`} style={{ transform: `translate3d(${dragX}px, 0, 0) rotate(${rotation}deg)`, transitionProperty: isDragging ? 'none' : 'transform, opacity', transitionDuration: '300ms', touchAction: 'pan-y' }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={(event) => finishPointer(event)} onPointerCancel={(event) => finishPointer(event, true)} onKeyDown={(event) => { if (event.key === 'ArrowLeft') commitSwipe('left'); if (event.key === 'ArrowRight') commitSwipe('right') }} tabIndex={0} aria-label={`${currentDish.dish} from ${currentDish.restaurant}. Use left arrow to pass or right arrow to want.`} aria-busy={actionState === 'persisting'} data-testid="swipe-card">
+          <article key={`current-${currentDish.id}`} className={`absolute inset-0 rounded-[1.5rem] overflow-hidden shadow-card-lg bg-hs-graphite select-none outline-none focus-visible:ring-2 focus-visible:ring-hs-gold ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`} style={{ transform: `translate3d(${dragX}px, 0, 0) rotate(${rotation}deg)`, transitionProperty: isDragging ? 'none' : 'transform, opacity', transitionDuration: '300ms', touchAction: 'none' }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={(event) => finishPointer(event)} onPointerCancel={(event) => finishPointer(event, true)} onKeyDown={(event) => { if (event.key === 'ArrowLeft') commitSwipe('left'); if (event.key === 'ArrowRight') commitSwipe('right') }} tabIndex={0} aria-label={`${currentDish.dish} from ${currentDish.restaurant}. Use left arrow to pass or right arrow to want.`} aria-busy={actionState === 'persisting'} data-testid="swipe-card">
             {currentDish.videoUrl ? (
               <FoodVideo src={currentDish.videoUrl} poster={currentDish.posterUrl || currentDish.imageUrl} className="w-full h-full" preload autoPlay />
             ) : (
@@ -472,14 +467,6 @@ export default function SwipePage() {
                 <div className="bg-hs-gold text-hs-black text-2xl font-black px-5 py-2.5 rounded-2xl rotate-[-12deg] shadow-gold flex items-center gap-2">
                   Saved ♥️
                 </div>
-                {continueEarly && (
-                  <button
-                    onClick={advanceNow}
-                    className="mt-4 px-5 py-2.5 bg-hs-black/70 text-white border border-white/20 rounded-full font-bold text-sm backdrop-blur-sm hover:bg-hs-black"
-                  >
-                    Continue →
-                  </button>
-                )}
               </div>
             )}
             {lastSwipe === 'left' && <div className="absolute inset-0 bg-hs-red/20 flex items-center justify-center"><div className="bg-hs-red text-white text-2xl font-black px-5 py-2.5 rounded-2xl rotate-[12deg] shadow-lg">PASS</div></div>}
@@ -504,20 +491,29 @@ export default function SwipePage() {
                   <FollowButton followingType={currentDish.contentKind === 'community' ? 'user' : 'seller'} followingId={currentDish.seller.id} variant="compact" />
                 )}
               </div>
-              <div className="flex items-center justify-center gap-5">{continueEarly ? (
-  <button
-    onClick={advanceNow}
-    className="px-5 py-2.5 bg-hs-gold text-hs-black rounded-full font-bold text-sm hover:bg-hs-gold-light transition"
-  >
-    Continue / Next →
-  </button>
-) : (
-  <>
+              <div className="flex items-center justify-center gap-5">
     <IconButton label={`Pass on ${currentDish.dish}`} disabled={actionLock.current} onClick={() => commitSwipe('left')} className="w-14 h-14 sm:w-16 sm:h-16 bg-hs-red/10 border-2 border-hs-red text-hs-red shadow-lg backdrop-blur-sm hover:scale-105 hover:bg-hs-red hover:text-white transition active:scale-95"><PassIcon size={24} className="sm:w-7 sm:h-7" /></IconButton>
     <IconButton label={`Want ${currentDish.dish}`} disabled={actionLock.current} onClick={() => commitSwipe('right')} className="w-16 h-16 sm:w-[72px] sm:h-[72px] bg-hs-gold text-hs-black shadow-gold hover:scale-105 hover:bg-hs-gold-light transition active:scale-95"><WantItIcon size={30} className="sm:w-8 sm:h-8" /></IconButton>
-  </>
-)}</div></div>
+              </div></div>
           </article>
+          {matchDish && (
+            <div
+              className="absolute inset-0 z-30 overflow-hidden rounded-[1.5rem] bg-hs-black shadow-card-lg"
+              data-testid="swipe-countdown"
+              role="status"
+              aria-live="assertive"
+              aria-label={`Next dish in ${matchCountdown}`}
+            >
+              <DishImage src={matchDish.imageUrl} alt="" sizes="(max-width: 480px) calc(100vw - 32px), 448px" quality={72} className="absolute inset-0 h-full w-full object-cover opacity-35" />
+              <div className="absolute inset-0 bg-black/60" />
+              <div className="relative flex h-full flex-col items-center justify-center px-6 text-center">
+                <p className="mb-2 text-sm font-black uppercase tracking-[0.22em] text-hs-gold">{user ? 'Saved' : 'Want it?'}</p>
+                <span className="text-[clamp(6rem,34vw,10rem)] font-black leading-none tabular-nums text-white drop-shadow-2xl" data-testid="countdown-number">{matchCountdown}</span>
+                <p className="mt-3 text-base font-bold text-white">Next dish coming up</p>
+                {!user && <Link href="/auth?mode=signup&next=/swipe" className="mt-5 inline-flex min-h-11 items-center rounded-full border border-hs-gold/50 bg-black/55 px-5 text-sm font-bold text-hs-gold">Sign in to save this dish</Link>}
+              </div>
+            </div>
+          )}
         </div>
       </main>
       <div aria-live="polite" className="sr-only">{announcement}</div>
@@ -534,7 +530,6 @@ export default function SwipePage() {
           Replaying food you’ve seen
         </div>
       )}
-      {matchDish && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" role="status"><div className="bg-hs-charcoal rounded-[2rem] p-6 text-center border border-white/[0.08] shadow-card-lg w-full max-w-sm animate-bounce"><div className="w-16 h-16 rounded-full bg-hs-gold/10 flex items-center justify-center mx-auto mb-4 text-hs-gold"><WantItIcon size={40} /></div><h2 className="text-2xl font-black text-hs-cream mb-1">Saved</h2><p className="text-hs-gray text-sm mb-4">Added to your saved dishes.</p><p className="text-lg font-bold text-hs-cream">{matchDish.dish}</p><p className="text-hs-gray text-sm mb-5">{matchDish.restaurant}</p><div className="flex justify-center"><PlaceActions place={{ ...matchDish.seller, name: matchDish.seller.business_name, order_url: matchDish.seller.order_url || matchDish.seller.ordering_url }} /></div></div></div>}
       <FilterSheet open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} onApply={applyFilters} onClear={clearFilters} mode={feedTab} onModeChange={changeMode} radius={radius} onRadiusChange={setRadius} locationState={locationState} onRequestLocation={requestLocation} />
       <MobileNav />
     </div>
