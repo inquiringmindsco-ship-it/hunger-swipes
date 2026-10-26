@@ -608,7 +608,7 @@ export default function SwipePage() {
         </div>
       )}
       {matchDish && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" role="dialog" aria-modal="true" aria-labelledby="saved-title">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" role="dialog" aria-modal="true" aria-labelledby="saved-title" data-testid="swipe-countdown">
           <div
             className="bg-hs-charcoal rounded-[2rem] p-6 text-center border border-white/[0.08] shadow-card-lg w-full max-w-sm"
           >
@@ -626,7 +626,7 @@ export default function SwipePage() {
             </div>
             <div className="rounded-2xl bg-hs-soft/70 px-4 py-3 mb-4" aria-live="polite">
               <p className="text-sm font-bold text-hs-cream">
-                {matchPaused ? 'Paused — take your time.' : `Next dish in ${matchCountdown} second${matchCountdown === 1 ? '' : 's'}`}
+                {matchPaused ? 'Paused — take your time.' : <>Next dish in <span data-testid="countdown-number">{matchCountdown}</span> second{matchCountdown === 1 ? '' : 's'}</>}
               </p>
               {!matchPaused && <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/30"><div className="h-full bg-hs-gold transition-[width] duration-1000 ease-linear" style={{ width: `${(matchCountdown / MATCH_CONFIRMATION_SECONDS) * 100}%` }} /></div>}
             </div>

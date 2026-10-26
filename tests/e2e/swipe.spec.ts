@@ -13,6 +13,10 @@ const fixtureDishes = Array.from({ length: 30 }, (_, index) => ({
   seller: { id: `seller-${index}`, business_name: `Test Kitchen ${index + 1}`, city: 'Ferguson', state: 'MO' },
 }))
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('hs_discover_tour_v1', 'true'))
+})
+
 async function openGuestFeed(page: Page) {
   await page.route('**/api/dishes?**', (route) => route.fulfill({
     status: 200,
@@ -31,10 +35,11 @@ test('guest right swipe shows a visible countdown, advances, and performs no wri
   await expect(page.getByRole('heading', { name: 'Test Dish 2' })).toBeVisible()
   await page.getByRole('button', { name: 'Want Test Dish 2' }).click()
   await expect(page.getByTestId('swipe-countdown')).toBeVisible()
-  await expect(page.getByTestId('countdown-number')).toHaveText('5')
-  await expect(page.getByTestId('countdown-number')).toHaveText('4', { timeout: 2000 })
-  await expect(page.getByRole('heading', { name: 'Test Dish 3' })).toBeVisible({ timeout: 6000 })
+  await expect(page.getByTestId('countdown-number')).toHaveText('15')
+  await expect(page.getByTestId('countdown-number')).toHaveText('14', { timeout: 2000 })
+  await page.getByRole('button', { name: 'Keep Swiping' }).click()
   await expect(page.getByTestId('swipe-countdown')).not.toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Test Dish 3' })).toBeVisible()
   expect(writes).toBe(0)
 })
 
