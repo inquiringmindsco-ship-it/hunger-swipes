@@ -103,6 +103,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta
+          name="impact-site-verification"
+          {...{ value: '98dcce70-830d-448b-ac0e-61702cd7f5dd' }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

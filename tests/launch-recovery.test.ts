@@ -8,6 +8,12 @@ test('homepage has one canonical destination: Discover', () => {
   assert.match(read('../app/page.tsx'), /redirect\(['"]\/swipe['"]\)/)
 })
 
+test('root document includes the exact Impact site verification tag', () => {
+  const layout = read('../app/layout.tsx')
+  assert.match(layout, /name="impact-site-verification"/)
+  assert.match(layout, /value: '98dcce70-830d-448b-ac0e-61702cd7f5dd'/)
+})
+
 test('mobile shell exposes exactly one primary navigation element', () => {
   const nav = read('../app/components/MobileNav.tsx')
   assert.equal((nav.match(/<nav\b/g) || []).length, 1)
