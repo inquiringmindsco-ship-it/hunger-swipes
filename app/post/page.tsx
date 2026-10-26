@@ -3,13 +3,15 @@
 import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Camera, Check, LocateFixed, MapPin, Search, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Camera, Check, ChefHat, LocateFixed, MapPin, Search, ChevronRight, Store } from 'lucide-react'
 import MobileNav from '@/app/components/MobileNav'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import { useAuth } from '@/lib/auth'
-import { authFetch } from '@/lib/auth-fetch'
+import { authFetch, apiFetch } from '@/lib/auth-fetch'
+import { pickImage } from '@/lib/image-picker'
 import { LoadingState } from '@/app/components/ui/LoadingState'
 import Head from 'next/head'
+import type { AddressSuggestion } from '@/lib/address-search'
 
 type Place = { id: string; name: string; location_text: string; address?: string; city?: string; state?: string; cuisine?: string; category?: string; claimed_status?: string; external_source?: string; distanceMiles?: number }
 
@@ -25,6 +27,10 @@ export default function CommunityPostPage() {
   const [manual, setManual] = useState(false)
   const [newPlace, setNewPlace] = useState('')
   const [location, setLocation] = useState('')
+  const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([])
+  const [selectedAddress, setSelectedAddress] = useState<AddressSuggestion | null>(null)
+  const [addressSearching, setAddressSearching] = useState(false)
+  const [addressSearched, setAddressSearched] = useState(false)
   const [newPlacePhone, setNewPlacePhone] = useState('')
   const [dishName, setDishName] = useState('')
   const [description, setDescription] = useState('')
@@ -33,16 +39,19 @@ export default function CommunityPostPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [postingType, setPostingType] = useState<'restaurant' | null>(null)
 
   useEffect(() => { if (!authLoading && !user) router.replace('/auth?next=/post') }, [authLoading, user, router])
   useEffect(() => {
-    const requested = new URLSearchParams(window.location.search).get('place') || ''
+    const params = new URLSearchParams(window.location.search)
+    const requested = params.get('place') || ''
+    if (requested || params.get('type') === 'restaurant') setPostingType('restaurant')
     setRequestedPlaceId(requested)
     setPlaceId(requested)
     if (requested) {
       // Pre-load only the requested place from URL
       setSearching(true)
-      fetch(`/api/places?id=${encodeURIComponent(requested)}`)
+      apiFetch(`/api/places?id=${encodeURIComponent(requested)}`)
         .then((response) => response.json())
         .then((data) => { setPlaces(data.places || []) })
         .catch(() => { setPlaces([]) })
@@ -65,13 +74,20 @@ export default function CommunityPostPage() {
         if (query.trim()) params.set('q', query.trim())
         if (coordinates) { params.set('lat', String(coordinates.lat)); params.set('lng', String(coordinates.lng)) }
         const endpoint = coordinates && !query.trim() && !requestedPlaceId ? `/api/nearby?lat=${coordinates.lat}&lng=${coordinates.lng}&radius=15` : `/api/places?${params}`
-        const response = await fetch(endpoint)
+        const response = await apiFetch(endpoint)
         const data = await response.json()
         setPlaces(data.places || [])
       } catch { setPlaces([]) } finally { setSearching(false) }
     }, query ? 300 : 0)
     return () => clearTimeout(timer)
   }, [query, coordinates, requestedPlaceId])
+
+  async function handlePickPhoto(source?: 'camera' | 'photos' | 'prompt') {
+    const picked = await pickImage({ source: source || 'prompt' })
+    if (!picked) return
+    setFile(picked.file)
+    setPreviewUrl(picked.previewUrl)
+  }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0] || null
@@ -92,6 +108,40 @@ export default function CommunityPostPage() {
     }, () => setError('Location was not shared. You can still search by name, food type, or area.'), { timeout: 10000, maximumAge: 300000 })
   }
 
+  async function searchAddress() {
+    const address = location.trim()
+    if (address.length < 5) return setError('Enter a fuller street address, including city/state or ZIP when possible')
+    setAddressSearching(true)
+    setAddressSearched(false)
+    setError('')
+    try {
+      const params = new URLSearchParams({ q: address })
+      if (coordinates) {
+        params.set('lat', String(coordinates.lat))
+        params.set('lng', String(coordinates.lng))
+      }
+      const response = await authFetch(`/api/places/address-search?${params}`)
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Could not search addresses')
+      setAddressSuggestions(data.suggestions || [])
+      setAddressSearched(true)
+    } catch (err: any) {
+      setAddressSuggestions([])
+      setAddressSearched(true)
+      setError(err.message || 'Could not search addresses')
+    } finally {
+      setAddressSearching(false)
+    }
+  }
+
+  function chooseAddress(suggestion: AddressSuggestion) {
+    setSelectedAddress(suggestion)
+    setLocation(suggestion.formattedAddress)
+    setAddressSuggestions([])
+    setAddressSearched(false)
+    setError('')
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!file) return setError('Choose a food photo')
@@ -100,7 +150,21 @@ export default function CommunityPostPage() {
     try {
       let resolvedPlaceId = placeId
       if (!resolvedPlaceId) {
-        const response = await authFetch('/api/places', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newPlace, location_text: location, phone: newPlacePhone }) })
+        const response = await authFetch('/api/places', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: newPlace,
+            location_text: location,
+            phone: newPlacePhone,
+            address: selectedAddress?.formattedAddress || location,
+            city: selectedAddress?.city,
+            state: selectedAddress?.state,
+            postal_code: selectedAddress?.postalCode,
+            latitude: selectedAddress?.latitude,
+            longitude: selectedAddress?.longitude,
+          }),
+        })
         const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not create place'); resolvedPlaceId = data.place.id
       }
       const upload = new FormData(); upload.append('file', file); upload.append('folder', 'community-posts')
@@ -129,6 +193,56 @@ export default function CommunityPostPage() {
     )
   }
 
+  if (!user) return null
+
+  if (!postingType) {
+    return (
+      <div className="min-h-screen bg-hs-ink pb-24">
+        <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
+          <div className="max-w-md mx-auto flex items-center gap-2">
+            <BrandMark size={28} />
+            <span className="font-bold text-base text-hs-cream tracking-tight">Post</span>
+          </div>
+        </header>
+        <main className="max-w-md mx-auto px-4 py-8">
+          <p className="text-xs font-semibold uppercase tracking-wider text-hs-gold">Choose a post type</p>
+          <h1 className="mt-2 text-3xl font-black text-hs-cream">What are you posting?</h1>
+          <p className="mt-2 text-sm text-hs-gray">Pick the option that matches where the food came from.</p>
+          <div className="mt-7 grid gap-4">
+            <button
+              type="button"
+              onClick={() => setPostingType('restaurant')}
+              className="w-full rounded-[1.5rem] border border-white/[0.08] bg-hs-charcoal p-5 text-left hover:border-hs-gold/40 transition"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-hs-gold/10 text-hs-gold flex items-center justify-center"><Store size={24} /></div>
+                <div className="flex-1">
+                  <h2 className="font-bold text-hs-cream">Restaurant dish</h2>
+                  <p className="mt-1 text-xs text-hs-gray">Share food you tried at a restaurant or local place.</p>
+                </div>
+                <ChevronRight size={20} className="text-hs-gray" />
+              </div>
+            </button>
+            <Link
+              href="/seller/dishes/new"
+              className="w-full rounded-[1.5rem] border border-hs-gold/25 bg-hs-gold/10 p-5 text-left hover:border-hs-gold/50 transition"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-hs-gold text-hs-black flex items-center justify-center"><ChefHat size={24} /></div>
+                <div className="flex-1">
+                  <h2 className="font-bold text-hs-cream">My own food</h2>
+                  <p className="mt-1 text-xs text-hs-gray">List food you make or sell. Every dish is reviewed before it goes live.</p>
+                </div>
+                <ChevronRight size={20} className="text-hs-gold" />
+              </div>
+            </Link>
+          </div>
+        </main>
+        <MobileNav />
+      </div>
+    )
+  }
+
   return (
     <>
       <Head>
@@ -144,6 +258,9 @@ export default function CommunityPostPage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6">
+        <button type="button" onClick={() => setPostingType(null)} className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-hs-gold">
+          <ArrowLeft size={17} /> Change post type
+        </button>
         <p className="text-sm text-hs-gray mb-6">
           Share your own food photo from a real place. Community posts are clearly labeled.
         </p>
@@ -156,7 +273,7 @@ export default function CommunityPostPage() {
 
         <form onSubmit={submit} className="space-y-6">
           <section>
-            <label htmlFor="photo" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Photo</label>
+            <button type="button" onClick={() => handlePickPhoto()} className="mb-3 block min-h-11 text-xs font-semibold uppercase tracking-wider text-hs-gold">Photo</button>
             <label
               htmlFor="photo"
               tabIndex={0}
@@ -291,11 +408,48 @@ export default function CommunityPostPage() {
                   <input
                     id="location"
                     value={location}
-                    onChange={e => setLocation(e.target.value)}
+                    onChange={e => {
+                      setLocation(e.target.value)
+                      setSelectedAddress(null)
+                      setAddressSuggestions([])
+                      setAddressSearched(false)
+                    }}
+                    autoComplete="street-address"
+                    placeholder="Street address, city/state or ZIP"
                     className="w-full rounded-2xl border border-white/[0.08] bg-hs-charcoal py-3.5 pl-11 pr-4 text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
                     required={manual}
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={searchAddress}
+                  disabled={addressSearching || location.trim().length < 5}
+                  className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-xl border border-hs-gold/30 px-3 py-2 text-sm font-semibold text-hs-gold disabled:opacity-50"
+                >
+                  <Search size={16} /> {addressSearching ? 'Checking address…' : 'Find full address'}
+                </button>
+                <p className="mt-2 text-xs text-hs-muted">Include the city/state or ZIP for the most accurate match.</p>
+                {addressSuggestions.length > 0 && (
+                  <div className="mt-2 space-y-1 rounded-2xl border border-white/[0.08] bg-hs-soft p-2">
+                    {addressSuggestions.map(suggestion => (
+                      <button
+                        key={suggestion.id}
+                        type="button"
+                        onClick={() => chooseAddress(suggestion)}
+                        className="w-full rounded-xl px-3 py-2 text-left text-sm text-hs-cream hover:bg-white/[0.06]"
+                      >
+                        {suggestion.formattedAddress}
+                      </button>
+                    ))}
+                    <p className="px-3 pt-1 text-[10px] text-hs-muted">© OpenStreetMap contributors</p>
+                  </div>
+                )}
+                {addressSearched && addressSuggestions.length === 0 && !addressSearching && (
+                  <p className="mt-2 text-xs text-hs-gray">No matching address found. Add city/state or ZIP and try again, or keep the address you entered.</p>
+                )}
+                {selectedAddress && (
+                  <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-hs-success"><Check size={14} /> Full address selected</p>
+                )}
               </div>
               <div>
                 <label htmlFor="phone" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">Phone</label>

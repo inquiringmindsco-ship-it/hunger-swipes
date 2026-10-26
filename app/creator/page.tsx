@@ -1,5 +1,6 @@
 'use client'
 
+import { apiFetch } from '@/lib/auth-fetch'
 import { useState } from 'react'
 import Link from 'next/link'
 import { ForkFlame, Flame, Camera, Heart, CheckLine, XMark, Star, Fork, Plate, Dollar, MapPin, Trophy, Verified, Upload, Clock, Grid, SwipeLeft, SwipeRight, ArrowRight, Note, Crown, Comment, Sparkle, Bookmark, Gear, CheckBold } from '@/app/components/HwIcon'
@@ -432,7 +433,7 @@ export default function CreatorDashboard() {
                         <button
                           onClick={() => {
                             const amount = photo.orders > 5 ? 'trending' : 'featured'
-                            fetch('/api/checkout', {
+                            apiFetch('/api/checkout', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ creatorId: 'current-user', promotion: amount, photoId: photo.id }),

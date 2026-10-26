@@ -8,6 +8,7 @@ import { useAuth, getAuthToken } from '@/lib/auth'
 import { BrandMark, ProfileIcon } from '@/app/components/icons/HungerIcons'
 import MobileNav from '@/app/components/MobileNav'
 import { LoadingState } from '@/app/components/ui/LoadingState'
+import { apiFetch } from '@/lib/auth-fetch'
 
 const RESERVED = new Set([
   'api','admin','swipe','saved','account','auth','join','login','logout','profile','profiles','seller','sellers',
@@ -30,7 +31,7 @@ async function api(path: string, init?: RequestInit) {
   const token = await getAuthToken()
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string> || {}) }
   if (token) headers.Authorization = `Bearer ${token}`
-  const res = await fetch(path, { ...init, headers })
+  const res = await apiFetch(path, { ...init, headers })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Request failed')
   return data

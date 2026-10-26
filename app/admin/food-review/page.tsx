@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Check, Loader2, ThumbsDown, ThumbsUp, Trash2, X, AlertCircle } from 'lucide-react'
 import { adminFetch } from '@/lib/admin-fetch'
+import { ImagePreviewModal } from '@/app/components/admin/ImagePreviewModal'
 
 function timeAgo(date: string) {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
@@ -53,6 +54,7 @@ export default function FoodReviewPage() {
   const [deciding, setDeciding] = useState(false)
   const [removeReason, setRemoveReason] = useState('')
   const [showRemove, setShowRemove] = useState(false)
+  const [showFullImage, setShowFullImage] = useState(false)
   const touchStartX = useRef(0)
 
   const load = useCallback(async () => {
@@ -221,17 +223,13 @@ export default function FoodReviewPage() {
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
           >
-            <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-black border border-white/10 mb-4 relative">
-              <img
-                src={post.photo_url}
-                alt={post.dish_name}
-                className="w-full h-full object-cover"
-                draggable={false}
-              />
+            <button type="button" onClick={() => setShowFullImage(true)} className="block aspect-[4/5] w-full rounded-2xl overflow-hidden bg-black border border-white/10 mb-4 relative" aria-label={`View full image for ${post.dish_name}`}>
+              <img src={post.photo_url} alt={post.dish_name} className="w-full h-full object-cover" draggable={false} />
               <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
                 {index + 1} / {posts.length}
               </div>
-            </div>
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/75 px-4 py-2 text-sm font-bold text-white">Tap for full image</div>
+            </button>
 
             <div className="space-y-1 mb-5">
               <p className="text-xl font-bold">{post.dish_name}</p>
@@ -320,6 +318,7 @@ export default function FoodReviewPage() {
             </div>
           </div>
         )}
+        {showFullImage && post && <ImagePreviewModal src={post.photo_url} alt={post.dish_name} onClose={() => setShowFullImage(false)} />}
       </main>
     </div>
   )

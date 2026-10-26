@@ -230,13 +230,13 @@ export default function HistoryPage() {
 
                     <div className="flex items-center gap-3">
                       <div className="flex-1 min-w-0">
-                        <PlaceActions place={{ ...seller, name: seller.business_name, order_url: seller.order_url || seller.ordering_url }} compact />
+                        <PlaceActions place={{ ...seller, name: seller.business_name, order_url: seller.order_url || seller.ordering_url }} compact showWebsiteWhenCompact />
                       </div>
                       {item.direction === 'left' && (
                         <button
                           onClick={() => saveAgain(dish.id, item.content_kind)}
                           disabled={saving === dish.id}
-                          className="px-4 py-2 rounded-xl bg-hs-gold text-hs-black text-sm font-bold hover:bg-hs-gold-light transition disabled:opacity-50"
+                          className="min-h-11 px-5 py-2 rounded-xl bg-hs-gold text-hs-black text-sm font-bold hover:bg-hs-gold-light transition disabled:opacity-50"
                         >
                           {saving === dish.id ? 'Saving…' : 'Save'}
                         </button>

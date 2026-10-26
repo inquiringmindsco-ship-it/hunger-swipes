@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChefHat, X, AlertCircle } from 'lucide-react'
 import { useDialogA11y } from '@/lib/dialog-a11y'
-import { getAuthToken } from '@/lib/auth-fetch'
+import { apiFetch, getAuthToken } from '@/lib/auth-fetch'
 import RecipePaymentForm from '@/app/components/RecipePaymentForm'
+import { isIOS } from '@/lib/capacitor'
 
 export type RecipeSummary = {
   id: string
@@ -45,7 +46,7 @@ async function api(path: string, init?: RequestInit) {
   const token = await getAuthToken()
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string> || {}) }
   if (token) headers.Authorization = `Bearer ${token}`
-  const res = await fetch(path, { ...init, headers })
+  const res = await apiFetch(path, { ...init, headers })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Request failed')
   return data
@@ -64,6 +65,7 @@ async function recordImpact(eventType: 'recipe_view' | 'recipe_purchase_intent',
 }
 
 export default function RecipeUnlockSheet({ recipeId, dishId, sellerId, onClose }: RecipeUnlockSheetProps) {
+  const iosApp = isIOS()
   const [state, setState] = useState<ViewState>({ status: 'loading' })
   const [proudAmount, setProudAmount] = useState<number | 'other' | null>(null)
   const [customAmount, setCustomAmount] = useState('')
@@ -213,12 +215,19 @@ export default function RecipeUnlockSheet({ recipeId, dishId, sellerId, onClose 
             {state.recipe.description && (
               <p className="text-sm text-hs-gray mb-6">{state.recipe.description}</p>
             )}
-            <button
-              onClick={() => startPurchase(state.recipe)}
-              className="w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold text-sm hover:bg-hs-gold-light transition"
-            >
-              Unlock Recipe
-            </button>
+            {iosApp ? (
+              <div className="rounded-2xl border border-white/[0.08] bg-hs-soft p-4 text-center">
+                <p className="text-sm font-semibold text-hs-cream">Paid recipe unlocking is not available in the iOS app.</p>
+                <p className="mt-1 text-xs text-hs-gray">Free recipes remain available.</p>
+              </div>
+            ) : (
+              <button
+                onClick={() => startPurchase(state.recipe)}
+                className="w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold text-sm hover:bg-hs-gold-light transition"
+              >
+                Unlock Recipe
+              </button>
+            )}
           </>
         )}
 

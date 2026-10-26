@@ -1,10 +1,13 @@
 'use client'
 
+import { apiFetch } from '@/lib/auth-fetch'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth, getAuthToken } from '@/lib/auth'
 import { useEffect, useState } from 'react'
+import { Keyboard } from '@capacitor/keyboard'
 import { DiscoverIcon, SavedIcon, PostIcon, SellIcon, ProfileIcon, ClockIcon } from '@/app/components/icons/HungerIcons'
+import { isNativeApp } from '@/lib/capacitor'
 
 function SellerLink() {
   const pathname = usePathname() || ''
@@ -19,7 +22,7 @@ function SellerLink() {
       return
     }
     getAuthToken().then((token) =>
-      fetch('/api/sellers?mine=true', {
+      apiFetch('/api/sellers?mine=true', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
         .then((r) => r.json())
@@ -60,6 +63,36 @@ function SellerLink() {
 
 export default function MobileNav() {
   const pathname = usePathname() || ''
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
+
+  useEffect(() => {
+    let disposed = false
+    const handles: Array<{ remove: () => Promise<void> }> = []
+
+    if (isNativeApp()) {
+      void Promise.all([
+        Keyboard.addListener('keyboardWillShow', () => setKeyboardOpen(true)),
+        Keyboard.addListener('keyboardWillHide', () => setKeyboardOpen(false)),
+      ]).then((listeners) => {
+        if (disposed) listeners.forEach((listener) => void listener.remove())
+        else handles.push(...listeners)
+      })
+    }
+
+    const viewport = window.visualViewport
+    const initialHeight = viewport?.height || window.innerHeight
+    const syncViewport = () => {
+      if (!viewport) return
+      setKeyboardOpen(initialHeight - viewport.height > 140)
+    }
+    viewport?.addEventListener('resize', syncViewport)
+
+    return () => {
+      disposed = true
+      viewport?.removeEventListener('resize', syncViewport)
+      handles.forEach((listener) => void listener.remove())
+    }
+  }, [])
 
   const navItems = [
     { href: '/swipe', label: 'Discover', icon: DiscoverIcon },
@@ -68,11 +101,14 @@ export default function MobileNav() {
     { href: '/history', label: 'History', icon: ClockIcon },
   ]
 
+  if (keyboardOpen) return null
+
   return (
     <nav
+      id="mobile-nav"
       aria-label="Primary"
       data-testid="mobile-nav"
-      className="fixed bottom-0 left-0 right-0 bg-hs-black/95 backdrop-blur-xl border-t border-white/[0.06] z-50 safe-bottom"
+      className="mobile-nav-safe fixed bottom-0 left-0 right-0 bg-hs-black/95 backdrop-blur-xl border-t border-white/[0.06] z-50"
     >
       <div className="flex items-end justify-around py-1.5 px-1 max-w-md mx-auto">
         {navItems.map((item) => {

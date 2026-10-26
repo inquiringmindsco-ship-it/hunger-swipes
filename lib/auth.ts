@@ -29,7 +29,12 @@ export function useAuth(): AuthState {
     let mounted = true
 
     const refresh = async () => {
-      const { data, error } = await supabase.auth.getSession()
+      const { data, error } = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<{ data: { session: null }; error: null }>((resolve) => {
+          window.setTimeout(() => resolve({ data: { session: null }, error: null }), 2500)
+        }),
+      ])
       if (!mounted) return
       if (error) {
         setState({ user: null, session: null, loading: false, error: error.message })

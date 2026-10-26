@@ -1,50 +1,50 @@
 # Hunger Swipes current state
 
-Updated: 2026-10-25
+Updated: 2026-10-26
 
 ## Authoritative development state
 
-- Production source branch: `main`.
-- Launch-recovery branch awaiting owner approval: `codex/launch-recovery`.
-- Launch-recovery base: `5a359fd4545263b786a2fdb0467d7bdb29bfc04a`.
+- Production source branch: `main` at merge commit `8348cb542f1bb480eff9fd30226804f956848929`.
+- Current production deployment: `dpl_BFMGBx2FwTLmnvt6d5LvPf3x2cme`. It contains the narrow recovery UI and is not the approved Build 15 experience.
+- Corrective release branch: `codex/build15-recovery`.
 - Canonical Discover route: `/swipe`; `/` redirects there immediately.
-- Authoritative Discover UX: `app/swipe/page.tsx` on `codex/launch-recovery`.
-- Current Vercel production deployment: `dpl_8WyZ7ekyWJ1PmkZDyBR6N4F2Rivk` (2026-10-25 12:39 CDT). Vercel reports no Git metadata for this CLI deployment, so it cannot be truthfully mapped to a source commit.
-- No production deployment was made during this recovery.
+- Authoritative mobile UX reference: archived iOS Build 15 at `.ios-build/Hunger Swipes 1.0 Build 15.xcarchive`, created October 24, 2026 at 10:23 CDT.
+- Preserved source snapshot for that app build: `a2ed9d2ba1ced90f33c9b2feb03d2874049e1a08`.
 
-## Recovery status
+## Build 15 recovery status
 
-- Direct anonymous food discovery: restored.
-- Visible right-swipe countdown: restored (5, 4, 3, 2, 1, then next card).
-- Mobile navigation: one persistent, safe-area-aware navigation component.
-- Gesture lock, one-card advancement, feed refill, and session rediscovery: covered by automated tests.
-- Swipe Bucks persistence and database uniqueness safeguards: preserved.
-- Dish-candidate administration, rights gates, audit trail, publish/unpublish controls, CI, and monitoring: preserved from `main`.
+- The Build 15 iOS/Capacitor foundation was integrated into current production code rather than replacing Sentinel's recovery work.
+- Direct anonymous food discovery remains active.
+- Right swipes restore the verified 15-second saved/want confirmation, countdown text and progress bar, pause behavior, place actions, and manual “Keep Swiping” continuation.
+- Profile restores the two-column dashboard tiles for Food Profile, Preferences, Saved, Swipe Bucks, Seller Hub/List Your Food, Add a Dish/Post Food, and History.
+- Post restores the complete post-type choice and restaurant/community food submission flow, including place search, address lookup, photo upload, dish details, and moderation language.
+- The first-use Discover tutorial, replay control, keyboard-aware navigation, content reporting/blocking, updated seller/recipe flows, support/privacy updates, and safe-area styling are restored.
+- Sentinel's dish candidate administration, rights gates, emergency unpublish, CI, monitoring, session rediscovery, deck supply, and Swipe Bucks protections remain preserved.
 
 ## Dish truth
 
-- Live Discover cards: 7 approved community dishes; all seven image URLs returned valid JPEG responses during recovery verification.
-- Candidate rows: 179 total. The database currently records all 179 as `permission_required`; 11 have staged records but remain rights-blocked. “168 owner review + 11 blocked” is an operational queue split, not an `approved` database count.
-- Do not publish any candidate without documented rights evidence. Do not treat staged records as live dishes.
+- Last verified production state: 7 approved community dishes live with working images.
+- Candidate rows: 179 total, still rights-gated. Do not publish a candidate without documented permission evidence.
 
 ## Verification
 
 - `npm test`: 42/42 passed.
-- `npm run test:ui`: 19/19 passed.
+- `npm run test:ui`: 20/20 passed.
 - `npm run lint`: passed.
-- `npm run build`: passed (Next.js production build and TypeScript).
-- Playwright with the app environment: 33/33 passed, including changing countdown numerals, next-card transition, anonymous browsing, single navigation, mobile viewports, feed refill, and rights checks.
-- Admin unpublish code and regression guards passed; a live dish was not destructively unpublished during release preparation.
+- `npm run build`: passed.
+- `tests/e2e/swipe.spec.ts`: 27/27 passed across 320×568, 360×800, 390×844, 430×932, tablet, and desktop checks.
+- Local live-catalog tests require the real Supabase environment; fixture-backed interaction tests are green.
 
-## Release and rollback
+## Release policy
 
-1. Owner reviews the exact commit on `codex/launch-recovery`.
-2. Merge only after CI is green and the branch is clean.
-3. Deploy from clean, synchronized `main` through the Git-connected Vercel project or `scripts/vercel-prod-guard.sh`.
-4. Immediately verify `/`, `/swipe`, countdown, next-card transition, navigation, images, and `/api/dishes` on production.
-5. Operational rollback target: `dpl_8WyZ7ekyWJ1PmkZDyBR6N4F2Rivk`; then run the production monitor. This target restores the current seven-card feed but does not contain the recovered visible countdown.
+1. Commit and push the clean `codex/build15-recovery` candidate.
+2. Review its preview against the archived Build 15 reference on a mobile viewport.
+3. Obtain owner approval for the exact candidate commit.
+4. Merge through green CI and deploy the exact clean commit only.
+5. Immediately verify production Discover, 15-second confirmation, tiled Profile, complete Post, navigation, Saved, History, images, and dish administration.
+6. If a critical check fails, roll back to `dpl_BFMGBx2FwTLmnvt6d5LvPf3x2cme` while a corrected candidate is prepared.
 
 ## Preserved work
 
-- The dirty `/Users/sentinel/Documents/hunger-swipes` checkout and unfinished `feature/catalog-review` work were not modified or copied into this release.
-- iOS/Capacitor and unrelated seller/catalog experiments remain separate from the launch recovery.
+- The dirty `/Users/sentinel/Documents/hunger-swipes` checkout remains intact; no uncommitted catalog or agent work was discarded.
+- `feature/catalog-review` remains separate. Catalog experiments are not part of this corrective release.

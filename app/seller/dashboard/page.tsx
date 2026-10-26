@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { QRCodeSVG } from 'qrcode.react'
-import { Ban, CheckCircle2, Clock3, CreditCard, ExternalLink, LogOut, MapPin, Pencil, Phone, Plus, Timer, ToggleLeft, ToggleRight, TrendingUp, Heart, Eye, Utensils, Lock, RefreshCw } from 'lucide-react'
+import { Ban, CheckCircle2, Clock3, ExternalLink, LogOut, MapPin, Pencil, Phone, Plus, Timer, ToggleLeft, ToggleRight, TrendingUp, Heart, Eye, Utensils, Lock, RefreshCw } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
 import { getSupabase } from '@/lib/supabase'
 import { BrandMark, SellerTypeIcon } from '@/app/components/icons/HungerIcons'
@@ -14,11 +14,37 @@ import { LoadingState } from '@/app/components/ui/LoadingState'
 import { EmptyState } from '@/app/components/ui/EmptyState'
 import { ImageFallback } from '@/app/components/ui/ImageFallback'
 import Head from 'next/head'
+import TutorialCoachMark, { type TutorialStep } from '@/app/components/TutorialCoachMark'
+
+const SELLER_INTRO_KEY = 'hs_seller_intro_v1'
+const STAFF_UPLOAD_ENABLED = false
+const SELLER_INTRO_STEPS: TutorialStep[] = [
+  { targetId: 'seller-readiness', title: 'Finish your profile', body: 'The checklist shows what is still needed before your listing can be reviewed.', placement: 'below' },
+  { targetId: 'seller-add-dish', title: 'Add your first dish', body: 'Post a clear food photo, name, and price. Every dish is reviewed before it goes live.', placement: 'above' },
+  { targetId: 'seller-review-status', title: 'We review, then you go live', body: 'Your status appears here after review. You can keep preparing your listing while you wait.', placement: 'below' },
+]
+
+function sellerTypesFor(seller: any): string[] {
+  return Array.isArray(seller?.seller_types) && seller.seller_types.length
+    ? seller.seller_types
+    : [seller?.seller_type].filter(Boolean)
+}
 
 function readinessChecklist(seller: any) {
   const checks = []
   const has = (v: any) => typeof v === 'string' && v.trim().length > 0
-  checks.push({ label: 'Business name', ok: has(seller.business_name) })
+  const types = sellerTypesFor(seller)
+  const recipeOnly = types.includes('recipe_creator') && types.length === 1
+  const homeCook = types.includes('home_cook') || types.includes('home_kitchen')
+
+  checks.push({ label: recipeOnly ? 'Creator name' : homeCook ? 'Kitchen or cook name' : 'Business name', ok: has(seller.business_name) })
+  if (recipeOnly) return { allReady: checks.every((check) => check.ok), checks }
+
+  if (homeCook) {
+    checks.push({ label: 'Service area', ok: has(seller.location_text) })
+    return { allReady: checks.every((check) => check.ok), checks }
+  }
+
   checks.push({ label: 'Contact name', ok: has(seller.contact_name) })
   checks.push({ label: 'Contact email', ok: has(seller.contact_email) })
   checks.push({ label: 'Address', ok: has(seller.address) })
@@ -46,12 +72,12 @@ export default function SellerDashboardPage() {
   const [dishes, setDishes] = useState<any[]>([])
   const [stats, setStats] = useState<any>(null)
   const [referrals, setReferrals] = useState<any>(null)
-  const [connect, setConnect] = useState<any>(null)
-  const [connectLoading, setConnectLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [staffPin, setStaffPin] = useState<string | null>(null)
   const [hasStaffPin, setHasStaffPin] = useState(false)
   const [pinLoading, setPinLoading] = useState(false)
+  const [showSellerIntro, setShowSellerIntro] = useState(false)
+  const sellerIntroChecked = useRef(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -62,6 +88,18 @@ export default function SellerDashboardPage() {
     if (sellerId === undefined) return
     loadData()
   }, [sellerId])
+
+  useEffect(() => {
+    if (loading || !seller || seller.status === 'active' || sellerIntroChecked.current) return
+    sellerIntroChecked.current = true
+    let seen = false
+    try { seen = localStorage.getItem(SELLER_INTRO_KEY) === 'true' } catch {}
+    if (seen) return
+    const timer = window.setTimeout(() => setShowSellerIntro(true), 500)
+    return () => window.clearTimeout(timer)
+  }, [loading, seller])
+
+  const closeSellerIntro = useCallback(() => setShowSellerIntro(false), [])
 
   const loadData = async () => {
     setLoading(true)
@@ -78,23 +116,20 @@ export default function SellerDashboardPage() {
         return
       }
       const ownedSellerId = sellerData.seller.id
-      const [dishesRes, statsRes, refRes, pinRes, connectRes] = await Promise.all([
+      const [dishesRes, statsRes, refRes, pinRes] = await Promise.all([
         authFetch(`/api/sellers/${ownedSellerId}/dishes`),
         authFetch(`/api/sellers/${ownedSellerId}/stats`),
         authFetch(`/api/sellers/${ownedSellerId}/referrals`),
         authFetch('/api/sellers/staff-pin'),
-        authFetch(`/api/stripe/connect?seller_id=${ownedSellerId}`),
       ])
       const dishesData = await dishesRes.json()
       const statsData = await statsRes.json()
       const refData = await refRes.json()
       const pinData = await pinRes.json().catch(() => ({ hasPin: false }))
-      const connectData = await connectRes.json().catch(() => ({}))
       setSeller(sellerData.seller)
       if (dishesData.dishes) setDishes(dishesData.dishes)
       if (statsData.stats) setStats(statsData.stats)
       if (refData.stats) setReferrals(refData.stats)
-      setConnect(connectData.status || connectData.error ? connectData : null)
       setHasStaffPin(pinData.hasPin)
       if (!pinData.hasPin) setStaffPin(null)
     } catch {
@@ -136,32 +171,9 @@ export default function SellerDashboardPage() {
     }
   }
 
-  const startStripeConnect = async () => {
-    if (!seller?.id) return
-    setConnectLoading(true)
-    try {
-      const res = await authFetch('/api/stripe/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seller_id: seller.id }),
-      })
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        // Refresh cached status
-        const statusRes = await authFetch(`/api/stripe/connect?seller_id=${seller.id}`)
-        const statusData = await statusRes.json().catch(() => ({}))
-        setConnect(statusData.status || statusData.error ? statusData : null)
-      }
-    } finally {
-      setConnectLoading(false)
-    }
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-hs-ink pb-24">
+      <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
         <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
           <div className="max-w-md mx-auto flex items-center gap-2">
             <BrandMark size={28} />
@@ -178,7 +190,7 @@ export default function SellerDashboardPage() {
 
   if (!seller) {
     return (
-      <div className="min-h-screen bg-hs-ink pb-24">
+      <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
         <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
           <div className="max-w-md mx-auto flex items-center gap-2">
             <BrandMark size={28} />
@@ -210,13 +222,22 @@ export default function SellerDashboardPage() {
   const restaurantUrl = seller?.slug ? `${appUrl}/${seller.slug}` : joinUrl
   const publicUrl = seller?.slug ? `${appUrl}/${seller.slug}` : null
   const staffUrl = seller?.slug ? `${appUrl}/seller/staff/${seller.slug}` : null
-  const StatusIcon = seller.status === 'active' ? CheckCircle2 : seller.status === 'suspended' ? Ban : Timer
-
-  const statusColor = seller.status === 'active' ? 'text-hs-success' : seller.status === 'suspended' ? 'text-hs-red' : 'text-hs-gold'
-  const statusBg = seller.status === 'active' ? 'bg-hs-success/10 border-hs-success/20' : seller.status === 'suspended' ? 'bg-hs-red/10 border-hs-red/20' : 'bg-hs-gold/10 border-hs-gold/20'
-
+  const sellerTypes = sellerTypesFor(seller)
+  const isRecipeOnly = sellerTypes.includes('recipe_creator') && sellerTypes.length === 1
   const readiness = readinessChecklist(seller)
+  const completedSteps = readiness.checks.filter((check) => check.ok).length
+  const completionPercent = Math.round((completedSteps / readiness.checks.length) * 100)
+  const remainingSteps = readiness.checks.filter((check) => !check.ok)
   const publishedDish = dishes.find((d: any) => d.status === 'active' && d.availability === 'available' && d.photo_url)
+  const awaitingReview = readiness.allReady && (seller.status !== 'active' || seller.verification_status === 'pending')
+  const displayStatus = !readiness.allReady
+    ? { label: 'Setup in progress', Icon: Timer, color: 'text-hs-gold', bg: 'bg-hs-gold/10 border-hs-gold/20' }
+    : awaitingReview
+      ? { label: 'Submitted · awaiting review', Icon: Clock3, color: 'text-hs-gold', bg: 'bg-hs-gold/10 border-hs-gold/20' }
+      : seller.status === 'active'
+      ? { label: 'Live', Icon: CheckCircle2, color: 'text-hs-success', bg: 'bg-hs-success/10 border-hs-success/20' }
+      : { label: 'Not active', Icon: Ban, color: 'text-hs-red', bg: 'bg-hs-red/10 border-hs-red/20' }
+  const DisplayStatusIcon = displayStatus.Icon
 
   return (
     <>
@@ -224,7 +245,7 @@ export default function SellerDashboardPage() {
         <title>Seller Dashboard — Hunger Swipes</title>
         <meta name="description" content="Manage your seller listing, dishes, and performance." />
       </Head>
-      <div className="min-h-screen bg-hs-ink pb-24">
+      <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
       <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -239,14 +260,10 @@ export default function SellerDashboardPage() {
               >
                 <ExternalLink size={14} /> Preview
               </Link>
-            ) : (
-              <span className="text-xs text-hs-muted flex items-center gap-1" title={seller?.slug ? 'Add a published dish to preview your public listing' : 'Complete seller setup to get a public page'}>
-                <ExternalLink size={14} /> Preview unavailable
-              </span>
-            )}
+            ) : null}
             <button
               onClick={logout}
-              className="inline-flex min-h-11 items-center gap-1.5 text-xs text-hs-gray hover:text-hs-cream transition"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-xs font-semibold text-hs-gray hover:bg-hs-soft hover:text-hs-cream transition"
             >
               <LogOut size={15} aria-hidden="true" /> Log out
             </button>
@@ -256,11 +273,11 @@ export default function SellerDashboardPage() {
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-5">
         {/* Status + readiness */}
-        <div className={`rounded-[1.5rem] p-4 flex items-center justify-between border ${statusBg}`}>
+        <div id="seller-review-status" className={`rounded-[1.5rem] p-4 flex items-center justify-between border ${displayStatus.bg}`}>
           <div className="flex items-center gap-2">
-            <StatusIcon size={20} className={statusColor} aria-hidden="true" />
-            <p className={`text-sm font-bold capitalize ${statusColor}`}>
-              {seller.status.replace('_', ' ')}
+            <DisplayStatusIcon size={20} className={displayStatus.color} aria-hidden="true" />
+            <p className={`text-sm font-bold ${displayStatus.color}`}>
+              {displayStatus.label}
             </p>
           </div>
           {seller.seller_type === 'home_kitchen' && seller.verification_status !== 'approved' && (
@@ -269,22 +286,18 @@ export default function SellerDashboardPage() {
         </div>
 
         {!readiness.allReady && (
-          <section className="bg-hs-gold/10 border border-hs-gold/20 rounded-[1.5rem] p-5">
-            <h2 className="text-sm font-bold text-hs-cream mb-3">Complete your seller setup</h2>
-            <p className="text-xs text-hs-gray mb-3">Your public listing cannot go live until these are filled in.</p>
-            <ul className="space-y-2">
-              {readiness.checks.map((check) => (
-                <li key={check.label} className="flex items-start gap-2 text-sm">
-                  <span className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${check.ok ? 'bg-hs-success text-hs-black' : 'bg-hs-red/20 text-hs-red'}`}>
-                    {check.ok ? '✓' : '!'}
-                  </span>
-                  <span className={check.ok ? 'text-hs-cream' : 'text-hs-cream'}>
-                    {check.label}
-                    {check.detail && <span className="block text-xs text-hs-gray mt-0.5">{check.detail}</span>}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <section id="seller-readiness" className="bg-hs-gold/10 border border-hs-gold/20 rounded-[1.5rem] p-5">
+            <div className="flex items-end justify-between gap-4 mb-3">
+              <div>
+                <h2 className="text-sm font-bold text-hs-cream">Complete your seller setup</h2>
+                <p className="mt-1 text-xs text-hs-gray">{remainingSteps.length} {remainingSteps.length === 1 ? 'step' : 'steps'} left before your listing can go live.</p>
+              </div>
+              <p className="text-xl font-black text-hs-gold">{completionPercent}%</p>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-black/30" role="progressbar" aria-label="Seller setup progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionPercent}>
+              <div className="h-full rounded-full bg-hs-gold transition-[width]" style={{ width: `${completionPercent}%` }} />
+            </div>
+            <p className="mt-3 text-xs text-hs-gray">Next: <span className="font-semibold text-hs-cream">{remainingSteps[0]?.label}</span>{remainingSteps.length > 1 ? ` + ${remainingSteps.length - 1} more` : ''}</p>
             <Link href="/seller/profile" className="mt-4 block w-full py-3 rounded-xl bg-hs-gold text-hs-black text-sm font-bold text-center hover:bg-hs-gold-light transition">
               Finish seller setup
             </Link>
@@ -324,7 +337,7 @@ export default function SellerDashboardPage() {
             )}
           </div>
           <Link href="/seller/profile" className="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-hs-soft text-sm font-bold text-hs-cream hover:border-hs-gold/30">
-            <Pencil size={16} /> Edit {seller.seller_types?.includes('home_cook') ? 'seller' : 'restaurant'} and ordering
+            <Pencil size={16} /> {isRecipeOnly ? 'Edit creator profile' : sellerTypes.includes('home_cook') || sellerTypes.includes('home_kitchen') ? 'Edit cook profile' : 'Edit restaurant and ordering'}
           </Link>
           {seller.slug && <p className="mt-3 text-center text-xs text-hs-muted">Public page: hungerswipes.com/{seller.slug}</p>}
         </section>
@@ -364,6 +377,7 @@ export default function SellerDashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-hs-cream">{seller.seller_types?.includes('recipe_creator') ? 'Your Dishes & Meals' : 'Your Dishes'}</h2>
             <Link
+              id="seller-add-dish"
               href="/seller/dishes/new"
               className="px-4 py-2 bg-hs-gold text-hs-black rounded-xl text-sm font-bold flex items-center gap-1 hover:bg-hs-gold-light transition"
             >
@@ -404,14 +418,23 @@ export default function SellerDashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-hs-cream truncate">{dish.name}</p>
                     <p className="text-sm text-hs-gold font-semibold">${Number(dish.price).toFixed(2)}</p>
-                    <p className="text-xs text-hs-gray">{dish.availability === 'available' ? 'Available' : 'Unavailable'}</p>
+                    <p className={`text-xs font-semibold ${
+                      dish.status === 'active'
+                        ? dish.availability === 'available' ? 'text-hs-success' : 'text-hs-gray'
+                        : dish.status === 'pending' ? 'text-hs-gold' : 'text-hs-red'
+                    }`}>
+                      {dish.status === 'active'
+                        ? dish.availability === 'available' ? 'Live · Available' : 'Live · Unavailable'
+                        : dish.status === 'pending' ? 'Awaiting admin approval' : 'Not published'}
+                    </p>
                   </div>
                   <IconButton
                     label={`${dish.availability === 'available' ? 'Mark unavailable' : 'Mark available'}: ${dish.name}`}
                     onClick={() => toggleAvailability(dish)}
+                    disabled={dish.status !== 'active'}
                     className="w-12 h-12 rounded-xl text-3xl hover:bg-hs-graphite transition"
                   >
-                    {dish.availability === 'available' ? (
+                    {dish.status === 'active' && dish.availability === 'available' ? (
                       <ToggleRight size={32} className="text-hs-success" />
                     ) : (
                       <ToggleLeft size={32} className="text-hs-gray" />
@@ -424,12 +447,12 @@ export default function SellerDashboardPage() {
         </section>
 
         {/* Recipes */}
-        {seller.seller_types?.includes('recipe_creator') && (
+        {sellerTypes.includes('recipe_creator') && (
           <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <SellerTypeIcon type="recipe_creator" size={18} className="text-hs-gold" />
-                <h2 className="font-bold text-hs-cream">Recipe Products</h2>
+                <h2 className="font-bold text-hs-cream">Your Recipes</h2>
               </div>
               <Link
                 href="/seller/recipes/new"
@@ -439,45 +462,13 @@ export default function SellerDashboardPage() {
               </Link>
             </div>
             <p className="text-sm text-hs-gray">
-              Attach a paid recipe to any of your dishes. Customers see the dish first, then can unlock the recipe.
+              Share a free recipe with ingredients and step-by-step instructions. Paid recipes are coming later.
             </p>
           </section>
         )}
 
-        {/* Stripe Connect */}
-        {seller.seller_types?.includes('recipe_creator') && (
-          <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <CreditCard size={18} className="text-hs-gold" />
-              <h2 className="font-bold text-hs-cream">Creator Setup / Stripe Connect</h2>
-            </div>
-            <div className="rounded-2xl bg-hs-soft p-4 mb-4">
-              <p className="text-xs text-hs-gray uppercase tracking-wider mb-1">Status</p>
-              <p className={`text-sm font-bold capitalize ${
-                connect?.status === 'ready'
-                  ? 'text-hs-success'
-                  : connect?.status === 'onboarding_incomplete'
-                    ? 'text-hs-gold'
-                    : 'text-hs-gray'
-              }`}>
-                {connect?.status?.replace('_', ' ') || 'Unknown'}
-              </p>
-              {connect?.stripe_account_id && (
-                <p className="text-xs text-hs-gray mt-1 truncate">Account: {connect.stripe_account_id}</p>
-              )}
-            </div>
-            <button
-              onClick={startStripeConnect}
-              disabled={connectLoading || connect?.status === 'ready'}
-              className="w-full py-3 bg-hs-gold text-hs-black rounded-2xl font-bold text-sm hover:bg-hs-gold-light transition disabled:opacity-50 inline-flex items-center justify-center gap-2"
-            >
-              {connectLoading ? 'Connecting…' : connect?.status === 'ready' ? 'Stripe Connected' : 'Connect Stripe Account'}
-            </button>
-          </section>
-        )}
-
         {/* Staff Upload QR + PIN */}
-        {staffUrl && (
+        {STAFF_UPLOAD_ENABLED && staffUrl && !isRecipeOnly && (
           <section className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-5 text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Lock size={16} className="text-hs-gold" />
@@ -555,6 +546,7 @@ export default function SellerDashboardPage() {
         </section>
       </main>
       <MobileNav />
+      <TutorialCoachMark open={showSellerIntro} steps={SELLER_INTRO_STEPS} storageKey={SELLER_INTRO_KEY} onClose={closeSellerIntro} />
     </div>
     </>
   )

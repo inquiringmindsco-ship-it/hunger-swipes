@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plate, Globe, Flame, Dollar, Gear, ArrowRight, CheckLine, Leaf, Protein, Light, MapPin, Sparkle, Filter, Crown, Star, Rising, Close, Veggie as VeggieIcon, Rising as RisingIcon, FireIcon } from '@/app/components/HwIcon'
 import { ArrowLeft, Check, ChevronDown } from 'lucide-react'
-import { clearDiscoveryPreferences, DEFAULT_DISCOVERY_PREFERENCES, readDiscoveryPreferences, writeDiscoveryPreferences } from '@/lib/preferences'
+import { ACCOUNT_DISCOVERY_PREFERENCES_KEY, clearDiscoveryPreferences, DEFAULT_DISCOVERY_PREFERENCES, readAccountDiscoveryPreferences, readDiscoveryPreferences, writeDiscoveryPreferences } from '@/lib/preferences'
+import { useAuth } from '@/lib/auth'
+import { getSupabase } from '@/lib/supabase'
 import Head from 'next/head'
 
 // ─── DIETARY ───
@@ -97,13 +99,22 @@ function Section({ title, subtitle, icon: Icon, iconColor, children, open, onTog
 
 // ─── MAIN ───
 export default function PreferencesPage() {
+  const { user, loading: authLoading } = useAuth()
   const [prefs, setPrefs] = useState(DEFAULT_DISCOVERY_PREFERENCES)
   const [saved, setSaved] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
 
   useEffect(() => {
-    setPrefs(readDiscoveryPreferences().preferences)
-  }, [])
+    if (authLoading) return
+    const local = readDiscoveryPreferences()
+    const account = readAccountDiscoveryPreferences(user?.user_metadata)
+    const restored = account || local.preferences
+    setPrefs(restored)
+    if (account) writeDiscoveryPreferences(account)
+    if (user && !account && local.source !== 'default') {
+      void getSupabase()?.auth.updateUser({ data: { [ACCOUNT_DISCOVERY_PREFERENCES_KEY]: local.preferences } })
+    }
+  }, [authLoading, user?.id])
 
   const toggle = <T extends string>(arr: T[], setArr: (v: T[]) => void, item: T) => {
     if (arr.includes(item)) setArr(arr.filter(i => i !== item))
@@ -112,15 +123,17 @@ export default function PreferencesPage() {
 
   const total = prefs.dietary.length + prefs.cuisines.length + prefs.health.length + prefs.price.length + (prefs.spice > 0 ? 1 : 0)
 
-  const save = () => {
+  const save = async () => {
     writeDiscoveryPreferences(prefs)
+    if (user) await getSupabase()?.auth.updateUser({ data: { [ACCOUNT_DISCOVERY_PREFERENCES_KEY]: prefs } })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const reset = () => {
+  const reset = async () => {
     setPrefs(DEFAULT_DISCOVERY_PREFERENCES)
     clearDiscoveryPreferences()
+    if (user) await getSupabase()?.auth.updateUser({ data: { [ACCOUNT_DISCOVERY_PREFERENCES_KEY]: null } })
   }
 
   const totalSelected = (arr: string[]) => arr.length

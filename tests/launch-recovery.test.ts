@@ -14,12 +14,31 @@ test('mobile shell exposes exactly one primary navigation element', () => {
   assert.match(nav, /data-testid="mobile-nav"/)
 })
 
+test('Build 15 profile keeps the two-column dashboard tiles', () => {
+  const account = read('../app/account/page.tsx')
+  assert.match(account, /Your dashboard/)
+  assert.match(account, /grid grid-cols-2 gap-3/)
+  for (const label of ['Food Profile', 'Preferences', 'Saved', 'Swipe Bucks', 'History']) {
+    assert.match(account, new RegExp(`label=["']${label}["']`))
+  }
+})
+
+test('Build 15 post flow keeps post type, place, address, photo, and dish details', () => {
+  const post = read('../app/post/page.tsx')
+  assert.match(post, /What are you posting\?/)
+  assert.match(post, /Restaurant dish/)
+  assert.match(post, /My own food/)
+  assert.match(post, /places\/address-search/)
+  assert.match(post, /handlePickPhoto/)
+  assert.match(post, /dishName/)
+})
+
 test('right swipe countdown is visible, timed, and advances the deck', () => {
   const swipe = read('../app/swipe/page.tsx')
-  assert.match(swipe, /RIGHT_SWIPE_COUNTDOWN_SECONDS = 5/)
-  assert.match(swipe, /data-testid="countdown-number"/)
+  assert.match(swipe, /MATCH_CONFIRMATION_SECONDS = 15/)
+  assert.match(swipe, /Next dish in <span data-testid="countdown-number">\{matchCountdown\}<\/span>/)
   assert.match(swipe, /setMatchCountdown\(\(seconds\) => seconds - 1\)/)
-  assert.match(swipe, /if \(matchCountdown <= 1\) doAdvance\(\)/)
+  assert.match(swipe, /if \(matchCountdown <= 0\) \{\s*setMatchDish\(null\)/)
   assert.match(swipe, /setCurrentIndex\(\(index\) => index \+ 1\)/)
 })
 

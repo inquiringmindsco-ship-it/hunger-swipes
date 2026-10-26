@@ -50,7 +50,7 @@ export function FilterSheet({ open, onClose, filters, onChange, onApply, onClear
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="relative bg-hs-charcoal rounded-t-[2rem] border-t border-white/[0.06] p-5 pb-8 safe-bottom animate-slide-up flex flex-col max-h-[85vh] outline-none"
+        className="relative bg-hs-charcoal rounded-t-[2rem] border-t border-white/[0.06] p-5 pb-8 safe-bottom animate-slide-up flex min-h-0 flex-col max-h-[calc(100dvh-env(safe-area-inset-top,0px)-0.5rem)] outline-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="filter-sheet-title"
@@ -63,13 +63,13 @@ export function FilterSheet({ open, onClose, filters, onChange, onApply, onClear
           <button
             onClick={onClose}
             aria-label="Close filters"
-            className="w-10 h-10 rounded-full bg-hs-soft flex items-center justify-center text-hs-cream hover:bg-hs-graphite transition focus:outline-none focus-visible:ring-2 focus-visible:ring-hs-gold"
+            className="min-h-11 min-w-11 rounded-full bg-hs-soft flex items-center justify-center text-hs-cream hover:bg-hs-graphite transition focus:outline-none focus-visible:ring-2 focus-visible:ring-hs-gold"
           >
             <CloseIcon size={20} aria-hidden="true" />
           </button>
         </div>
 
-        <div className="space-y-6 overflow-y-auto scrollbar-hide pr-1">
+        <div className="min-h-0 space-y-6 overflow-y-auto scrollbar-hide pr-1">
           <section aria-label="Feed mode">
             <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Feed</label>
             <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Discovery feed mode">

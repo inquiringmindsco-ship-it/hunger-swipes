@@ -3,6 +3,7 @@ import './globals.css'
 
 import AuthHashHandler from '@/app/components/AuthHashHandler'
 import PwaRegistration from '@/app/components/PwaRegistration'
+import NativeAppInit from '@/app/components/NativeAppInit'
 
 const ICON_VERSION = 'v4-20260926'
 const SITE_TITLE = 'Hunger Swipes — Swipe food. Find your next meal.'
@@ -110,6 +111,7 @@ export default function RootLayout({
       <body className="antialiased">
         <AuthHashHandler />
         <PwaRegistration />
+        <NativeAppInit />
         {children}
       </body>
     </html>

@@ -1,13 +1,15 @@
 'use client'
 
+import { apiFetch, authFetch } from '@/lib/auth-fetch'
 import Link from 'next/link'
 import { useAuth, signOut, getAuthToken } from '@/lib/auth'
 import { useEffect, useState } from 'react'
-import { LogOut, Store, Heart, User, ChevronRight, MapPin, SlidersHorizontal, Shield, Bell, Utensils, Wallet, Camera, Trash2, Clock, CheckCircle, HelpCircle, XCircle } from 'lucide-react'
+import { LogOut, Store, Heart, User, ChevronRight, MapPin, SlidersHorizontal, Shield, Utensils, Wallet, Camera, Trash2, Clock, CheckCircle, HelpCircle, XCircle } from 'lucide-react'
 import { BrandMark, ProfileIcon } from '@/app/components/icons/HungerIcons'
 import MobileNav from '@/app/components/MobileNav'
 import { LoadingState } from '@/app/components/ui/LoadingState'
 import { useDialogA11y } from '@/lib/dialog-a11y'
+import { DishImage } from '@/app/components/DishImage'
 import Head from 'next/head'
 
 function DeletePostDialog({ postId, onCancel, onDelete, deleting }: { postId: string; onCancel: () => void; onDelete: () => void; deleting: boolean }) {
@@ -108,6 +110,20 @@ function Row({
   )
 }
 
+function DashboardTile({ href, onClick, icon, label, detail }: { href?: string; onClick?: () => void; icon: React.ReactNode; label: string; detail: string }) {
+  const content = (
+    <>
+      <div className="w-10 h-10 rounded-xl bg-hs-gold/10 text-hs-gold flex items-center justify-center">{icon}</div>
+      <div className="mt-3">
+        <p className="text-sm font-bold text-hs-cream leading-tight">{label}</p>
+        <p className="mt-1 text-[11px] leading-snug text-hs-gray line-clamp-2">{detail}</p>
+      </div>
+    </>
+  )
+  const className = "min-h-32 rounded-[1.25rem] border border-white/[0.06] bg-hs-charcoal p-4 text-left hover:border-hs-gold/30 hover:bg-white/[0.04] transition"
+  return href ? <Link href={href} className={className}>{content}</Link> : <button type="button" onClick={onClick} className={className}>{content}</button>
+}
+
 export default function AccountPage() {
   const { user, loading } = useAuth()
   const [seller, setSeller] = useState<any>(null)
@@ -118,6 +134,8 @@ export default function AccountPage() {
   const [postToDelete, setPostToDelete] = useState<string | null>(null)
   const [deletingPost, setDeletingPost] = useState<string | null>(null)
   const [toast, setToast] = useState('')
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   useEffect(() => {
     if (!toast) return
@@ -145,16 +163,16 @@ export default function AccountPage() {
     }
     getAuthToken().then((token) =>
       Promise.all([
-        fetch('/api/sellers?mine=true', {
+        apiFetch('/api/sellers?mine=true', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }).then((r) => r.json()),
-        fetch('/api/community-posts?mine=true', {
+        apiFetch('/api/community-posts?mine=true', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }).then((r) => r.json()),
       ])
         .then(([sellerData, postsData]) => {
           if (sellerData.seller) setSeller(sellerData.seller)
-          setMyPosts(postsData.posts || [])
+          setMyPosts((postsData.posts || []).filter((post: any) => !post.deleted_at && post.status !== 'removed' && post.moderation_status !== 'removed'))
         })
         .finally(() => {
           setChecking(false)
@@ -167,17 +185,38 @@ export default function AccountPage() {
     setDeletingPost(id)
     try {
       const token = await getAuthToken()
-      const res = await fetch(`/api/community-posts/${id}`, {
+      const res = await apiFetch(`/api/community-posts/${id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       const data = await res.json()
       if (data.success) {
-        setMyPosts((prev) => prev.map((p) => (p.id === id ? { ...p, moderation_status: 'removed', status: 'removed' } : p)))
+        setMyPosts((prev) => prev.filter((post) => post.id !== id))
         setPostToDelete(null)
+        setToast('Food post deleted')
       }
     } finally {
       setDeletingPost(null)
+    }
+  }
+
+  const deleteAccount = async () => {
+    setDeletingAccount(true)
+    try {
+      const res = await authFetch('/api/account/delete', { method: 'DELETE' })
+      if (res.ok) {
+        await signOut()
+        window.location.href = '/'
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setToast(data.error || 'Could not delete account')
+        setShowDeleteAccount(false)
+      }
+    } catch {
+      setToast('Could not delete account')
+      setShowDeleteAccount(false)
+    } finally {
+      setDeletingAccount(false)
     }
   }
 
@@ -258,75 +297,25 @@ export default function AccountPage() {
           </div>
         </div>
 
-        <Section title="Food Profile">
-          <Row
-            href="/account/profile"
-            icon={<User size={18} />}
-            label="Edit Food Profile"
-            detail="Claim @handle, bio, social links"
-          />
-        </Section>
-
-        <Section title="Messages">
-          <Row
-            onClick={() => setToast('Notifications coming soon')}
-            icon={<Bell size={18} />}
-            label="Notifications"
-            detail="Coming soon"
-          />
-        </Section>
-
-        <Section title="Discovery">
-          <Row
-            href="/preferences"
-            icon={<SlidersHorizontal size={18} />}
-            label="Food Preferences"
-            detail="Cuisine, dietary, health"
-          />
-          <div className="h-px bg-white/[0.06]" />
-          <Row
-            href="/preferences"
-            icon={<MapPin size={18} />}
-            label="Location & Distance"
-            detail="Set your discovery radius"
-          />
-        </Section>
-
-        <Section title="Selling">
-          {seller ? (
-            <>
-              <Row
-                href={`/seller/dashboard?id=${seller.id}`}
-                icon={<Store size={18} />}
-                label="Seller Dashboard"
-                detail={`${seller.business_name} • ${seller.status.replace('_', ' ')}`}
-              />
-              <div className="h-px bg-white/[0.06]" />
-              <Row
-                href="/seller/dishes/new"
-                icon={<Utensils size={18} />}
-                label="Add a Dish"
-                detail="Publish a new dish to discover"
-              />
-            </>
-          ) : (
-            <Row
-              href="/join"
-              icon={<Store size={18} />}
-              label="List Your Food"
-              detail="Become a seller on Hunger Swipes"
-            />
-          )}
-        </Section>
-
-        <Section title="Swipe Bucks">
-          <Row
-            href="/swipe-bucks"
-            icon={<Wallet size={18} />}
-            label="Swipe Bucks"
-            detail="Post food. Earn meals."
-          />
-        </Section>
+        <section className="mb-7">
+          <div className="mb-3 flex items-center justify-between px-1">
+            <h2 className="text-xs font-semibold text-hs-gold uppercase tracking-wider">Your dashboard</h2>
+            <span className="text-[10px] text-hs-muted">Tap a tile</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <DashboardTile href="/account/profile" icon={<User size={19} />} label="Food Profile" detail="Handle, bio and social links" />
+            <DashboardTile href="/preferences" icon={<SlidersHorizontal size={19} />} label="Preferences" detail="Cuisine, diet and distance" />
+            <DashboardTile href="/saved" icon={<Heart size={19} />} label="Saved" detail="Food you want to try" />
+            <DashboardTile href="/swipe-bucks" icon={<Wallet size={19} />} label="Swipe Bucks" detail="Verified purchase rewards" />
+            {seller ? (
+              <DashboardTile href={`/seller/dashboard?id=${seller.id}`} icon={<Store size={19} />} label="Seller Hub" detail={`${seller.business_name} · ${seller.status.replace('_', ' ')}`} />
+            ) : (
+              <DashboardTile href="/join" icon={<Store size={19} />} label="List Your Food" detail="Create a seller profile" />
+            )}
+            <DashboardTile href={seller ? "/seller/dishes/new" : "/post"} icon={<Utensils size={19} />} label={seller ? "Add a Dish" : "Post Food"} detail={seller ? "Submit a dish for approval" : "Share a food discovery"} />
+            <DashboardTile href="/history" icon={<Clock size={19} />} label="History" detail="See your recent swipes" />
+          </div>
+        </section>
 
         <Section title="Your food posts">
           {postsLoading ? (
@@ -343,7 +332,15 @@ export default function AccountPage() {
                 const isRemoved = post.moderation_status === 'removed' || post.status === 'removed'
                 return (
                   <div key={post.id} className="px-4 py-3.5 flex items-center gap-3">
-                    <img src={post.photo_url} alt={post.dish_name} className="w-12 h-12 rounded-lg object-cover bg-black flex-shrink-0" />
+                    {isRemoved || post.moderation_status === 'rejected' ? (
+                      <div className="w-12 h-12 rounded-lg bg-hs-soft flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                        {isRemoved ? <Trash2 size={18} className="text-hs-muted" /> : <XCircle size={18} className="text-hs-red" />}
+                      </div>
+                    ) : (
+                      <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-black flex-shrink-0">
+                        <DishImage src={post.photo_url} alt={post.dish_name} sizes="48px" className="w-full h-full object-cover" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-hs-cream truncate">{post.dish_name}</p>
                       <div className={`flex items-center gap-1 text-xs ${st.color}`}>
@@ -353,7 +350,7 @@ export default function AccountPage() {
                         <p className="text-xs text-hs-gray mt-0.5">We&apos;re checking this photo before it goes into Discover.</p>
                       )}
                       {post.moderation_status === 'rejected' && (
-                        <p className="text-xs text-hs-gray mt-0.5">This photo doesn&apos;t appear to clearly show food. Try another photo with the dish as the main subject.</p>
+                        <p className="text-xs text-hs-gray mt-0.5">This photo wasn&apos;t approved and has been deleted. Try another photo with the dish as the main subject.</p>
                       )}
                     </div>
                     {!isRemoved && (
@@ -372,23 +369,7 @@ export default function AccountPage() {
           )}
         </Section>
 
-        <Section title="Saved">
-          <Row
-            href="/saved"
-            icon={<Heart size={18} />}
-            label="Saved Dishes"
-            detail="See everything you want"
-          />
-        </Section>
-
         <Section title="Account">
-          <Row
-            onClick={() => setToast('Notifications coming soon')}
-            icon={<Bell size={18} />}
-            label="Notifications"
-            detail="Coming soon"
-          />
-          <div className="h-px bg-white/[0.06]" />
           <Row
             href="/privacy"
             icon={<Shield size={18} />}
@@ -407,10 +388,17 @@ export default function AccountPage() {
             label="Sign Out"
             danger
           />
+          <div className="h-px bg-white/[0.06]" />
+          <Row
+            onClick={() => setShowDeleteAccount(true)}
+            icon={<Trash2 size={18} />}
+            label="Delete Account"
+            danger
+          />
         </Section>
 
         {toast && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-hs-gold text-hs-black text-sm font-bold shadow-lg">
+          <div role="status" className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-2xl border border-hs-gold/30 bg-hs-black/95 px-4 py-3 text-center text-xs font-bold text-hs-gold shadow-lg backdrop-blur-md">
             {toast}
           </div>
         )}
@@ -422,6 +410,19 @@ export default function AccountPage() {
             onDelete={() => postToDelete && deletePost(postToDelete)}
             deleting={deletingPost === postToDelete}
           />
+        )}
+
+        {showDeleteAccount && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/80 p-4" onClick={() => !deletingAccount && setShowDeleteAccount(false)}>
+            <div className="bg-hs-charcoal border border-white/10 rounded-t-2xl sm:rounded-2xl p-5 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <h2 className="font-bold text-hs-cream mb-2">Delete your account?</h2>
+              <p className="text-sm text-hs-gray mb-5">This permanently removes your account, profile, and community posts. This cannot be undone.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setShowDeleteAccount(false)} disabled={deletingAccount} className="py-4 rounded-xl bg-white/5 text-hs-cream font-semibold active:bg-white/10 disabled:opacity-50">Cancel</button>
+                <button onClick={deleteAccount} disabled={deletingAccount} className="py-4 rounded-xl bg-hs-red text-white font-bold disabled:opacity-50">{deletingAccount ? 'Deleting…' : 'Delete Account'}</button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
       <div style={{ display: postToDelete ? 'none' : 'block' }}>

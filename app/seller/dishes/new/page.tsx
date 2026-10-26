@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus, Plus, Trash2, Video } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import { LoadingState } from '@/app/components/ui/LoadingState'
@@ -17,7 +17,7 @@ const CATEGORIES = [
 function NewDishContent() {
   const router = useRouter()
   const [sellerId, setSellerId] = useState('')
-  const [sellerStatus, setSellerStatus] = useState('')
+  const [sellerType, setSellerType] = useState('')
   const [authChecking, setAuthChecking] = useState(true)
 
   const [form, setForm] = useState({
@@ -28,15 +28,15 @@ function NewDishContent() {
     tags: '',
     availability: 'available',
     photo_url: '',
-    status: 'active',
   })
   const [preview, setPreview] = useState('')
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState('')
-  const [videoMediaId, setVideoMediaId] = useState('')
-  const [uploadingVideo, setUploadingVideo] = useState(false)
-  const [videoError, setVideoError] = useState('')
+  const [ingredients, setIngredients] = useState([{ quantity: '', unit: '', name: '' }])
+  const [allergens, setAllergens] = useState<string[]>([])
+  const [servingSize, setServingSize] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [createdDishId, setCreatedDishId] = useState('')
+  const [addRecipeNext, setAddRecipeNext] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -53,7 +53,10 @@ function NewDishContent() {
           return
         }
         setSellerId(data.seller.id)
-        setSellerStatus(data.seller.status)
+        setSellerType(data.seller.seller_type || '')
+        if (data.seller.seller_type === 'recipe_creator' || new URLSearchParams(window.location.search).get('continue') === 'recipe') {
+          setAddRecipeNext(true)
+        }
       } catch {
         setError('Unable to load your seller profile.')
       } finally {
@@ -80,32 +83,6 @@ function NewDishContent() {
     } catch {}
   }
 
-  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploadingVideo(true)
-    setVideoError('')
-    const fd = new FormData()
-    fd.append('file', file)
-    try {
-      const res = await authFetch('/api/upload-video', { method: 'POST', body: fd })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Upload failed')
-      setVideoMediaId(data.media.id)
-      setVideoPreviewUrl(data.urls.optimized || data.urls.original)
-    } catch (reason: any) {
-      setVideoError(reason.message || 'Could not upload video')
-    } finally {
-      setUploadingVideo(false)
-    }
-  }
-
-  const removeVideo = () => {
-    setVideoMediaId('')
-    setVideoPreviewUrl('')
-    setVideoError('')
-  }
-
   const handleSubmit = async () => {
     if (!sellerId) {
       setError('Missing seller ID. Please return to dashboard.')
@@ -128,16 +105,21 @@ function NewDishContent() {
           price: parseFloat(form.price || '0'),
           category: form.category,
           tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+          ingredients: ingredients.filter((item) => item.name.trim()),
+          allergens,
+          serving_size: servingSize,
           availability: form.availability,
           photo_url: form.photo_url,
-          video_media_id: videoMediaId || undefined,
-          poster_url: videoPreviewUrl || undefined,
-          status: form.status,
         }),
       })
       const data = await res.json()
       if (data.dish) {
-        setDone(true)
+        setCreatedDishId(data.dish.id)
+        if (sellerType === 'recipe_creator' || addRecipeNext) {
+          router.replace(`/seller/recipes/new?dish=${encodeURIComponent(data.dish.id)}`)
+        } else {
+          setDone(true)
+        }
       } else {
         setError(data.error || 'Failed to create dish')
       }
@@ -150,7 +132,7 @@ function NewDishContent() {
 
   if (authChecking) {
     return (
-      <div className="min-h-screen bg-hs-ink pb-24">
+      <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
         <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
           <div className="max-w-md mx-auto flex items-center gap-2">
             <BrandMark size={28} />
@@ -166,8 +148,9 @@ function NewDishContent() {
   }
 
   if (done) {
+    const isRecipeCreator = sellerType === 'recipe_creator'
     return (
-      <div className="min-h-screen bg-hs-ink pb-24">
+      <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
         <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
           <div className="max-w-md mx-auto flex items-center gap-2">
             <BrandMark size={28} />
@@ -178,21 +161,32 @@ function NewDishContent() {
           <div className="w-20 h-20 rounded-full bg-hs-gold/10 flex items-center justify-center mx-auto mb-5">
             <CheckCircle2 size={44} className="text-hs-gold" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl font-black text-hs-cream mb-2">Dish saved!</h1>
+          <h1 className="text-2xl font-black text-hs-cream mb-2">{isRecipeCreator ? 'Food saved!' : 'Dish saved!'}</h1>
           <p className="text-hs-gray text-sm mb-8">
-            {sellerStatus === 'active' ? 'It is now live on the swipe feed.' : 'It will appear after your seller profile is approved.'}
+            {isRecipeCreator
+              ? 'Now add the ingredients and instructions. The complete recipe will appear after review.'
+              : 'It is awaiting approval and will appear in Discover after an admin reviews it.'}
           </p>
-          <Link
-            href="/seller/dashboard"
-            className="block w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold text-center hover:bg-hs-gold-light transition mb-3"
-          >
-            Back to Dashboard
-          </Link>
+          {isRecipeCreator ? (
+            <Link
+              href={`/seller/recipes/new?dish=${encodeURIComponent(createdDishId)}`}
+              className="block w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold text-center hover:bg-hs-gold-light transition mb-3"
+            >
+              Continue to Ingredients &amp; Instructions
+            </Link>
+          ) : (
+            <Link
+              href="/seller/dashboard"
+              className="block w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold text-center hover:bg-hs-gold-light transition mb-3"
+            >
+              Back to Dashboard
+            </Link>
+          )}
           <Link
             href="/swipe"
             className="block w-full py-3 border border-white/[0.08] text-hs-cream rounded-2xl font-semibold text-center hover:bg-hs-charcoal transition"
           >
-            Preview in App
+            Browse Discover
           </Link>
         </main>
         <MobileNav />
@@ -200,14 +194,18 @@ function NewDishContent() {
     )
   }
 
+  const isHomeCook = sellerType === 'home_cook' || sellerType === 'home_kitchen'
+  const isRecipeCreator = sellerType === 'recipe_creator'
+  const allergenOptions = ['Milk', 'Eggs', 'Fish', 'Shellfish', 'Tree nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame']
+
   return (
-    <div className="min-h-screen bg-hs-ink pb-24">
+    <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
       <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
         <div className="max-w-md mx-auto flex items-center gap-2">
           <Link href="/seller/dashboard" aria-label="Back to seller dashboard" className="w-10 h-10 rounded-full flex items-center justify-center text-hs-gray hover:bg-hs-soft hover:text-hs-cream transition">
             <ArrowLeft size={20} aria-hidden="true" />
           </Link>
-          <span className="font-bold text-base text-hs-cream tracking-tight">Add a Dish</span>
+          <span className="font-bold text-base text-hs-cream tracking-tight">{isRecipeCreator ? 'Add Recipe Food' : 'Add a Dish'}</span>
         </div>
       </header>
 
@@ -219,15 +217,56 @@ function NewDishContent() {
         )}
 
         <section>
-          <label htmlFor="name" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Dish Name *</label>
+          <label htmlFor="name" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{isRecipeCreator ? 'Recipe / Dish Name' : 'Dish Name'} *</label>
           <input
             id="name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Ex: Smoked Brisket Plate"
+            placeholder={isRecipeCreator ? 'Ex: Grandma’s Smothered Chicken' : 'Ex: Smoked Brisket Plate'}
             className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
           />
         </section>
+
+        <section className="rounded-3xl border border-hs-gold/20 bg-hs-gold/5 p-4">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={sellerType === 'recipe_creator' || addRecipeNext}
+            onClick={() => sellerType !== 'recipe_creator' && setAddRecipeNext((current) => !current)}
+            className="flex w-full items-center justify-between gap-4 text-left"
+          >
+            <span>
+              <span className="block font-black text-hs-cream">Add the recipe next</span>
+              <span className="mt-1 block text-xs leading-relaxed text-hs-gray">
+                Continue straight to ingredients and instructions after this photo uploads. You do not have to wait for dish approval.
+              </span>
+            </span>
+            <span className={`relative h-7 w-12 shrink-0 rounded-full transition ${sellerType === 'recipe_creator' || addRecipeNext ? 'bg-hs-gold' : 'bg-hs-soft'}`}>
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition ${sellerType === 'recipe_creator' || addRecipeNext ? 'left-6' : 'left-1'}`} />
+            </span>
+          </button>
+          {sellerType === 'recipe_creator' && <p className="mt-3 text-[11px] font-semibold text-hs-gold">Recipe Creator accounts continue automatically.</p>}
+        </section>
+
+        {isHomeCook && <section className="rounded-3xl border border-hs-gold/20 bg-hs-gold/5 p-4">
+          <div className="mb-4">
+            <h2 className="font-black text-hs-cream">What’s in this dish?</h2>
+            <p className="mt-1 text-xs leading-relaxed text-hs-gray">Add the ingredients customers should know about. Full recipe instructions stay private unless you publish a separate recipe.</p>
+          </div>
+          <div className="space-y-3">
+            {ingredients.map((ingredient, index) => <div key={index} className="grid grid-cols-[0.7fr_0.9fr_1.8fr_auto] gap-2">
+              <input aria-label={`Ingredient ${index + 1} quantity`} value={ingredient.quantity} onChange={(event) => setIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} placeholder="2" className="min-w-0 rounded-xl border border-white/[0.08] bg-hs-charcoal px-3 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
+              <input aria-label={`Ingredient ${index + 1} unit`} value={ingredient.unit} onChange={(event) => setIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, unit: event.target.value } : item))} placeholder="cups" className="min-w-0 rounded-xl border border-white/[0.08] bg-hs-charcoal px-3 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
+              <input aria-label={`Ingredient ${index + 1} name`} value={ingredient.name} onChange={(event) => setIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} placeholder="flour" className="min-w-0 rounded-xl border border-white/[0.08] bg-hs-charcoal px-3 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
+              <button type="button" aria-label={`Remove ingredient ${index + 1}`} disabled={ingredients.length === 1} onClick={() => setIngredients((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 min-w-11 rounded-xl text-hs-gray disabled:opacity-30"><Trash2 size={17} className="mx-auto" /></button>
+            </div>)}
+          </div>
+          <button type="button" onClick={() => setIngredients((current) => [...current, { quantity: '', unit: '', name: '' }])} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-full bg-hs-soft px-4 text-xs font-bold text-hs-gold"><Plus size={15} /> Add Ingredient</button>
+          <label htmlFor="serving-size" className="mt-5 block text-xs font-semibold uppercase tracking-wider text-hs-gold">Serving Size</label>
+          <input id="serving-size" value={servingSize} onChange={(event) => setServingSize(event.target.value)} placeholder="Example: Serves 2 or one 12 oz bowl" className="mt-2 w-full rounded-2xl border border-white/[0.08] bg-hs-charcoal px-4 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
+          <fieldset className="mt-5"><legend className="text-xs font-semibold uppercase tracking-wider text-hs-gold">Contains Allergens</legend><div className="mt-2 flex flex-wrap gap-2">{allergenOptions.map((allergen) => <button type="button" key={allergen} aria-pressed={allergens.includes(allergen)} onClick={() => setAllergens((current) => current.includes(allergen) ? current.filter((item) => item !== allergen) : [...current, allergen])} className={`min-h-10 rounded-full px-3 text-xs font-bold ${allergens.includes(allergen) ? 'bg-hs-gold text-hs-black' : 'border border-white/[0.08] bg-hs-soft text-hs-gray'}`}>{allergen}</button>)}</div></fieldset>
+          <p className="mt-3 text-[11px] leading-relaxed text-hs-muted">Customers with allergies should always confirm ingredients directly with the seller.</p>
+        </section>}
 
         <section>
           <label htmlFor="description" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Description <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
@@ -310,31 +349,15 @@ function NewDishContent() {
         </section>
 
         <section>
-          <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">10-Second Food Video <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
-          {videoPreviewUrl ? (
-            <div className="space-y-3">
-              <video src={videoPreviewUrl} muted loop playsInline className="w-full max-h-64 rounded-2xl object-cover bg-hs-graphite" />
-              <button
-                type="button"
-                onClick={removeVideo}
-                className="w-full py-3 border border-white/[0.08] text-hs-cream rounded-2xl font-semibold hover:bg-hs-soft transition"
-              >
-                Remove video
-              </button>
+          <div className="rounded-2xl border border-hs-gold/20 bg-hs-gold/10 p-5 flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl bg-hs-gold/15 text-hs-gold flex items-center justify-center shrink-0">
+              <Video size={22} aria-hidden="true" />
             </div>
-          ) : (
-            <label className="block cursor-pointer">
-              <div className="border-2 border-dashed border-white/15 rounded-2xl p-6 text-center hover:border-hs-gold/40 transition bg-hs-charcoal">
-                <div className="text-hs-gray flex flex-col items-center gap-2">
-                  <ImagePlus size={24} aria-hidden="true" />
-                  <span className="text-sm font-medium">{uploadingVideo ? 'Processing video…' : 'Tap to upload 10-second video'}</span>
-                </div>
-              </div>
-              <input type="file" accept="video/*" disabled={uploadingVideo} className="hidden" onChange={handleVideoChange} />
-            </label>
-          )}
-          {videoError && <p className="text-xs text-hs-red mt-2">{videoError}</p>}
-          <p className="text-xs text-hs-gray mt-2">MP4/MOV/WebM, ≤10 seconds, ≤50 MB. Videos are moderated before they appear in Discover.</p>
+            <div>
+              <p className="font-bold text-hs-cream">Food videos — Coming Soon</p>
+              <p className="mt-1 text-xs text-hs-gray">Launch with a great photo today. Short food videos will arrive in a future update.</p>
+            </div>
+          </div>
         </section>
 
         <section className="flex gap-3 pt-4">
@@ -349,7 +372,7 @@ function NewDishContent() {
             disabled={submitting}
             className="flex-1 min-h-12 py-3 bg-hs-gold text-hs-black rounded-2xl font-bold disabled:opacity-50 inline-flex items-center justify-center gap-2 hover:bg-hs-gold-light transition"
           >
-            {submitting ? 'Publishing...' : <>Publish Dish <ArrowRight size={18} aria-hidden="true" /></>}
+            {submitting ? 'Submitting...' : <>{sellerType === 'recipe_creator' || addRecipeNext ? 'Continue to Recipe' : 'Submit for Review'} <ArrowRight size={18} aria-hidden="true" /></>}
           </button>
         </section>
       </main>

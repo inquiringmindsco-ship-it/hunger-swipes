@@ -13,9 +13,7 @@ import {
   MousePointer,
   CheckCircle,
   Sparkles,
-  Plus,
   ChevronRight,
-  ArrowRight,
 } from 'lucide-react'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import MobileNav from '@/app/components/MobileNav'
@@ -127,7 +125,6 @@ export default function SwipeBucksPage() {
 
   const balance = wallet?.balance_cents || 0
   const progress = Math.min(balance / MEAL_GOAL_CENTS, 1)
-  const isEmpty = balance === 0 && ledger.length === 0
   const latestCredit = ledger.find(e => e.type === 'credit')
 
   return (
@@ -176,7 +173,7 @@ export default function SwipeBucksPage() {
               <h1 className={`text-6xl sm:text-7xl font-black tracking-tight mb-3 transition-colors ${balance === 0 ? 'text-hs-gray' : 'text-hs-cream'}`}>
                 {formatDollars(balance)}
               </h1>
-              <p className="text-sm text-hs-gray">Post food. Help people discover it. Earn meals.</p>
+              <p className="text-sm text-hs-gray">Earned only through eligible verified purchases.</p>
 
               {(wallet?.restricted_cents || 0) > 0 && (
                 <p className="mt-3 text-xs text-hs-red bg-hs-red/10 border border-hs-red/20 rounded-lg px-3 py-2">
@@ -186,7 +183,7 @@ export default function SwipeBucksPage() {
 
               {(wallet?.redemption_status === 'eligible' || wallet?.redemption_status === 'review') && !impact?.redemption_eligible && (
                 <p className="mt-3 text-xs text-hs-gold bg-hs-gold/10 border border-hs-gold/20 rounded-lg px-3 py-2">
-                  Swipe Bucks redemption is not open yet. Keep earning — your balance is safe.
+                  Earning and redemption are not open yet. Posting, swiping, saving, and clicking do not earn Swipe Bucks.
                 </p>
               )}
 
@@ -205,12 +202,12 @@ export default function SwipeBucksPage() {
           </div>
         </section>
 
-        {/* Next Meal Progress */}
+        {/* Purchase-only reward status */}
         <section>
           <div className="flex items-end justify-between mb-3 gap-4">
             <div className="min-w-0">
-              <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-hs-gold mb-0.5">Next Meal</p>
-              <p className="text-sm text-hs-gray">Keep posting. Your next meal could be on us.</p>
+              <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-hs-gold mb-0.5">Purchase Rewards</p>
+              <p className="text-sm text-hs-gray">Coming later through verified orders only.</p>
             </div>
             <p className="text-lg font-bold text-hs-cream whitespace-nowrap">
               {formatDollars(balance)} <span className="text-hs-gray font-normal">/ {formatDollars(MEAL_GOAL_CENTS)}</span>
@@ -273,13 +270,7 @@ export default function SwipeBucksPage() {
                 <Wallet size={24} className="text-hs-gold" />
               </div>
               <p className="text-lg font-bold text-hs-cream mb-1">No Swipe Bucks yet.</p>
-              <p className="text-sm text-hs-gray mb-5">Post a dish and help someone find their next meal.</p>
-              <Link
-                href="/post"
-                className="inline-flex items-center gap-2 px-5 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm hover:bg-hs-gold-light transition"
-              >
-                <Plus size={16} /> {(impact?.dishes_posted || 0) > 0 ? 'Post another dish' : 'Post your first dish'}
-              </Link>
+              <p className="text-sm text-hs-gray">Purchase rewards are not available yet. Posting and engagement do not earn Swipe Bucks.</p>
             </div>
           ) : (
             <div className="rounded-[1.5rem] border border-white/[0.06] bg-hs-charcoal overflow-hidden">
@@ -310,19 +301,6 @@ export default function SwipeBucksPage() {
             </div>
           )}
         </section>
-
-        {/* Post CTA when populated */}
-        {!isEmpty && (
-          <Link
-            href="/post"
-            className="group flex items-center justify-between w-full px-5 py-4 bg-hs-gold text-hs-black rounded-2xl font-bold hover:bg-hs-gold-light transition"
-          >
-            <span className="flex items-center gap-2">
-              <Plus size={18} /> Post another dish
-            </span>
-            <ArrowRight size={18} className="group-hover:translate-x-1 transition" />
-          </Link>
-        )}
 
         {/* bottom spacing for nav */}
         <div className="h-6" />

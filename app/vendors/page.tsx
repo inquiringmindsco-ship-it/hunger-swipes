@@ -1,291 +1,97 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ForkFlame, MapPin, Dollar, Star, Verified, Heart, ArrowRight, Fork, Trophy, Bookmark, StarFilled } from '@/app/components/HwIcon'
+import { ArrowRight, BadgeCheck, MapPin, PackageCheck, Search, Store, Truck } from 'lucide-react'
+import { apiFetch } from '@/lib/auth-fetch'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
+import { DishImage } from '@/app/components/DishImage'
+import MobileNav from '@/app/components/MobileNav'
 
-interface Vendor {
-  id: string
-  name: string
-  description: string
-  location_text: string
-  address: string
-  city: string
-  neighborhood: string
-  cuisine_type: string
-  price_range: string
-  image_url: string
-  cover_image_url: string
-  discount_offer: string
-  discount_code: string
-  minimum_order: number
-  active: boolean
-  verified: boolean
-  mock?: boolean
+type Vendor = {
+  id: string; name: string; description: string; location: string; sellerType: string; sellerTypes: string[]
+  logoUrl: string; coverUrl: string; pickupAvailable: boolean; deliveryAvailable: boolean; approved: boolean
+  dishes: Array<{ id: string; name: string; photoUrl: string; price: number; category: string }>
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  restaurant: 'Restaurant', home_kitchen: 'Home Cook', home_cook: 'Home Cook', food_truck: 'Food Truck',
+  caterer: 'Caterer', pop_up: 'Pop-up', meal_prep: 'Meal Prep', recipe_creator: 'Recipe Creator', other: 'Food Seller',
+}
+const FILTERS = [
+  { key: 'all', label: 'All' }, { key: 'restaurant', label: 'Restaurants' },
+  { key: 'home_cook', label: 'Home Cooks' }, { key: 'food_truck', label: 'Food Trucks' },
+  { key: 'pickup', label: 'Pickup' }, { key: 'delivery', label: 'Delivery' },
+] as const
+
+function matchesType(vendor: Vendor, type: string) {
+  const types = new Set([vendor.sellerType, ...(vendor.sellerTypes || [])])
+  return type === 'home_cook' ? types.has('home_cook') || types.has('home_kitchen') : types.has(type)
 }
 
 export default function VendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
-  const [cityFilter, setCityFilter] = useState('all')
-  const [claimedCodes, setClaimedCodes] = useState<Record<string, boolean>>({})
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null)
+  const [error, setError] = useState(false)
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]['key']>('all')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
-    fetchVendors()
+    apiFetch('/api/vendors').then(async (response) => {
+      if (!response.ok) throw new Error('Vendor directory unavailable')
+      const data = await response.json()
+      setVendors(Array.isArray(data.vendors) ? data.vendors : [])
+    }).catch(() => setError(true)).finally(() => setLoading(false))
   }, [])
 
-  async function fetchVendors() {
-    try {
-      const res = await fetch('/api/vendors')
-      const data = await res.json()
-      setVendors(data.vendors || [])
-    } catch {
-      setVendors([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    return vendors.filter((vendor) => {
+      if (filter === 'pickup' && !vendor.pickupAvailable) return false
+      if (filter === 'delivery' && !vendor.deliveryAvailable) return false
+      if (!['all', 'pickup', 'delivery'].includes(filter) && !matchesType(vendor, filter)) return false
+      return !term || `${vendor.name} ${vendor.description} ${vendor.location} ${vendor.dishes.map((dish) => dish.name).join(' ')}`.toLowerCase().includes(term)
+    })
+  }, [filter, search, vendors])
 
-  const cities = ['all', ...Array.from(new Set(vendors.map(v => v.city).filter(Boolean)))]
-  const neighborhoods = ['all', ...Array.from(new Set(vendors.map(v => v.neighborhood).filter(Boolean)))]
-
-  const filtered = vendors.filter(v => {
-    if (filter === 'verified' && !v.verified) return false
-    if (filter === 'discount' && !v.discount_offer) return false
-    if (cityFilter !== 'all' && v.city !== cityFilter) return false
-    if (filter !== 'all' && filter !== 'verified' && filter !== 'discount') return false
-    return true
-  })
-
-  function claimCode(vendorId: string, code: string) {
-    setClaimedCodes(prev => ({ ...prev, [vendorId]: true }))
-    // Copy to clipboard
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(code)
-    }
-  }
-
-  const priceRangeColor = (p: string) => {
-    if (p === '$') return 'text-green-400'
-    if (p === '$$') return 'text-yellow-400'
-    if (p === '$$$') return 'text-orange-400'
-    return 'text-red-400'
-  }
-
-  return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
-      {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-5 max-w-7xl mx-auto">
-        <Link href="/" className="flex items-center gap-3">
-          <BrandMark size={40} aria-label="HungerSwipes" />
-          <span className="font-bold text-xl tracking-tight">HungerSwipes</span>
-        </Link>
-        <div className="flex items-center gap-4">
-          <Link href="/swipe" className="text-gray-400 hover:text-white transition font-medium text-sm">
-            <ForkFlame size={18} /> Swipe
-          </Link>
-          <Link href="/matches" className="text-gray-400 hover:text-white transition font-medium text-sm">
-            Matches
-          </Link>
-          <Link href="/creator" className="text-gray-400 hover:text-white transition font-medium text-sm">
-            For Creators
-          </Link>
-          <Link
-            href="/auth"
-            className="px-4 py-2 bg-[#FF6A00] text-white rounded-full font-semibold hover:bg-[#E05A00] transition text-sm"
-          >
-            Sign Up
-          </Link>
-        </div>
-      </nav>
-
-      {/* Hero */}
-      <section className="px-6 pt-8 pb-12 max-w-7xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF6A00]/15 rounded-full text-[#FF6A00] font-semibold text-sm mb-6">
-          <Dollar size={18} /> Vendors with special offers
-        </div>
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
-          Show a photo. <span className="text-[#FFD500]">Get rewarded.</span>
-        </h1>
-        <p className="text-gray-400 text-lg max-w-xl mx-auto mb-8">
-          Swipe through vendors below. Tap a discount to reveal your code, then show it when you order.
-        </p>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 justify-center mb-8">
-          {[
-            { key: 'all', label: 'All Vendors' },
-            { key: 'discount', label: 'Has Discount' },
-            { key: 'verified', label: 'Verified' },
-          ].map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                filter === f.key
-                  ? 'bg-[#FF6A00] text-white'
-                  : 'bg-[#1A1A1A] text-gray-400 hover:text-white border border-white/10'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-
-          <select
-            value={cityFilter}
-            onChange={e => setCityFilter(e.target.value)}
-            className="px-4 py-2 rounded-full text-sm font-medium bg-[#1A1A1A] text-gray-300 border border-white/10 focus:outline-none"
-          >
-            {cities.map(c => (
-              <option key={c} value={c}>{c === 'all' ? 'All Cities' : c}</option>
-            ))}
-          </select>
-        </div>
+  return <div className="min-h-screen bg-hs-ink pb-24 text-hs-cream">
+    <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-hs-ink/90 px-4 py-3 backdrop-blur-md safe-top">
+      <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+        <Link href="/swipe" className="flex min-w-0 items-center gap-2"><BrandMark size={30} /><span className="truncate text-base font-bold">Local Food Sellers</span></Link>
+        <Link href="/join" className="shrink-0 rounded-full bg-hs-gold px-4 py-2 text-xs font-bold text-hs-black">List Your Food</Link>
+      </div>
+    </header>
+    <main className="mx-auto max-w-md px-4 py-5">
+      <section className="mb-5">
+        <p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-hs-gold">Eat local</p>
+        <h1 className="text-3xl font-black tracking-tight">Food made near you</h1>
+        <p className="mt-2 text-sm leading-relaxed text-hs-gray">Browse approved restaurants, home cooks, food trucks, and local sellers with food available now.</p>
       </section>
-
-      {/* Vendor Grid */}
-      <section className="px-6 pb-24 max-w-7xl mx-auto">
-        {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="bg-[#141414] rounded-2xl overflow-hidden animate-pulse">
-                <div className="h-48 bg-[#1A1A1A]" />
-                <div className="p-5 space-y-3">
-                  <div className="h-5 bg-[#1A1A1A] rounded w-3/4" />
-                  <div className="h-4 bg-[#1A1A1A] rounded w-1/2" />
-                </div>
-              </div>
-            ))}
+      <div className="relative mb-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-hs-muted" size={17} aria-hidden="true" />
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search sellers or food" className="min-h-12 w-full rounded-2xl border border-white/[0.08] bg-hs-charcoal pl-10 pr-4 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
+      </div>
+      <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Filter food sellers">
+        {FILTERS.map((item) => <button key={item.key} onClick={() => setFilter(item.key)} className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold ${filter === item.key ? 'bg-hs-gold text-hs-black' : 'border border-white/[0.08] bg-hs-soft text-hs-gray'}`}>{item.label}</button>)}
+      </div>
+      {loading ? <div className="space-y-4" aria-label="Loading sellers">{[0, 1, 2].map((item) => <div key={item} className="h-72 animate-pulse rounded-3xl bg-hs-charcoal" />)}</div>
+        : error ? <div className="rounded-3xl border border-hs-red/20 bg-hs-red/10 px-5 py-10 text-center"><p className="font-bold">We couldn’t load local sellers.</p><button onClick={() => location.reload()} className="mt-4 rounded-full bg-hs-soft px-5 py-2.5 text-sm font-bold">Try Again</button></div>
+        : filtered.length === 0 ? <div className="rounded-3xl border border-white/[0.06] bg-hs-charcoal px-5 py-12 text-center"><Store className="mx-auto text-hs-gold" size={38} /><h2 className="mt-4 text-xl font-black">No food sellers match yet</h2><p className="mt-2 text-sm text-hs-gray">Try another filter or check back as more approved sellers add food.</p><button onClick={() => { setFilter('all'); setSearch('') }} className="mt-5 rounded-full bg-hs-gold px-6 py-3 text-sm font-bold text-hs-black">Show All Sellers</button></div>
+        : <div className="space-y-4">{filtered.map((vendor) => <article key={vendor.id} className="overflow-hidden rounded-3xl border border-white/[0.07] bg-hs-charcoal shadow-card">
+          <div className="relative aspect-[16/9] overflow-hidden bg-hs-soft">
+            <DishImage src={vendor.coverUrl} alt={`${vendor.name} food`} sizes="(max-width: 480px) 100vw, 430px" className="h-full w-full object-cover" />
+            <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-hs-black/80 px-2.5 py-1 text-[11px] font-bold backdrop-blur"><BadgeCheck size={13} className="text-hs-success" /> Approved seller</div>
+            {vendor.dishes.length > 1 && <div className="absolute bottom-3 right-3 rounded-full bg-hs-black/80 px-2.5 py-1 text-[11px] font-bold backdrop-blur">{vendor.dishes.length} dishes</div>}
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-20">
-            <ForkFlame size={48} style={{ opacity: 0.3 }} />
-            <p className="text-gray-500 mt-4">No vendors found in this category yet.</p>
-            <p className="text-gray-600 text-sm mt-1">Check back soon — vendors join every week.</p>
+          <div className="p-4"><h2 className="truncate text-xl font-black">{vendor.name}</h2>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-hs-gray"><span className="font-semibold text-hs-gold">{TYPE_LABELS[vendor.sellerType] || 'Food Seller'}</span>{vendor.location && <span className="inline-flex items-center gap-1"><MapPin size={12} />{vendor.location}</span>}</div>
+            {vendor.description && <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-hs-gray">{vendor.description}</p>}
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-hs-gray">{vendor.pickupAvailable && <span className="inline-flex items-center gap-1 rounded-full bg-hs-soft px-2.5 py-1.5"><PackageCheck size={13} /> Pickup</span>}{vendor.deliveryAvailable && <span className="inline-flex items-center gap-1 rounded-full bg-hs-soft px-2.5 py-1.5"><Truck size={13} /> Delivery</span>}</div>
+            <Link href={`/swipe?sellerId=${vendor.id}`} className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-hs-gold px-4 text-sm font-black text-hs-black">View Their Food <ArrowRight size={17} /></Link>
           </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map(vendor => (
-              <div
-                key={vendor.id}
-                className="bg-[#141414] rounded-2xl overflow-hidden border border-white/5 card-hover"
-                onMouseEnter={() => setHoveredCard(vendor.id)}
-                onMouseLeave={() => setHoveredCard(null)}
-              >
-                {/* Cover image */}
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={vendor.cover_image_url || vendor.image_url}
-                    alt={vendor.name}
-                    className="w-full h-full object-cover transition-transform duration-500"
-                    style={{ transform: hoveredCard === vendor.id ? 'scale(1.05)' : 'scale(1)' }}
-                  />
-                  {/* Discount badge */}
-                  {vendor.discount_offer && (
-                    <div className="absolute top-3 left-3 bg-[#FFD500] text-black px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                      <Dollar size={12} /> {vendor.discount_offer.split(' ').slice(0, 3).join(' ')}
-                    </div>
-                  )}
-                  {/* Verified badge */}
-                  {vendor.verified && (
-                    <div className="absolute top-3 right-3 bg-[#FF6A00] p-1.5 rounded-full">
-                      <Verified size={16} />
-                    </div>
-                  )}
-                  {/* Price range */}
-                  <div className="absolute bottom-3 right-3 bg-black/70 px-2 py-1 rounded text-xs font-bold">
-                    <span className={priceRangeColor(vendor.price_range)}>{vendor.price_range}</span>
-                  </div>
-                </div>
-
-                {/* Card body */}
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-bold text-lg leading-tight">{vendor.name}</h3>
-                    {vendor.cuisine_type && (
-                      <span className="text-xs text-[#FF6A00] bg-[#FF6A00]/15 px-2 py-0.5 rounded-full ml-2 flex-shrink-0">
-                        {vendor.cuisine_type}
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-gray-400 text-sm mb-3 line-clamp-2">{vendor.description}</p>
-
-                  <div className="flex items-center gap-1 text-gray-500 text-xs mb-4">
-                    <MapPin size={12} />
-                    <span>{vendor.location_text || vendor.address || vendor.neighborhood}</span>
-                  </div>
-
-                  {/* Discount code reveal */}
-                  {vendor.discount_offer && vendor.discount_code && (
-                    <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#FFD500]/20">
-                      <p className="text-xs text-[#FFD500] font-semibold mb-2 uppercase tracking-wide">
-                        Your Discount Code
-                      </p>
-                      {claimedCodes[vendor.id] ? (
-                        <div className="flex items-center justify-between">
-                          <div className="bg-[#FFD500]/20 rounded-lg px-4 py-2">
-                            <span className="text-[#FFD500] font-mono font-bold text-lg tracking-widest">
-                              {vendor.discount_code}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 text-green-400 text-xs">
-                            <Verified size={14} />
-                            <span>Copied!</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => claimCode(vendor.id, vendor.discount_code)}
-                          className="w-full py-2.5 bg-[#FFD500] hover:bg-[#E0BB00] text-black font-bold rounded-lg transition text-sm"
-                        >
-                          Tap to Reveal Code
-                        </button>
-                      )}
-                      {vendor.minimum_order && (
-                        <p className="text-gray-600 text-xs mt-2">
-                          Min. order ${vendor.minimum_order}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* CTA */}
-                  <Link
-                    href={`/swipe?vendor=${vendor.id}`}
-                    className="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-[#FF6A00]/15 hover:bg-[#FF6A00]/25 text-[#FF6A00] rounded-xl font-semibold transition text-sm"
-                  >
-                    <ForkFlame size={16} />
-                    Swipe Their Food
-                    <ArrowRight size={14} />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Vendor CTA */}
-      <section className="px-6 py-20 bg-[#111] border-t border-white/5">
-        <div className="max-w-2xl mx-auto text-center">
-          <ForkFlame size={48} style={{ opacity: 0.8 }} />
-          <h2 className="text-3xl font-extrabold mt-4 mb-3">Own a food business?</h2>
-          <p className="text-gray-400 mb-8">
-            List on HungerSwipes. Get your discount in front of hungry eaters who already love your food.
-            Pay only when a photo drives a customer to you.
-          </p>
-          <Link
-            href="/auth?role=restaurant"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-[#FF6A00] text-white rounded-full font-bold text-lg hover:bg-[#E05A00] transition"
-          >
-            List My Business <ArrowRight size={20} />
-          </Link>
-        </div>
-      </section>
-    </div>
-  )
+        </article>)}</div>}
+      <section className="mt-6 rounded-3xl border border-hs-gold/20 bg-hs-gold/10 p-5 text-center"><Store className="mx-auto text-hs-gold" size={30} /><h2 className="mt-3 text-lg font-black">Make or sell food?</h2><p className="mt-1 text-sm text-hs-gray">Create a seller profile and submit your dishes for approval.</p><Link href="/join" className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-hs-gold px-6 text-sm font-bold text-hs-black">Start Your Listing</Link></section>
+    </main>
+    <MobileNav />
+  </div>
 }

@@ -1,27 +1,28 @@
 # IMG-DEV.md — Hunger Swipes development state
-*Machine-readable state for any authorized agent (Codex / Sentinel / ACP fallback). Update at the END of every work session. NO credentials in this file — env var NAMES only.*
+*Machine-readable state for authorized agents. Update at the end of each work session. Never store credential values here.*
 
-## State snapshot (updated 2026-10-25)
-- **Current architecture:** Next.js (App Router) + Supabase (service-role server-side) + Vercel + node:test / Vitest / Playwright. Content kinds: official (sellers), community (moderated posts), and rights-gated place staging.
-- **Canonical production branch:** `main`. **Release candidate:** `codex/launch-recovery`, based on `5a359fd4545263b786a2fdb0467d7bdb29bfc04a`, awaiting owner approval.
-- **Authoritative UX:** `/` redirects to `/swipe`; `app/swipe/page.tsx` contains the single-card Discover deck, 5-second visible right-swipe countdown, gestures, feed refill, and session rediscovery. `app/components/MobileNav.tsx` is the sole mobile navigation implementation.
-- **Production baseline:** `dpl_8WyZ7ekyWJ1PmkZDyBR6N4F2Rivk` (Oct 25 12:39 CDT). It has no Vercel Git metadata and therefore no verifiable source commit. No deployment was made by the launch-recovery work.
-- **Dish state:** 7 approved community dishes live with valid images; 179 candidates remain `permission_required`. Eleven have staged records but remain blocked by the rights gate.
-- **Preserved Sentinel work:** Discover supply/session recovery, Swipe Bucks safeguards, dish-candidate admin and emergency unpublish, CI, monitoring, and deployment guard.
-- **Preserved separate work:** `feature/catalog-review`, iOS/Capacitor, and dirty agent worktrees were not merged into this release.
-- **Verification:** 42/42 unit, 19/19 UI, 33/33 browser tests, lint, TypeScript, and production build all pass.
-- **Next action:** owner reviews the exact `codex/launch-recovery` commit; merge/deploy is prohibited until explicit approval.
+## State snapshot (updated 2026-10-26)
 
-## Rollback procedure
-1. `vercel rollback dpl_8WyZ7ekyWJ1PmkZDyBR6N4F2Rivk` from a project-linked directory (instant alias flip).
-2. This operational rollback restores the current seven-card feed, but not the recovered visible countdown.
-3. After rollback, run `node --env-file=.env.local scripts/monitor/prod-watch.mjs` and confirm green.
+- **Architecture:** Next.js App Router + Supabase + Vercel + Capacitor iOS + node:test / Vitest / Playwright.
+- **Production:** `main` at `8348cb542f1bb480eff9fd30226804f956848929`; deployment `dpl_BFMGBx2FwTLmnvt6d5LvPf3x2cme` is the incomplete narrow-recovery UI.
+- **Corrective candidate:** `codex/build15-recovery`.
+- **Authoritative UX:** archived iOS Build 15 (`.ios-build/Hunger Swipes 1.0 Build 15.xcarchive`, Oct 24 10:23 CDT) and source snapshot `a2ed9d2ba1ced90f33c9b2feb03d2874049e1a08`.
+- **Discover:** `/` redirects to `/swipe`; anonymous browsing; 15-second right-swipe confirmation; session rediscovery; EAT/MAKE/EXPLORE; first-use coach marks; one safe-area-aware mobile navigation.
+- **Profile:** `app/account/page.tsx` uses the Build 15 two-column tile dashboard.
+- **Post:** `app/post/page.tsx` contains post-type selection, place/address lookup, photo upload, details, and moderation flow.
+- **Preserved Sentinel work:** seven-card live feed recovery, dish-candidate admin, rights gating, emergency unpublish, CI, monitoring, deployment guard, deck/session behavior, and Swipe Bucks safeguards.
+- **Dish state:** last verified 7 live approved community dishes; 179 candidates remain permission-gated.
+- **Verification:** unit 42/42, UI 20/20, swipe browser 27/27, lint, TypeScript, and production build pass.
+- **Deploy status:** do not deploy until the clean corrective commit is previewed and explicitly approved.
 
-## Production-deploy policy (see GIT_POLICY.md)
-Production deploys ONLY via: (a) merge of an approved, CI-green PR to main (git-connected), or (b) `scripts/vercel-prod-guard.sh vercel --prod` from a clean, synced main checkout. NEVER `vercel --prod` from a dirty tree. CLI deploys carry no commit identity and cannot be tied to review — treat as forbidden until guard passes.
+## Rollback
 
-## Agent handoff instructions
-1. Read this file first; check `git status` for dirty state; if the tree is dirty from another agent's session, DO NOT discard — verify branch ownership in the state block above.
-2. Sentinel dispatcher fallback (when Codex unavailable): OpenCode (free, ollama-backed) → GitHub Copilot CLI → Gemini CLI (key required). Auth recovery: `codex login --device-auth`; `claude` interactive sign-in; Gemini: set GEMINI_API_KEY (owner authorizes key provisioning).
-3. Environment var names (values NEVER here or in logs): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_SECRET, IMG_X_LIKENESS_SSO_SECRET, FOURSQUARE_PLACES_API_KEY, (pending) GOOGLE_PLACES_API_KEY.
-4. When finished: run relevant tests + build; commit to your branch; update this file's snapshot; leave the tree clean.
+If the corrective release later fails critical production checks, roll back to `dpl_BFMGBx2FwTLmnvt6d5LvPf3x2cme`, verify the seven-card feed, and keep the corrective branch intact for repair.
+
+## Agent handoff
+
+1. Start from `codex/build15-recovery`; do not copy from the dirty catalog checkout.
+2. Use Build 15 as the visual/behavioral reference, not the 5-second recovery implementation.
+3. Keep `feature/catalog-review` and unrelated catalog work out of this release.
+4. Required env var names: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_SECRET`, `IMG_X_LIKENESS_SSO_SECRET`.
+5. Production deploys must use an approved clean commit through established Git/CI or the guarded deployment script.

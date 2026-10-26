@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { promoteApprovedCommunityPlaceImage } from '@/lib/place-images'
+import { replaceRemovedCommunityPlaceImage } from '@/lib/place-images'
+import { safeRemoveStoredImage } from '@/lib/storage-cleanup'
 import { getAdminPrincipal } from '@/lib/admin-auth'
 
 export async function GET(request: NextRequest) {
@@ -16,7 +18,7 @@ export async function GET(request: NextRequest) {
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
 
-  const [{ data: posts, error }, { data: allToday, error: countError }] = await Promise.all([
+  const [{ data: posts, error }, { data: allToday, error: countError }, { count: pendingCount, error: pendingCountError }] = await Promise.all([
     admin
       .from('community_food_posts')
       .select(`*, place:places!inner(id,name,location_text,status)`)
@@ -28,16 +30,22 @@ export async function GET(request: NextRequest) {
       .from('community_food_posts')
       .select('moderation_status')
       .gte('created_at', todayStart.toISOString()),
+    admin
+      .from('community_food_posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .eq('moderation_status', 'pending_review'),
   ])
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (countError) console.error('count error', countError)
+  if (pendingCountError) console.error('pending count error', pendingCountError)
 
   const list = allToday || []
   return NextResponse.json({
     posts: posts || [],
     counts: {
-      needs_review: list.filter((c: any) => c.moderation_status === 'pending_review').length,
+      needs_review: pendingCount || 0,
       approved_today: list.filter((c: any) => c.moderation_status === 'approved').length,
       rejected_today: list.filter((c: any) => c.moderation_status === 'rejected').length,
     },
@@ -93,6 +101,14 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('community place image promotion failed', error)
     }
+  } else {
+    try {
+      await replaceRemovedCommunityPlaceImage(admin, post.place_id, post.photo_url)
+    } catch (error) {
+      console.error('community place image replacement failed', error)
+    }
+    await admin.from('image_fingerprints').update({ rejected: true }).eq('community_post_id', postId)
+    await safeRemoveStoredImage(post.photo_url)
   }
 
   return NextResponse.json({ success: true, postId, newStatus })

@@ -1,5 +1,6 @@
 'use client'
 
+import { apiFetch } from '@/lib/auth-fetch'
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -156,7 +157,7 @@ export default function CreatorUpload() {
     setIsSubmitting(true)
 
     try {
-      const res = await fetch('/api/photos', {
+      const res = await apiFetch('/api/photos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

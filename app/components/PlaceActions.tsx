@@ -3,7 +3,15 @@
 import { ExternalLink, MapPin, Phone } from 'lucide-react'
 import { formatPhone, getAppleMapsUrl, getCallUrl, getGoogleMapsUrl, safePlaceWebUrl, type ActionablePlace } from '@/lib/place-actions'
 
-export default function PlaceActions({ place, compact = false }: { place: ActionablePlace; compact?: boolean }) {
+export default function PlaceActions({
+  place,
+  compact = false,
+  showWebsiteWhenCompact = false,
+}: {
+  place: ActionablePlace
+  compact?: boolean
+  showWebsiteWhenCompact?: boolean
+}) {
   const call = getCallUrl(place)
   const website = safePlaceWebUrl(place.website)
   const order = safePlaceWebUrl(place.order_url)
@@ -50,7 +58,7 @@ export default function PlaceActions({ place, compact = false }: { place: Action
           <Phone size={compact ? 13 : 16} /> {compact ? 'Call' : formatPhone(place.phone)}
         </a>
       )}
-      {!compact && website && (
+      {website && (!compact || showWebsiteWhenCompact) && (
         <a
           href={website}
           target="_blank"

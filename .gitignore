@@ -15,6 +15,9 @@
 
 # production
 /build
+/dist/
+.hunger-swipes-ios-hold/
+.hunger-swipes-api-hold/
 
 # misc
 .DS_Store

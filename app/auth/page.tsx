@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import { authFetch } from '@/lib/auth-fetch'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
-import { safeNextRoute } from '@/lib/auth-routes'
+import { authValueCopy, safeNextRoute } from '@/lib/auth-routes'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -19,6 +19,7 @@ export default function AuthPage() {
   const [message, setMessage] = useState('')
   const [next, setNext] = useState('/swipe')
   const [refSellerId, setRefSellerId] = useState<string | null>(null)
+  const valueCopy = authValueCopy(next)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -67,10 +68,7 @@ export default function AuthPage() {
     try {
       const supabase = getSupabase()
       if (!supabase) throw new Error('Authentication is not configured')
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-      if (!appUrl) {
-        throw new Error('NEXT_PUBLIC_APP_URL is not configured')
-      }
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hungerswipes.com'
       const emailRedirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(next)}`
 
       if (mode === 'recovery') {
@@ -110,23 +108,24 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-hs-ink flex flex-col text-hs-cream">
-      <header className="px-4 py-4 max-w-md mx-auto w-full safe-top">
-        <Link href="/swipe" className="inline-flex items-center gap-2">
+      <header className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-hs-ink/95 px-4 py-3 backdrop-blur-md safe-top">
+        <Link href="/swipe" className="mx-auto flex min-h-11 w-full max-w-md items-center gap-2" aria-label="Back to Hunger Swipes">
           <BrandMark size={28} />
           <span className="font-bold text-base tracking-tight">Hunger Swipes</span>
+          <span className="ml-auto text-sm font-semibold text-hs-gold">Browse food</span>
         </Link>
       </header>
 
-      <main className="flex-1 flex items-start justify-center px-4 pt-2 pb-10">
+      <main className="flex-1 flex items-start justify-center px-4 pt-2 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
         <div className="w-full max-w-md">
           <div className="mb-6">
             <h1 className="text-2xl md:text-3xl font-black mb-2 tracking-tight">
-              {mode === 'login' ? 'Welcome back' : mode === 'signup' ? 'Create your account' : 'Reset your password'}
+              {mode === 'login' ? valueCopy.title : mode === 'signup' ? 'Create your account' : 'Reset your password'}
             </h1>
             <p className="text-hs-gray text-sm">
               {mode === 'login'
-                ? 'Sign in to save food and manage your listing.'
-                : mode === 'signup' ? 'One account to swipe through food and list your own.' : 'We’ll send a secure recovery link to your email.'}
+                ? valueCopy.body
+                : mode === 'signup' ? `${valueCopy.body} Your account keeps everything together.` : 'We’ll send a secure recovery link to your email.'}
             </p>
           </div>
 
@@ -193,7 +192,7 @@ export default function AuthPage() {
                     : mode === 'signup' ? 'Creating account...' : 'Sending recovery link...'
                   : mode === 'login'
                     ? 'Sign In'
-                    : mode === 'signup' ? 'Create Free Account' : 'Send Recovery Link'}
+                    : mode === 'signup' ? 'Create Account' : 'Send Recovery Link'}
               </button>
             </form>
 
@@ -203,7 +202,7 @@ export default function AuthPage() {
                   <button onClick={() => setMode('recovery')} className="text-hs-gold font-semibold hover:text-hs-gold-light transition">Forgot password?</button>
                   <span className="mx-2">•</span>No account yet?{' '}
                   <button onClick={() => setMode('signup')} className="text-hs-gold font-semibold hover:text-hs-gold-light transition">
-                    Sign up free
+                    Sign up
                   </button>
                 </>
               ) : (
@@ -215,6 +214,9 @@ export default function AuthPage() {
                 </>
               )}
             </p>
+            <Link href="/swipe" className="mt-5 flex min-h-11 w-full items-center justify-center rounded-xl border border-white/[0.08] text-sm font-semibold text-hs-cream hover:bg-hs-soft transition">
+              Continue browsing Hunger Swipes
+            </Link>
           </div>
         </div>
       </main>

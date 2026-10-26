@@ -14,6 +14,7 @@ interface Dish {
   name: string
   photo_url: string | null
   price: number
+  status?: string
 }
 
 export default function NewRecipePage() {
@@ -27,14 +28,9 @@ export default function NewRecipePage() {
   const [dishId, setDishId] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [price, setPrice] = useState('4.99')
-  const [recipeType, setRecipeType] = useState<'free' | 'fixed_price' | 'proud_to_pay'>('fixed_price')
-  const [minProudAmount, setMinProudAmount] = useState('5.00')
-  const [published, setPublished] = useState(false)
   const [photoUrl, setPhotoUrl] = useState('')
-  const [ingredients, setIngredients] = useState([''])
+  const [ingredients, setIngredients] = useState([{ quantity: '', unit: '', name: '' }])
   const [instructions, setInstructions] = useState([''])
-  const [videoMediaId, setVideoMediaId] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -53,12 +49,14 @@ export default function NewRecipePage() {
 
         const dishesRes = await authFetch(`/api/sellers/${sellerData.seller.id}/dishes`)
         const dishesData = await dishesRes.json()
-        const available = (dishesData.dishes || []).filter((d: any) => d.status === 'active')
+        const available = (dishesData.dishes || []).filter((d: any) => d.status !== 'removed')
         setDishes(available)
-        if (available[0]) {
-          setDishId(available[0].id)
-          setTitle(`Recipe: ${available[0].name}`)
-          setPhotoUrl(available[0].photo_url || '')
+        const requestedDishId = new URLSearchParams(window.location.search).get('dish')
+        const initialDish = available.find((dish: Dish) => dish.id === requestedDishId) || available[0]
+        if (initialDish) {
+          setDishId(initialDish.id)
+          setTitle(initialDish.name)
+          setPhotoUrl(initialDish.photo_url || '')
         }
       } catch {
         setError('Unable to load your dishes.')
@@ -89,23 +87,14 @@ export default function NewRecipePage() {
       setError('Choose a dish and give the recipe a title.')
       return
     }
-    const cleanIngredients = ingredients.map((s) => s.trim()).filter(Boolean)
+    const cleanIngredients = ingredients
+      .filter((ingredient) => ingredient.name.trim())
+      .map((ingredient) => [ingredient.quantity.trim(), ingredient.unit.trim(), ingredient.name.trim()].filter(Boolean).join(' '))
     const cleanInstructions = instructions.map((s) => s.trim()).filter(Boolean)
     if (cleanIngredients.length === 0 || cleanInstructions.length === 0) {
       setError('Add at least one ingredient and one instruction.')
       return
     }
-    const priceNum = parseFloat(price || '0')
-    const minProudNum = parseFloat(minProudAmount || '0')
-    if (isNaN(priceNum) || priceNum < 0) {
-      setError('Price must be 0 or more.')
-      return
-    }
-    if (recipeType === 'proud_to_pay' && (isNaN(minProudNum) || minProudNum <= 0)) {
-      setError('Set a minimum proud-to-pay amount.')
-      return
-    }
-
     setSaving(true)
     setError('')
     try {
@@ -113,15 +102,14 @@ export default function NewRecipePage() {
         dish_id: dishId,
         title: title.trim(),
         description: description.trim() || null,
-        price: priceNum,
-        recipe_type: recipeType,
-        min_proud_to_pay_amount: recipeType === 'proud_to_pay' ? minProudNum : null,
+        price: 0,
+        recipe_type: 'free',
+        min_proud_to_pay_amount: null,
         ingredients: cleanIngredients,
         instructions: cleanInstructions,
         photo_url: photoUrl || selectedDish?.photo_url || null,
-        published,
+        published: true,
       }
-      if (videoMediaId) body.video_media_id = videoMediaId
 
       const res = await authFetch('/api/recipes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
@@ -136,7 +124,7 @@ export default function NewRecipePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-hs-ink pb-24">
+      <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
         <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
           <div className="max-w-md mx-auto flex items-center gap-2">
             <BrandMark size={28} />
@@ -153,7 +141,7 @@ export default function NewRecipePage() {
 
   if (dishes.length === 0) {
     return (
-      <div className="min-h-screen bg-hs-ink pb-24">
+      <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
         <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
           <div className="max-w-md mx-auto flex items-center gap-2">
             <Link href="/seller/dashboard" className="flex h-10 w-10 items-center justify-center rounded-full text-hs-gray hover:bg-hs-soft hover:text-hs-cream transition">
@@ -164,9 +152,10 @@ export default function NewRecipePage() {
           </div>
         </header>
         <main className="max-w-md mx-auto px-4 py-12 text-center">
-          <p className="text-hs-gray text-sm mb-4">Add an active dish before you can attach a recipe.</p>
-          <Link href="/seller/dishes/new" className="inline-flex items-center gap-2 px-6 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">
-            Add a Dish <ArrowRight size={16} />
+          <h1 className="text-2xl font-black text-hs-cream">Start with the food</h1>
+          <p className="mt-2 text-hs-gray text-sm mb-5">Add a photo and name for the finished dish, then you’ll continue directly to its ingredients and instructions. You do not have to wait for approval.</p>
+          <Link href="/seller/dishes/new?continue=recipe" className="inline-flex items-center gap-2 px-6 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">
+            Add Food &amp; Recipe <ArrowRight size={16} />
           </Link>
         </main>
         <MobileNav />
@@ -175,7 +164,7 @@ export default function NewRecipePage() {
   }
 
   return (
-    <div className="min-h-screen bg-hs-ink pb-24">
+    <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
       <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
         <div className="max-w-md mx-auto flex items-center gap-2">
           <Link href="/seller/dashboard" className="flex h-10 w-10 items-center justify-center rounded-full text-hs-gray hover:bg-hs-soft hover:text-hs-cream transition">
@@ -208,10 +197,10 @@ export default function NewRecipePage() {
             className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream focus:border-hs-gold/50 focus:outline-none transition appearance-none"
           >
             {dishes.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
+              <option key={d.id} value={d.id}>{d.name}{d.status === 'pending' ? ' · awaiting review' : ''}</option>
             ))}
           </select>
-          <p className="text-xs text-hs-gray mt-2">The recipe will appear behind this dish in Discover.</p>
+          <p className="text-xs text-hs-gray mt-2">Pending food is allowed here. The dish and recipe will appear after review.</p>
         </section>
 
         <section>
@@ -235,58 +224,9 @@ export default function NewRecipePage() {
           />
         </section>
 
-        <section className="grid gap-4">
-          <div>
-            <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Recipe Type *</label>
-            <select
-              value={recipeType}
-              onChange={(e) => setRecipeType(e.target.value as typeof recipeType)}
-              className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream focus:border-hs-gold/50 focus:outline-none transition appearance-none"
-            >
-              <option value="free">Free Recipe</option>
-              <option value="fixed_price">Fixed Price</option>
-              <option value="proud_to_pay">Proud to Pay</option>
-            </select>
-          </div>
-        </section>
-
-        <section className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{recipeType === 'proud_to_pay' ? 'Suggested Price ($)' : recipeType === 'free' ? 'Price ($)' : 'Price ($)'} *</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
-            />
-            <p className="text-xs text-hs-gray mt-2">Server validates minimums for fixed / proud-to-pay.</p>
-          </div>
-          {recipeType === 'proud_to_pay' && (
-            <div>
-              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Minimum Proud-to-Pay ($)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={minProudAmount}
-                onChange={(e) => setMinProudAmount(e.target.value)}
-                className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
-              />
-            </div>
-          )}
-          <div className="flex items-end">
-            <label className="flex items-center gap-3 p-4 bg-hs-charcoal rounded-2xl border border-white/[0.06] cursor-pointer w-full">
-              <input
-                type="checkbox"
-                checked={published}
-                onChange={(e) => setPublished(e.target.checked)}
-                className="w-5 h-5 accent-hs-gold rounded"
-              />
-              <span className="text-sm font-medium text-hs-cream">Publish now</span>
-            </label>
-          </div>
+        <section className="rounded-2xl border border-hs-gold/20 bg-hs-gold/10 p-4">
+          <p className="font-bold text-hs-cream">Free recipe for launch</p>
+          <p className="mt-1 text-xs leading-relaxed text-hs-gray">Your recipe will be submitted with this dish for review. Optional paid recipes are coming in a future update.</p>
         </section>
 
         <section>
@@ -306,7 +246,7 @@ export default function NewRecipePage() {
             <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider">Ingredients</label>
             <button
               type="button"
-              onClick={() => setIngredients([...ingredients, ''])}
+              onClick={() => setIngredients([...ingredients, { quantity: '', unit: '', name: '' }])}
               className="text-xs text-hs-gold font-semibold inline-flex items-center gap-1"
             >
               <Plus size={14} /> Add
@@ -314,21 +254,34 @@ export default function NewRecipePage() {
           </div>
           <div className="space-y-2">
             {ingredients.map((item, idx) => (
-              <div key={idx} className="flex gap-2">
+              <div key={idx} className="grid grid-cols-[0.7fr_0.9fr_1.8fr_auto] gap-2">
                 <input
-                  value={item}
-                  onChange={(e) => {
-                    const next = [...ingredients]
-                    next[idx] = e.target.value
-                    setIngredients(next)
-                  }}
-                  placeholder={`Ingredient ${idx + 1}`}
-                  className="flex-1 px-4 py-3 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition text-sm"
+                  aria-label={`Ingredient ${idx + 1} quantity`}
+                  value={item.quantity}
+                  onChange={(e) => setIngredients((current) => current.map((ingredient, ingredientIndex) => ingredientIndex === idx ? { ...ingredient, quantity: e.target.value } : ingredient))}
+                  placeholder="2"
+                  className="min-w-0 px-3 py-3 bg-hs-charcoal border border-white/[0.08] rounded-xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition text-sm"
+                />
+                <input
+                  aria-label={`Ingredient ${idx + 1} unit`}
+                  value={item.unit}
+                  onChange={(e) => setIngredients((current) => current.map((ingredient, ingredientIndex) => ingredientIndex === idx ? { ...ingredient, unit: e.target.value } : ingredient))}
+                  placeholder="cups"
+                  className="min-w-0 px-3 py-3 bg-hs-charcoal border border-white/[0.08] rounded-xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition text-sm"
+                />
+                <input
+                  aria-label={`Ingredient ${idx + 1} name`}
+                  value={item.name}
+                  onChange={(e) => setIngredients((current) => current.map((ingredient, ingredientIndex) => ingredientIndex === idx ? { ...ingredient, name: e.target.value } : ingredient))}
+                  placeholder="flour"
+                  className="min-w-0 px-3 py-3 bg-hs-charcoal border border-white/[0.08] rounded-xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setIngredients(ingredients.filter((_, i) => i !== idx))}
-                  className="px-3 text-hs-gray hover:text-hs-red"
+                  disabled={ingredients.length === 1}
+                  aria-label={`Remove ingredient ${idx + 1}`}
+                  className="min-h-11 min-w-11 text-hs-gray hover:text-hs-red disabled:opacity-30"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -387,7 +340,7 @@ export default function NewRecipePage() {
             disabled={saving}
             className="flex-1 min-h-12 py-3 bg-hs-gold text-hs-black rounded-2xl font-bold disabled:opacity-50 inline-flex items-center justify-center gap-2 hover:bg-hs-gold-light transition"
           >
-            {saving ? 'Saving…' : <><CheckCircle2 size={18} /> Save Recipe</>}
+            {saving ? 'Submitting…' : <><CheckCircle2 size={18} /> Submit Recipe for Review</>}
           </button>
         </div>
       </main>

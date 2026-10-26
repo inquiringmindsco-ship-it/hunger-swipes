@@ -168,7 +168,7 @@ export default function SavedPage() {
         ) : (
           <div className="space-y-5">
             {error && <p role="alert" className="rounded-xl border border-hs-red/30 bg-hs-red/10 p-3 text-sm text-hs-cream">{error}</p>}
-            <p className="text-hs-gray text-sm mb-4">{saved.length} {saved.length === 1 ? 'dish' : 'dishes'} saved · dishes drop off after 24 hours and move to <Link href="/history" className="text-hs-gold hover:underline">History</Link></p>
+            <p className="text-hs-gray text-sm mb-4">{saved.length} {saved.length === 1 ? 'dish' : 'dishes'} saved · after 24 hours they move to <Link href="/history" className="text-hs-gold hover:underline">History</Link>, where you can save them again.</p>
             {saved.map((item) => {
               const dish = item.dish
               const seller = dish.seller
