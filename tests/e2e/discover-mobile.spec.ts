@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-const BASE = process.env.DISCOVER_E2E_BASE_URL || 'http://localhost:3000'
+const BASE = process.env.DISCOVER_E2E_BASE_URL || ''
 
 // Signed-out browse only — the spec performs zero swipe/save writes (Pass/Want are
 // render-presence checks only; no button is clicked).
@@ -16,7 +16,8 @@ test.describe('Discover mobile recovery', () => {
     await expect(page.getByRole('button', { name: /want/i }).first()).toBeVisible()
     await expect(page.getByRole('button', { name: /pass/i }).first()).toBeVisible()
     // Bottom navigation + discovery-mode tabs render.
-    await expect(page.getByRole('navigation').last()).toBeVisible()
+    await expect(page.getByTestId('mobile-nav')).toHaveCount(1)
+    await expect(page.getByTestId('mobile-nav')).toBeVisible()
     await expect(page.getByRole('button', { name: /EAT/ })).toBeVisible()
   })
 

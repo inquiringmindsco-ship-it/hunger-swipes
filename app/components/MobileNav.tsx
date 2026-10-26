@@ -69,7 +69,11 @@ export default function MobileNav() {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-hs-black/95 backdrop-blur-xl border-t border-white/[0.06] z-50 safe-bottom">
+    <nav
+      aria-label="Primary"
+      data-testid="mobile-nav"
+      className="fixed bottom-0 left-0 right-0 bg-hs-black/95 backdrop-blur-xl border-t border-white/[0.06] z-50 safe-bottom"
+    >
       <div className="flex items-end justify-around py-1.5 px-1 max-w-md mx-auto">
         {navItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')

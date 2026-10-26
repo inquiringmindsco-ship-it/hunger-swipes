@@ -23,15 +23,34 @@ async function openGuestFeed(page: Page) {
   await expect(page.getByRole('heading', { name: 'Test Dish 1' })).toBeVisible()
 }
 
-test('guest buttons share the swipe flow and wanting prompts signup without writing', async ({ page }) => {
+test('guest right swipe shows a visible countdown, advances, and performs no write', async ({ page }) => {
   let writes = 0
   await page.route('**/api/swipe', (route) => { writes += 1; return route.fulfill({ status: 500 }) })
   await openGuestFeed(page)
   await page.getByRole('button', { name: 'Pass on Test Dish 1' }).click()
   await expect(page.getByRole('heading', { name: 'Test Dish 2' })).toBeVisible()
   await page.getByRole('button', { name: 'Want Test Dish 2' }).click()
-  await expect(page).toHaveURL(/\/auth\?mode=signup&next=%2Fswipe|\/auth\?mode=signup&next=\/swipe/)
+  await expect(page.getByTestId('swipe-countdown')).toBeVisible()
+  await expect(page.getByTestId('countdown-number')).toHaveText('5')
+  await expect(page.getByTestId('countdown-number')).toHaveText('4', { timeout: 2000 })
+  await expect(page.getByRole('heading', { name: 'Test Dish 3' })).toBeVisible({ timeout: 6000 })
+  await expect(page.getByTestId('swipe-countdown')).not.toBeVisible()
   expect(writes).toBe(0)
+})
+
+test('homepage enters Discover directly with one mobile navigation bar', async ({ page }) => {
+  await page.route('**/api/dishes?**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ dishes: fixtureDishes, hasMore: false }),
+  }))
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/swipe$/)
+  await expect(page.getByRole('heading', { name: 'Test Dish 1' })).toBeVisible()
+  await expect(page.getByTestId('mobile-nav')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'EAT' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'MAKE' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'EXPLORE' })).toBeVisible()
 })
 
 test('gesture threshold and axis lock preserve the current card', async ({ page }) => {
@@ -211,7 +230,7 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
     await openGuestFeed(page)
     const samples = await sampleCardExit(page, async () => dragPastThreshold(page, 'right'))
-    await expect(page).toHaveURL(/\/auth\?mode=signup&next=%2Fswipe|\/auth\?mode=signup&next=\/swipe/)
+    await expect(page.getByTestId('swipe-countdown')).toBeVisible()
 
     expect(samples.length).toBeGreaterThanOrEqual(5)
     const motion = exitMotion(samples, 'right')
@@ -260,7 +279,7 @@ for (const viewport of [
     const samples = await sampleCardExit(page, async () => {
       await page.getByRole('button', { name: 'Want Test Dish 1' }).click()
     })
-    await expect(page).toHaveURL(/\/auth\?mode=signup&next=%2Fswipe|\/auth\?mode=signup&next=\/swipe/)
+    await expect(page.getByTestId('swipe-countdown')).toBeVisible()
 
     expect(samples.length).toBeGreaterThanOrEqual(5)
     const motion = exitMotion(samples, 'right')

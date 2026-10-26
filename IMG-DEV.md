@@ -2,19 +2,20 @@
 *Machine-readable state for any authorized agent (Codex / Sentinel / ACP fallback). Update at the END of every work session. NO credentials in this file — env var NAMES only.*
 
 ## State snapshot (updated 2026-10-25)
-- **Current architecture:** Next.js (App Router) + Supabase (service-role server-side) + Vercel (git deploys) + node:test / vitest / Playwright. Content kinds: official (sellers) / community (posts, moderated) / place_staging (starters, rights-gated).
-- **Active development branch:** `feature/ios-capacitor` (iOS RC work, UNPUSHED commits) + `feature/catalog-review` (catalog, 4 commits local) + `sentinel/discover-recovery` (deck fix, 2 commits pushed) + `sentinel/phase1-infra` (CI/monitoring, this branch).
-- **Production baseline:** hungerswipes.com ← `dpl_8DZkCsn5XsFK54DDmuQgV57AwAL2` (Oct 25 10:42 CDT; **incident — see below**). Prior known-good: Oct 24 10:36 deploy.
-- **Open tasks:** merge `sentinel/discover-recovery` + release (owner keyword); merge `sentinel/phase1-infra`; catalog review adjudication (~11,108 rows); FSQ Details enablement (owner); iOS release flow after catalog merge.
-- **Known issues:** Discover deck was 2-cards for returning users (root cause: un-reviewed prod deploy + history-exhaustion semantics — both fixed on recovery branch); Ferguson 11 starters rights-blocked (permission_required, 4 wrong-jurisdiction domains — do NOT publish without documentation); GOOGLE_PLACES_API_KEY absent; FSQ Details/Photos 401 (product gate).
-- **Last verified tests:** foundation 15/15 + discover-recovery 7/7 (2026-10-25 local); build exit 0.
-- **Pending deployments:** `sentinel/discover-recovery` (preview verified; OWNER APPROVAL REQUIRED), then `sentinel/phase1-infra` (CI + monitoring + continuity).
-- **Recent decisions:** test dishes stay removed; starters auto-return only when `rights_status='approved'`; no 250 hard-code in tests; $0-spend modernization.
+- **Current architecture:** Next.js (App Router) + Supabase (service-role server-side) + Vercel + node:test / Vitest / Playwright. Content kinds: official (sellers), community (moderated posts), and rights-gated place staging.
+- **Canonical production branch:** `main`. **Release candidate:** `codex/launch-recovery`, based on `5a359fd4545263b786a2fdb0467d7bdb29bfc04a`, awaiting owner approval.
+- **Authoritative UX:** `/` redirects to `/swipe`; `app/swipe/page.tsx` contains the single-card Discover deck, 5-second visible right-swipe countdown, gestures, feed refill, and session rediscovery. `app/components/MobileNav.tsx` is the sole mobile navigation implementation.
+- **Production baseline:** `dpl_8WyZ7ekyWJ1PmkZDyBR6N4F2Rivk` (Oct 25 12:39 CDT). It has no Vercel Git metadata and therefore no verifiable source commit. No deployment was made by the launch-recovery work.
+- **Dish state:** 7 approved community dishes live with valid images; 179 candidates remain `permission_required`. Eleven have staged records but remain blocked by the rights gate.
+- **Preserved Sentinel work:** Discover supply/session recovery, Swipe Bucks safeguards, dish-candidate admin and emergency unpublish, CI, monitoring, and deployment guard.
+- **Preserved separate work:** `feature/catalog-review`, iOS/Capacitor, and dirty agent worktrees were not merged into this release.
+- **Verification:** 42/42 unit, 19/19 UI, 33/33 browser tests, lint, TypeScript, and production build all pass.
+- **Next action:** owner reviews the exact `codex/launch-recovery` commit; merge/deploy is prohibited until explicit approval.
 
 ## Rollback procedure
-1. `vercel rollback <last-good-dpl-id>` from a project-linked directory (instant alias flip).
-2. Known-good records: `dpl_8DZkCsn5XsFK54DDmuQgV57AwAL2` = current (incident state); Oct 24 10:36 deploy = last pre-incident snapshot.
-3. After rollback: run `node --env-file=.env.local scripts/monitor/prod-watch.mjs` and confirm green.
+1. `vercel rollback dpl_8WyZ7ekyWJ1PmkZDyBR6N4F2Rivk` from a project-linked directory (instant alias flip).
+2. This operational rollback restores the current seven-card feed, but not the recovered visible countdown.
+3. After rollback, run `node --env-file=.env.local scripts/monitor/prod-watch.mjs` and confirm green.
 
 ## Production-deploy policy (see GIT_POLICY.md)
 Production deploys ONLY via: (a) merge of an approved, CI-green PR to main (git-connected), or (b) `scripts/vercel-prod-guard.sh vercel --prod` from a clean, synced main checkout. NEVER `vercel --prod` from a dirty tree. CLI deploys carry no commit identity and cannot be tied to review — treat as forbidden until guard passes.

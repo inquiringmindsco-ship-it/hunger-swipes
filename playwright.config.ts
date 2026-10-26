@@ -17,5 +17,14 @@ export default defineConfig({
     url: 'http://localhost:3100/swipe',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_SUPABASE_URL:
+        process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://hwqvfltopgoxocvpbexq.supabase.co',
+      // Browser auth is fully intercepted in the relevant tests. A non-secret
+      // placeholder keeps the client enabled when CI intentionally has no app key.
+      NEXT_PUBLIC_SUPABASE_ANON_KEY:
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'playwright-anon-key',
+    },
   },
 })
