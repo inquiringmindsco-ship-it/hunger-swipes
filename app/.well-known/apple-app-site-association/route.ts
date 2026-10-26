@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 
+// Keep the AASA endpoint compatible with the Capacitor static export. The
+// response is build-time data; the production route still serves it normally.
+export const dynamic = 'force-static'
+
 /**
  * Apple App Site Association file for universal links.
  * Required for iOS deep links from hungerswipes.com into the native app.
@@ -12,7 +16,7 @@ export async function GET() {
     applinks: {
       details: [
         {
-          appIDs: ['TEAM_ID.com.inquiringminds.hungerswipes'],
+          appIDs: ['39A3BYR7NN.com.inquiringminds.hungerswipes'],
           components: [
             { '/': '/*' },
           ],

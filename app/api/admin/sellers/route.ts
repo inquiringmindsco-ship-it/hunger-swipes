@@ -47,6 +47,9 @@ export async function PUT(request: NextRequest) {
     if (update.status && !allowedStatuses.includes(update.status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
+    if (update.verification_status && !['pending', 'approved', 'rejected'].includes(update.verification_status)) {
+      return NextResponse.json({ error: 'Invalid verification status' }, { status: 400 })
+    }
 
     const { data, error } = await admin.from('sellers').update(update).eq('id', id).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

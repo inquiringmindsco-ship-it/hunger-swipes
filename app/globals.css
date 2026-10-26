@@ -54,6 +54,15 @@ body {
   color: var(--hs-cream);
 }
 
+/* iOS zooms the entire WebView when a focused form control is below 16px. */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   font-weight: 700;
@@ -184,7 +193,13 @@ h1, h2, h3, h4, h5, h6 {
     padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
   .safe-top {
-    padding-top: max(0px, env(safe-area-inset-top));
+    padding-top: calc(0.75rem + env(safe-area-inset-top));
+  }
+  .mobile-nav-safe {
+    padding-bottom: max(0.375rem, env(safe-area-inset-bottom));
+  }
+  .page-with-mobile-nav {
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom));
   }
 }
 

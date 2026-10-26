@@ -4,6 +4,7 @@ import { getRequestUser } from '@/lib/server-auth'
 import { boundedLimit, isOwnedManagedPhotoUrl, mapCommunityPost } from '@/lib/food'
 import { classifyFoodImage, computeImageFingerprint, hammingDistance, ModerationResult } from '@/lib/moderation'
 import { promoteApprovedCommunityPlaceImage } from '@/lib/place-images'
+import { safeRemoveStoredImage } from '@/lib/storage-cleanup'
 
 const DUPLICATE_HAMMING_THRESHOLD = 8
 
@@ -15,7 +16,9 @@ export async function GET(request: NextRequest) {
   const admin = getSupabaseAdmin()
   if (!admin) return NextResponse.json({ error: 'Database not configured', posts: [] }, { status: 503 })
   let query = admin.from('community_food_posts').select(`*,place:places!inner(id,name,location_text,status)`).eq('places.status', 'active').order('created_at', { ascending: false }).limit(boundedLimit(params.get('limit')))
-  query = mine ? query.eq('user_id', user!.id) : query.eq('status', 'active').eq('moderation_status', 'approved')
+  query = mine
+    ? query.eq('user_id', user!.id).is('deleted_at', null)
+    : query.eq('status', 'active').eq('moderation_status', 'approved')
   if (params.get('placeId')) query = query.eq('place_id', params.get('placeId')!)
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message, posts: [] }, { status: 500 })
@@ -162,6 +165,9 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('community place image promotion failed', error)
     }
+  } else if (finalStatus === 'rejected') {
+    const cleanup = await safeRemoveStoredImage(data.photo_url)
+    if (!cleanup.removed) console.error('rejected community photo cleanup failed', cleanup.reason)
   }
 
   return NextResponse.json({ post: mapCommunityPost(data) }, { status: 201 })

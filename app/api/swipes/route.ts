@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         ? admin
             .from('dishes')
             .select(
-              `*,seller:sellers!inner(id,business_name,seller_type,location_text,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,status,verification_status)`,
+              `*,seller:sellers!inner(id,business_name,seller_type,location_text,address,latitude,longitude,phone,hours_text,pickup_available,delivery_available,ordering_method,ordering_url,website:website_url,status,verification_status)`,
             )
             .in('id', officialIds)
             .eq('status', 'active')

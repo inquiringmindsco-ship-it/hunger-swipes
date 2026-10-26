@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getAuthToken } from '@/lib/auth'
+import { apiFetch } from '@/lib/auth-fetch'
 
 interface FollowButtonProps {
   followingType: 'user' | 'seller'
@@ -13,7 +14,7 @@ async function api(path: string, init?: RequestInit) {
   const token = await getAuthToken()
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string> || {}) }
   if (token) headers.Authorization = `Bearer ${token}`
-  const res = await fetch(path, { ...init, headers })
+  const res = await apiFetch(path, { ...init, headers })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Request failed')
   return data

@@ -15,7 +15,7 @@ import MobileNav from '@/app/components/MobileNav'
 const SELLER_TYPES = [
   { value: 'restaurant', label: 'Restaurant / Food Business', description: 'Restaurants, food trucks, bakeries, caterers', icon: Utensils },
   { value: 'home_cook', label: 'Home Cook', description: 'Sell your own prepared food where permitted', icon: ChefHat },
-  { value: 'recipe_creator', label: 'Recipe Creator', description: 'Share food and sell the recipe behind it', icon: ScrollText },
+  { value: 'recipe_creator', label: 'Recipe Creator', description: 'Share food and publish the recipe behind it', icon: ScrollText },
 ]
 
 const RESTAURANT_SUB_TYPES = [
@@ -50,14 +50,15 @@ export default function JoinPage() {
   const [authChecking, setAuthChecking] = useState(true)
   const [seller, setSeller] = useState<any>(null)
   const [logoPreview, setLogoPreview] = useState('')
+  const [draftReady, setDraftReady] = useState(false)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hungerswipes.com'
 
   const [form, setForm] = useState({
     business_name: '',
     contact_name: '',
     contact_email: '',
-    seller_type: 'restaurant',
-    seller_types: ['restaurant'],
+    seller_type: '',
+    seller_types: [] as string[],
     description: '',
     location_text: '',
     address: '',
@@ -71,6 +72,13 @@ export default function JoinPage() {
     logo_url: '',
   })
 
+  const selectedSellerType = form.seller_types[0] || ''
+  const isRecipeCreator = selectedSellerType === 'recipe_creator'
+  const isHomeCook = selectedSellerType === 'home_cook'
+  const isRestaurant = !!selectedSellerType && !isRecipeCreator && !isHomeCook
+  const profileNameLabel = isRecipeCreator ? 'Creator name' : isHomeCook ? 'Kitchen or cook name' : 'Business name'
+  const profileNamePlaceholder = isRecipeCreator ? 'Ex: Recipes by Maya' : isHomeCook ? 'Ex: Maya’s Sunday Kitchen' : "Ex: Mama's Tacos"
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
@@ -78,10 +86,6 @@ export default function JoinPage() {
     const ref = params.get('ref')
     setPrefillType(st)
     setRefSellerId(ref)
-    if (st) {
-      const normalized = normalizeSellerTypes(st)
-      setForm((f) => ({ ...f, seller_type: normalized[0] || 'restaurant', seller_types: normalized }))
-    }
     const savedIntake = sessionStorage.getItem('hungerswipes_business_intake')
     if (savedIntake) {
       try {
@@ -90,6 +94,19 @@ export default function JoinPage() {
         setForm((current) => ({ ...current, ...intake, contact_email: intake.email || '', website_url: intake.website || '', seller_type: 'restaurant', seller_types: normalized }))
       } catch {}
     }
+    const savedDraft = sessionStorage.getItem('hungerswipes_join_draft_v1')
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft)
+        if (draft?.form) setForm((current) => ({ ...current, ...draft.form }))
+        if (draft?.step === 2) setStep(2)
+      } catch {}
+    }
+    if (st) {
+      const normalized = normalizeSellerTypes(st)
+      setForm((current) => ({ ...current, seller_type: normalized[0] || 'restaurant', seller_types: normalized }))
+    }
+    setDraftReady(true)
 
     // Record scan if this page was opened via a seller's QR
     if (ref) {
@@ -132,6 +149,14 @@ export default function JoinPage() {
     // Location is only requested after the user explicitly chooses Nearby, Near Me, or Use My Location.
   }, [router])
 
+  useEffect(() => {
+    if (!draftReady || submitted || typeof window === 'undefined') return
+    const timeout = window.setTimeout(() => {
+      sessionStorage.setItem('hungerswipes_join_draft_v1', JSON.stringify({ form, step }))
+    }, 200)
+    return () => window.clearTimeout(timeout)
+  }, [draftReady, form, step, submitted])
+
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -150,13 +175,30 @@ export default function JoinPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.business_name || !form.contact_name || !form.contact_email || !form.address || !form.location_text) {
-      alert('Business name, contact name, email, address, and location are required.')
+    if (!selectedSellerType) {
+      alert('Choose how you want to sell or share food.')
+      return
+    }
+    if (!form.business_name.trim()) {
+      alert(`${profileNameLabel} is required.`)
+      return
+    }
+    if (isRestaurant && (!form.contact_name.trim() || !form.contact_email.trim() || !form.address.trim() || !form.location_text.trim())) {
+      alert('Business name, contact name, email, address, and location are required for restaurants and food businesses.')
+      return
+    }
+    if (isHomeCook && !form.location_text.trim()) {
+      alert('Add the neighborhood or service area where people can find your food.')
       return
     }
     setLoading(true)
     try {
-      const body: any = { ...form }
+      const body: any = {
+        ...form,
+        ...(isRecipeCreator ? {
+          address: '', location_text: '', phone: '', hours_text: '', ordering_method: 'none', ordering_url: '', pickup_available: false, delivery_available: false,
+        } : {}),
+      }
       if (refSellerId) body.referred_by = refSellerId
       const res = await authFetch('/api/sellers', {
         method: 'POST',
@@ -166,6 +208,7 @@ export default function JoinPage() {
       const data = await res.json()
       if (data.seller) {
         sessionStorage.removeItem('hungerswipes_business_intake')
+        sessionStorage.removeItem('hungerswipes_join_draft_v1')
         setSeller(data.seller)
         setSubmitted(true)
       } else {
@@ -177,13 +220,23 @@ export default function JoinPage() {
     setLoading(false)
   }
 
+  const goToStepTwo = () => {
+    if (!selectedSellerType) return alert('Choose Restaurant, Home Cook, or Recipe Creator first.')
+    if (!form.business_name.trim()) return alert(`${profileNameLabel} is required.`)
+    if (isRestaurant && (!form.contact_name.trim() || !form.contact_email.trim() || !form.address.trim() || !form.location_text.trim())) {
+      return alert('Complete the restaurant contact and location fields before continuing.')
+    }
+    if (isHomeCook && !form.location_text.trim()) return alert('Add your neighborhood or service area before continuing.')
+    setStep(2)
+  }
+
   const joinUrl = `${appUrl}/join${refSellerId ? `?ref=${refSellerId}` : ''}`
   const dashboardUrl = seller ? `${appUrl}/seller/dashboard?id=${seller.id}` : appUrl
   const restaurantUrl = seller?.slug ? `${appUrl}/${seller.slug}` : appUrl
 
   if (authChecking) {
     return (
-      <div className="min-h-screen bg-hs-ink pb-24">
+      <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
         <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
           <div className="max-w-md mx-auto flex items-center gap-2">
             <BrandMark size={28} />
@@ -200,7 +253,7 @@ export default function JoinPage() {
 
   if (submitted && seller) {
     return (
-      <div className="min-h-screen bg-hs-ink pb-24">
+      <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
         <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
           <div className="max-w-md mx-auto flex items-center gap-2">
             <BrandMark size={28} />
@@ -212,37 +265,37 @@ export default function JoinPage() {
           <div className="w-20 h-20 rounded-full bg-hs-gold/10 flex items-center justify-center mx-auto mb-5">
             <CheckCircle2 size={40} className="text-hs-gold" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl font-black text-hs-cream mb-2">You&apos;re on Hunger Swipes!</h1>
-          <p className="text-hs-gray text-sm mb-6">{form.business_name} is ready to be discovered.</p>
+          <h1 className="text-2xl font-black text-hs-cream mb-2">{isRecipeCreator ? 'Your creator profile is ready!' : 'You’re on Hunger Swipes!'}</h1>
+          <p className="text-hs-gray text-sm mb-6">{isRecipeCreator ? `${form.business_name} can now start sharing recipes.` : `${form.business_name} is ready to be discovered.`}</p>
 
           {seller.status === 'pending_review' && (
             <div className="rounded-2xl border border-hs-gold/20 bg-hs-gold/10 p-4 mb-6 text-left">
               <p className="text-sm text-hs-gold font-medium">
-                Your seller profile is pending review. You can add dishes now, but they stay hidden until an admin approves your profile.
+                {isRecipeCreator ? 'Your creator profile is pending review. You can prepare recipes now, and they will appear after approval.' : 'Your seller profile is pending review. You can add dishes now, but they stay hidden until an admin approves your profile.'}
               </p>
             </div>
           )}
 
-          <div className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-6 mb-6">
+          {seller.status === 'active' ? <div className="bg-hs-charcoal border border-white/[0.06] rounded-[1.5rem] p-6 mb-6">
             <h2 className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-4 text-left">Your QR Code</h2>
             <div className="flex justify-center mb-4">
               <QRCodeSVG value={restaurantUrl} size={180} bgColor="#141414" fgColor="#D4AF37" />
             </div>
-            <p className="text-xs text-hs-gray text-center mb-4">Scan to open your permanent restaurant page</p>
+            <p className="text-xs text-hs-gray text-center mb-4">Scan to open your permanent {isRecipeCreator ? 'creator' : 'food'} page</p>
             <div className="bg-hs-soft rounded-xl p-3 text-left">
-              <p className="text-xs text-hs-gray mb-1">Your permanent restaurant page:</p>
+              <p className="text-xs text-hs-gray mb-1">Your permanent {isRecipeCreator ? 'creator' : 'food'} page:</p>
               <p className="text-sm font-mono text-hs-gold break-all">{restaurantUrl}</p>
               <p className="mt-3 text-xs text-hs-gray mb-1">Your private dashboard:</p>
               <p className="text-xs font-mono text-hs-silver break-all">{dashboardUrl}</p>
             </div>
-          </div>
+          </div> : <div className="mb-6 rounded-[1.5rem] border border-white/[0.06] bg-hs-charcoal p-6 text-left"><h2 className="font-bold text-hs-cream">Public page after approval</h2><p className="mt-2 text-sm text-hs-gray">Your link and QR code will turn on after the profile is reviewed. You can prepare your first {isRecipeCreator ? 'recipe' : 'dish'} now.</p></div>}
 
           <Link
-            href={`/seller/dashboard?id=${seller.id}`}
+            href={isRecipeCreator ? '/seller/dishes/new?continue=recipe' : '/seller/dishes/new'}
             className="block w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold text-center hover:bg-hs-gold-light transition mb-3"
           >
             <span className="inline-flex items-center gap-2 justify-center">
-              Add Your First Dish <ArrowRight size={18} aria-hidden="true" />
+              {isRecipeCreator ? 'Publish Your First Recipe' : 'Add Your First Dish'} <ArrowRight size={18} aria-hidden="true" />
             </span>
           </Link>
           <Link
@@ -258,7 +311,7 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-hs-ink pb-24">
+    <div className="page-with-mobile-nav min-h-screen bg-hs-ink">
       <header className="sticky top-0 z-40 bg-hs-ink/90 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 safe-top">
         <div className="max-w-md mx-auto flex items-center gap-2">
           <BrandMark size={28} />
@@ -269,8 +322,8 @@ export default function JoinPage() {
       <main className="max-w-md mx-auto px-4 py-6">
         <div className="flex items-center gap-2 mb-8">
           {[
-            { n: 1, label: 'Restaurant' },
-            { n: 2, label: 'Ordering' },
+            { n: 1, label: 'Your path' },
+            { n: 2, label: isRecipeCreator ? 'Creator profile' : 'How it works' },
           ].map(({ n, label }, i) => (
             <div key={n} className="flex items-center gap-2">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition ${
@@ -301,49 +354,16 @@ export default function JoinPage() {
         {step === 1 ? (
           <div className="space-y-6">
             <section>
-              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Business / Seller Name *</label>
-              <input
-                value={form.business_name}
-                onChange={(e) => setForm({ ...form, business_name: e.target.value })}
-                placeholder="Ex: Mama's Tacos"
-                className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
-              />
-            </section>
-
-            <section className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="contact-name" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Contact Name *</label>
-                <input id="contact-name" value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} placeholder="Your name" className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
-              </div>
-              <div>
-                <label htmlFor="contact-email" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Email *</label>
-                <input id="contact-email" type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} placeholder="you@restaurant.com" className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
-              </div>
-            </section>
-
-            <section>
-              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">What do you want to sell? *</label>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">How do you want to show up? *</label>
               <div className="grid gap-3">
                 {SELLER_TYPES.map((t) => {
                   const Icon = t.icon
-                  const selected = form.seller_types.includes(t.value)
+                  const selected = selectedSellerType === t.value
                   return (
                     <button
                       key={t.value}
                       type="button"
-                      onClick={() => {
-                        const next = selected
-                          ? form.seller_types.filter((x) => x !== t.value)
-                          : normalizeSellerTypes([...form.seller_types, t.value])
-                        const primary = next.includes('recipe_creator') && !next.some((x) => x !== 'recipe_creator')
-                          ? 'recipe_creator'
-                          : next.includes('home_cook')
-                            ? 'home_cook'
-                            : next.includes('restaurant')
-                              ? 'restaurant'
-                              : next[0] || 'restaurant'
-                        setForm({ ...form, seller_type: primary, seller_types: next.length ? next : ['restaurant'] })
-                      }}
+                      onClick={() => setForm({ ...form, seller_type: t.value, seller_types: [t.value] })}
                       aria-pressed={selected}
                       className={`p-4 rounded-2xl border text-left transition flex items-start gap-3 ${
                         selected
@@ -365,7 +385,7 @@ export default function JoinPage() {
                   )
                 })}
               </div>
-              {form.seller_types.includes('restaurant') && (
+              {selectedSellerType === 'restaurant' && (
                 <div className="mt-4">
                   <label className="text-xs font-semibold text-hs-silver uppercase tracking-wider mb-2 block">Food business type</label>
                   <div className="flex flex-wrap gap-2">
@@ -388,25 +408,48 @@ export default function JoinPage() {
               )}
             </section>
 
-            <section>
-              <label htmlFor="street-address" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Street Address *</label>
-              <input id="street-address" autoComplete="street-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={form.seller_types.includes('home_cook') ? 'Your pickup address' : 'Restaurant street address'} className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
-            </section>
+            {selectedSellerType && <section>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{profileNameLabel} *</label>
+              <input
+                value={form.business_name}
+                onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                placeholder={profileNamePlaceholder}
+                className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
+              />
+              {isRecipeCreator && <p className="mt-2 text-xs leading-relaxed text-hs-gray">This is the name people will see on your recipes. It can be your name or a creator name—no business is required.</p>}
+            </section>}
 
-            <section>
-              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Location / Where to find you *</label>
+            {isRestaurant && <section className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="contact-name" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Contact Name *</label>
+                <input id="contact-name" value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} placeholder="Your name" className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
+              </div>
+              <div>
+                <label htmlFor="contact-email" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Business Email *</label>
+                <input id="contact-email" type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} placeholder="you@restaurant.com" className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
+              </div>
+            </section>}
+
+            {!isRecipeCreator && selectedSellerType && <section>
+              <label htmlFor="street-address" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{isHomeCook ? 'Pickup address' : 'Street address *'} {isHomeCook && <span className="font-normal normal-case text-hs-gray">(optional)</span>}</label>
+              <input id="street-address" autoComplete="street-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={isHomeCook ? 'Only if you offer pickup' : 'Restaurant street address'} className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
+              {isHomeCook && <p className="mt-2 text-xs text-hs-gray">Your public profile shows your service area, not your full street address.</p>}
+            </section>}
+
+            {!isRecipeCreator && selectedSellerType && <section>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{isHomeCook ? 'Neighborhood / service area' : 'Location / Where to find you'} *</label>
               <div className="relative">
                 <MapPin size={18} className="absolute left-4 top-4 text-hs-gray" aria-hidden="true" />
                 <input
                   value={form.location_text}
                   onChange={(e) => setForm({ ...form, location_text: e.target.value })}
-                  placeholder={form.seller_types.includes('home_cook') ? 'Ex: Tower Grove South, St. Louis' : 'Ex: Delmar Loop, St. Louis'}
+                  placeholder={isHomeCook ? 'Ex: Tower Grove South, St. Louis' : 'Ex: Delmar Loop, St. Louis'}
                   className="w-full pl-11 pr-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
                 />
               </div>
-            </section>
+            </section>}
 
-            <section className="grid gap-4 sm:grid-cols-2">
+            {!isRecipeCreator && selectedSellerType && <section className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Phone</label>
                 <input
@@ -417,15 +460,15 @@ export default function JoinPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{form.seller_types.includes('home_cook') ? 'Availability' : 'Hours'}</label>
+                <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{isHomeCook ? 'Availability' : 'Hours'}</label>
                 <input
                   value={form.hours_text}
                   onChange={(e) => setForm({ ...form, hours_text: e.target.value })}
-                  placeholder={form.seller_types.includes('home_cook') ? 'Ex: Fri–Sun, pre-order 24h' : 'Mon–Sat 11am–9pm'}
+                  placeholder={isHomeCook ? 'Ex: Fri–Sun, pre-order 24h' : 'Mon–Sat 11am–9pm'}
                   className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
                 />
               </div>
-            </section>
+            </section>}
 
             <section>
               <label htmlFor="website" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Website or Social Link <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
@@ -433,7 +476,7 @@ export default function JoinPage() {
             </section>
 
             <button
-              onClick={() => setStep(2)}
+              onClick={goToStepTwo}
               className="w-full py-4 bg-hs-gold text-hs-black rounded-2xl font-bold hover:bg-hs-gold-light transition flex items-center justify-center gap-2"
             >
               Continue <ChevronRight size={18} />
@@ -441,7 +484,19 @@ export default function JoinPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            <section>
+            {isRecipeCreator && (
+              <section className="rounded-3xl border border-hs-gold/25 bg-hs-gold/10 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-2xl bg-hs-gold/15 p-3 text-hs-gold"><ScrollText size={24} /></div>
+                  <div>
+                    <h2 className="font-black text-hs-cream">Share recipes without a storefront</h2>
+                    <p className="mt-1 text-sm leading-relaxed text-hs-gray">Publish free recipes with a finished-food photo, measured ingredients, and step-by-step instructions. Paid options are coming later.</p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {!isRecipeCreator && <section>
               <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">How do people order?</label>
               <div className="grid grid-cols-2 gap-2">
                 {ORDERING_METHODS.map((m) => {
@@ -462,9 +517,9 @@ export default function JoinPage() {
                   )
                 })}
               </div>
-            </section>
+            </section>}
 
-            {form.ordering_method === 'link' && (
+            {!isRecipeCreator && form.ordering_method === 'link' && (
               <section>
                 <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Order URL</label>
                 <input
@@ -476,7 +531,7 @@ export default function JoinPage() {
               </section>
             )}
 
-            <section className="space-y-3">
+            {!isRecipeCreator && <section className="space-y-3">
               <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider block">Availability</label>
               <label className="flex items-center gap-3 p-4 bg-hs-charcoal rounded-2xl border border-white/[0.06] cursor-pointer">
                 <input
@@ -498,14 +553,14 @@ export default function JoinPage() {
                 />
                 <span className="text-sm font-medium text-hs-cream">Delivery available</span>
               </label>
-            </section>
+            </section>}
 
             <section>
-              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Description</label>
+              <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{isRecipeCreator ? 'Creator bio' : 'Description'}</label>
               <textarea
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="What makes your food special?"
+                placeholder={isRecipeCreator ? 'Tell people what you love to cook and what they can expect from your recipes.' : 'What makes your food special?'}
                 rows={3}
                 className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition resize-none"
               />
@@ -535,7 +590,7 @@ export default function JoinPage() {
                 disabled={loading}
                 className="flex-[2] py-4 bg-hs-gold text-hs-black rounded-2xl font-bold hover:bg-hs-gold-light transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {loading ? 'Creating…' : <>Create Seller Profile <CheckCircle2 size={18} /></>}
+                  {loading ? 'Creating…' : <>{isRecipeCreator ? 'Create Creator Profile' : 'Create Seller Profile'} <CheckCircle2 size={18} /></>}
               </button>
             </div>
           </div>

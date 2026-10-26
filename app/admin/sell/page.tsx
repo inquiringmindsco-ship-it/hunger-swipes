@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, Eye, Shield, Trash2, XCircle, Play } from 'lucide-react'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import { adminFetch } from '@/lib/admin-fetch'
+import { ImagePreviewModal } from '@/app/components/admin/ImagePreviewModal'
 
 export default function SellAdminPage() {
   const [secret, setSecret] = useState('')
@@ -16,6 +17,7 @@ export default function SellAdminPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [actionId, setActionId] = useState<string | null>(null)
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null)
 
   const login = () => { if (secret) setAuthenticated(true) }
 
@@ -47,13 +49,13 @@ export default function SellAdminPage() {
     adminFetch('/api/admin/session').then((response) => setAuthenticated(response.ok)).catch(() => setAuthenticated(false))
   }, [])
 
-  const toggleSellerStatus = async (seller: any, status: string) => {
+  const updateSeller = async (seller: any, patch: Record<string, string>) => {
     setActionId(seller.id)
     try {
       const res = await adminFetch(`/api/admin/sellers?id=${seller.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(patch),
       })
       const data = await res.json()
       if (data.error) setError(data.error)
@@ -143,14 +145,16 @@ export default function SellAdminPage() {
                   <div>
                     <p className="font-bold text-hs-cream">{s.business_name}</p>
                     <p className="text-xs text-hs-gray">{(s.seller_types || [s.seller_type]).join(', ')} • {s.location_text}</p>
-                    <p className="text-xs text-hs-gold mt-1">Status: {s.status}</p>
+                    <p className="text-xs text-hs-gold mt-1">Status: {s.status} · Review: {s.verification_status || 'pending'}</p>
                     <p className="text-xs text-hs-gray mt-1">
                       Stripe: {s.stripe_connect_status || 'not connected'} {s.stripe_account_id ? `· ${s.stripe_account_id}` : ''}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    {s.status !== 'active' && <button disabled={actionId === s.id} onClick={() => toggleSellerStatus(s, 'active')} className="p-2 rounded-xl bg-hs-success/10 text-hs-success"><CheckCircle2 size={16} /></button>}
-                    {s.status !== 'suspended' && <button disabled={actionId === s.id} onClick={() => toggleSellerStatus(s, 'suspended')} className="p-2 rounded-xl bg-hs-red/10 text-hs-red"><XCircle size={16} /></button>}
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {s.verification_status !== 'approved' && <button title="Approve seller" disabled={actionId === s.id} onClick={() => updateSeller(s, { verification_status: 'approved', status: 'active' })} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-hs-success/10 px-4 py-3 text-sm font-bold text-hs-success"><CheckCircle2 size={18} /> Approve</button>}
+                    {s.verification_status !== 'rejected' && <button title="Reject seller" disabled={actionId === s.id} onClick={() => updateSeller(s, { verification_status: 'rejected', status: 'suspended' })} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-hs-red/10 px-4 py-3 text-sm font-bold text-hs-red"><XCircle size={18} /> Reject</button>}
+                    {s.status === 'suspended' && s.verification_status === 'approved' && <button disabled={actionId === s.id} onClick={() => updateSeller(s, { status: 'active' })} className="min-h-12 rounded-xl bg-hs-soft px-4 py-3 text-sm font-bold text-hs-cream">Reactivate</button>}
+                    {s.status === 'active' && <button disabled={actionId === s.id} onClick={() => updateSeller(s, { status: 'suspended' })} className="min-h-12 rounded-xl bg-hs-soft px-4 py-3 text-sm font-bold text-hs-gray">Suspend</button>}
                   </div>
                 </div>
               </div>
@@ -163,7 +167,12 @@ export default function SellAdminPage() {
             {recipes.map((r) => (
               <div key={r.id} className="bg-hs-charcoal border border-white/[0.06] rounded-2xl p-4">
                 <div className="flex items-start gap-3">
-                  {r.photo_url && <img src={r.photo_url} alt="" className="w-16 h-16 rounded-xl object-cover" />}
+                  {r.photo_url && (
+                    <button type="button" onClick={() => setPreviewImage({ src: r.photo_url, alt: r.title })} className="relative min-h-20 min-w-20 overflow-hidden rounded-xl" aria-label={`View full image for ${r.title}`}>
+                      <img src={r.photo_url} alt={r.title} className="h-20 w-20 object-cover" />
+                      <span className="absolute inset-x-0 bottom-0 bg-black/70 py-1 text-[10px] font-bold text-white">View full</span>
+                    </button>
+                  )}
                   <div className="flex-1">
                     <p className="font-bold text-hs-cream">{r.title}</p>
                     <p className="text-xs text-hs-gray">
@@ -174,8 +183,9 @@ export default function SellAdminPage() {
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3">
-                  <button disabled={actionId === r.id} onClick={() => updateRecipe(r, { published: !r.published })} className="px-3 py-2 rounded-xl bg-hs-soft text-xs font-semibold text-hs-cream">{r.published ? 'Unpublish' : 'Publish'}</button>
-                  {r.status !== 'removed' && <button disabled={actionId === r.id} onClick={() => updateRecipe(r, { status: 'removed' })} className="px-3 py-2 rounded-xl bg-hs-red/10 text-xs font-semibold text-hs-red">Remove</button>}
+                  {r.status !== 'active' && r.status !== 'removed' && <button disabled={actionId === r.id} onClick={() => updateRecipe(r, { status: 'active', published: true, reviewBundle: true })} className="min-h-12 px-4 py-3 rounded-xl bg-hs-success/10 text-sm font-bold text-hs-success">Approve food &amp; recipe</button>}
+                  {r.status === 'active' && <button disabled={actionId === r.id} onClick={() => updateRecipe(r, { published: !r.published })} className="min-h-12 px-4 py-3 rounded-xl bg-hs-soft text-sm font-bold text-hs-cream">{r.published ? 'Unpublish' : 'Publish'}</button>}
+                  {r.status !== 'removed' && <button disabled={actionId === r.id} onClick={() => updateRecipe(r, { status: 'removed', published: false, reviewBundle: true })} className="min-h-12 px-4 py-3 rounded-xl bg-hs-red/10 text-sm font-bold text-hs-red">Reject</button>}
                 </div>
               </div>
             ))}
@@ -187,21 +197,22 @@ export default function SellAdminPage() {
             {media.map((m) => (
               <div key={m.id} className="bg-hs-charcoal border border-white/[0.06] rounded-2xl p-4">
                 <div className="flex items-start gap-3">
-                  {m.thumbnail_path && <img src={m.thumbnail_path} alt="" className="w-24 h-16 rounded-xl object-cover" />}
+                  {m.thumbnail_path && <button type="button" onClick={() => setPreviewImage({ src: m.thumbnail_path, alt: 'Video thumbnail' })} aria-label="View full video thumbnail"><img src={m.thumbnail_path} alt="Video thumbnail" className="w-24 h-20 rounded-xl object-cover" /></button>}
                   <div className="flex-1">
                     <p className="font-bold text-hs-cream text-sm">{Math.round(m.duration_seconds || 0)}s • {m.processing_status} • {m.moderation_status}</p>
                     <p className="text-xs text-hs-gray">{m.moderation_reason}</p>
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3">
-                  {m.moderation_status !== 'approved' && <button disabled={actionId === m.id} onClick={() => updateMedia(m, { moderation_status: 'approved' })} className="px-3 py-2 rounded-xl bg-hs-success/10 text-xs font-semibold text-hs-success">Approve</button>}
-                  {m.moderation_status !== 'rejected' && <button disabled={actionId === m.id} onClick={() => updateMedia(m, { moderation_status: 'rejected' })} className="px-3 py-2 rounded-xl bg-hs-red/10 text-xs font-semibold text-hs-red">Reject</button>}
+                  {m.moderation_status !== 'approved' && <button disabled={actionId === m.id} onClick={() => updateMedia(m, { moderation_status: 'approved' })} className="min-h-12 px-4 py-3 rounded-xl bg-hs-success/10 text-sm font-bold text-hs-success">Approve</button>}
+                  {m.moderation_status !== 'rejected' && <button disabled={actionId === m.id} onClick={() => updateMedia(m, { moderation_status: 'rejected' })} className="min-h-12 px-4 py-3 rounded-xl bg-hs-red/10 text-sm font-bold text-hs-red">Reject</button>}
                 </div>
               </div>
             ))}
           </div>
         )}
       </main>
+      {previewImage && <ImagePreviewModal src={previewImage.src} alt={previewImage.alt} onClose={() => setPreviewImage(null)} />}
     </div>
   )
 }

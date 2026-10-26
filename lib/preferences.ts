@@ -4,6 +4,7 @@
 import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES } from './tags'
 
 export const DISCOVERY_PREFERENCES_KEY = 'hungerswipes_discovery_preferences_v1'
+export const ACCOUNT_DISCOVERY_PREFERENCES_KEY = 'discovery_preferences_v1'
 export const LEGACY_PREFERENCE_KEYS = ['hw_prefs', 'hungerswipes_preferences'] as const
 
 export interface DiscoveryPreferences {
@@ -30,7 +31,7 @@ function stringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 }
 
-function normalizeDiscoveryPreferences(value: any): DiscoveryPreferences {
+export function normalizeDiscoveryPreferences(value: any): DiscoveryPreferences {
   return {
     version: 1,
     dietary: stringArray(value?.dietary ?? value?.dietaryRestrictions),
@@ -40,6 +41,24 @@ function normalizeDiscoveryPreferences(value: any): DiscoveryPreferences {
     price: stringArray(value?.price ?? value?.priceRange).filter((range) => ['$', '$$', '$$$'].includes(range)),
     distanceMiles: [5, 10, 15, 25, 50].includes(Number(value?.distanceMiles)) ? Number(value.distanceMiles) : 15,
   }
+}
+
+export function readAccountDiscoveryPreferences(metadata: unknown): DiscoveryPreferences | null {
+  if (!metadata || typeof metadata !== 'object') return null
+  const stored = (metadata as Record<string, unknown>)[ACCOUNT_DISCOVERY_PREFERENCES_KEY]
+  if (!stored || typeof stored !== 'object') return null
+  return normalizeDiscoveryPreferences(stored)
+}
+
+export function hasActiveDiscoveryPreferences(preferences: DiscoveryPreferences) {
+  return Boolean(
+    preferences.dietary.length
+    || preferences.cuisines.length
+    || preferences.health.length
+    || preferences.price.length
+    || preferences.spice > 0
+    || preferences.distanceMiles !== DEFAULT_DISCOVERY_PREFERENCES.distanceMiles
+  )
 }
 
 export function readDiscoveryPreferences(): { preferences: DiscoveryPreferences; source: 'canonical' | 'hw_prefs' | 'hungerswipes_preferences' | 'default' } {

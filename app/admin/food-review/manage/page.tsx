@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, Search, Trash2, AlertCircle, CheckCircle, XCircle, HelpCircle } from 'lucide-react'
 import { adminFetch } from '@/lib/admin-fetch'
+import { ImagePreviewModal } from '@/app/components/admin/ImagePreviewModal'
 
 function timeAgo(date: string) {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
@@ -51,6 +52,7 @@ export default function FoodReviewManagePage() {
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [rowReasons, setRowReasons] = useState<Record<string, string>>({})
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -191,7 +193,10 @@ export default function FoodReviewManagePage() {
           <div className="grid gap-3">
             {filtered.map((post) => (
               <div key={post.id} className="bg-white/[0.03] border border-white/10 rounded-xl p-3 flex gap-4">
-                <img src={post.photo_url} alt={post.dish_name} className="w-24 h-24 object-cover rounded-lg bg-black flex-shrink-0" />
+                <button type="button" onClick={() => setPreviewImage({ src: post.photo_url, alt: post.dish_name })} className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-black" aria-label={`View full image for ${post.dish_name}`}>
+                  <img src={post.photo_url} alt={post.dish_name} className="h-full w-full object-cover" />
+                  <span className="absolute inset-x-0 bottom-0 bg-black/75 py-1 text-[10px] font-bold">View full</span>
+                </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     {statusIcon(post.moderation_status)}
@@ -236,6 +241,7 @@ export default function FoodReviewManagePage() {
           </div>
         )}
       </main>
+      {previewImage && <ImagePreviewModal src={previewImage.src} alt={previewImage.alt} onClose={() => setPreviewImage(null)} />}
     </div>
   )
 }

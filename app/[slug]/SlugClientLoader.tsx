@@ -34,9 +34,9 @@ function normalizeForClient(data: any): ProfilePayload {
   }
 }
 
-export default function SlugClientLoader() {
+export default function SlugClientLoader({ slugOverride }: { slugOverride?: string } = {}) {
   const params = useParams()
-  const slug = typeof params.slug === 'string' ? params.slug : ''
+  const slug = slugOverride || (typeof params.slug === 'string' ? params.slug : '')
   const normalized = slug.trim().toLowerCase().replace(/^@/, '')
 
   const [loading, setLoading] = useState(true)

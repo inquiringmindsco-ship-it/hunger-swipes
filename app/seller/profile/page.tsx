@@ -40,7 +40,16 @@ export default function SellerProfilePage() {
   const save = async () => {
     if (!seller) return
     setSaving(true); setError(''); setMessage('')
-    const required: (keyof typeof empty)[] = ['business_name', 'contact_name', 'contact_email', 'address', 'location_text']
+    const types: string[] = Array.isArray(seller.seller_types) && seller.seller_types.length
+      ? seller.seller_types
+      : [seller.seller_type].filter(Boolean)
+    const recipeOnly = types.includes('recipe_creator') && types.length === 1
+    const homeCook = types.includes('home_cook') || types.includes('home_kitchen')
+    const required: (keyof typeof empty)[] = recipeOnly
+      ? ['business_name']
+      : homeCook
+        ? ['business_name', 'location_text']
+        : ['business_name', 'contact_name', 'contact_email', 'address', 'location_text']
     const missing = required.filter((k) => !String(form[k] || '').trim())
     if (missing.length) {
       setSaving(false)
@@ -57,6 +66,14 @@ export default function SellerProfilePage() {
   }
 
   if (loading) return <div className="min-h-screen bg-hs-ink px-4 pt-12 pb-24"><LoadingState label="Loading restaurant profile…" /></div>
+
+  const sellerTypes: string[] = Array.isArray(seller?.seller_types) && seller.seller_types.length
+    ? seller.seller_types
+    : [seller?.seller_type].filter(Boolean)
+  const isRecipeCreator = sellerTypes.includes('recipe_creator') && sellerTypes.length === 1
+  const isHomeCook = sellerTypes.includes('home_cook') || sellerTypes.includes('home_kitchen')
+  const nameLabel = isRecipeCreator ? 'Creator name' : isHomeCook ? 'Kitchen or cook name' : 'Restaurant name'
+  const profileTitle = isRecipeCreator ? 'Recipe creator profile' : isHomeCook ? 'Home cook profile' : 'Seller profile'
 
   const field = (key: keyof typeof empty, label: string, type = 'text', placeholder = '', required = false) => (
     <label className="block">
@@ -75,24 +92,35 @@ export default function SellerProfilePage() {
     </label>
   )
 
-  return <><Head><title>Seller Setup — Hunger Swipes</title><meta name="description" content="Set up your seller listing on Hunger Swipes." /></Head><div className="min-h-screen bg-hs-ink pb-24 text-hs-cream">
+  return <><Head><title>Seller Setup — Hunger Swipes</title><meta name="description" content="Set up your seller listing on Hunger Swipes." /></Head><div className="page-with-mobile-nav min-h-screen bg-hs-ink text-hs-cream">
     <header className="safe-top sticky top-0 z-20 border-b border-white/[0.06] bg-hs-ink/95 px-4 py-3"><div className="mx-auto flex max-w-md items-center gap-3"><Link href="/seller/dashboard" className="flex h-11 w-11 items-center justify-center rounded-full bg-hs-soft" aria-label="Back"><ArrowLeft size={19} /></Link><BrandMark size={28} /><span className="font-bold">Seller setup</span></div></header>
     <main className="mx-auto max-w-md space-y-6 px-4 py-6">
-      {seller?.slug && <Link href={`/${seller.slug}`} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-hs-gold/25 bg-hs-gold/10 text-sm font-bold text-hs-gold">View public page <ExternalLink size={16} /></Link>}
+      {seller?.slug && seller.status === 'active' && seller.verification_status === 'approved' ? (
+        <Link href={`/${encodeURIComponent(seller.slug)}`} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-hs-gold/25 bg-hs-gold/10 text-sm font-bold text-hs-gold">View public page <ExternalLink size={16} /></Link>
+      ) : seller?.slug ? (
+        <div className="rounded-2xl border border-hs-gold/20 bg-hs-gold/10 p-4 text-center">
+          <p className="text-sm font-bold text-hs-gold">Submitted · awaiting review</p>
+          <p className="mt-1 text-xs text-hs-gray">Your public page will be available after approval.</p>
+        </div>
+      ) : null}
       {error && <p className="rounded-xl border border-hs-red/30 bg-hs-red/10 p-3 text-sm text-hs-red">{error}</p>}
       {message && <p role="status" className="flex items-center gap-2 rounded-xl border border-hs-success/30 bg-hs-success/10 p-3 text-sm text-hs-success"><CheckCircle2 size={17} />{message}</p>}
       <section className="space-y-4">
-        <h1 className="text-2xl font-black">Seller profile</h1>
-        {field('business_name', 'Restaurant name', 'text', '', true)}
-        {field('contact_name', 'Contact name', 'text', '', true)}
-        <div className="grid gap-4 sm:grid-cols-2">{field('contact_email', 'Email', 'email', '', true)}{field('phone', 'Phone', 'tel')}</div>
-        {field('address', 'Street address', 'text', '', true)}
-        {field('location_text', 'Display location', 'text', 'Neighborhood, City', true)}
+        <h1 className="text-2xl font-black">{profileTitle}</h1>
+        {field('business_name', nameLabel, 'text', '', true)}
+        {!isRecipeCreator && field('contact_name', isHomeCook ? 'Your name' : 'Contact name', 'text', '', !isHomeCook)}
+        {!isRecipeCreator && <div className="grid gap-4 sm:grid-cols-2">{field('contact_email', 'Email', 'email', '', !isHomeCook)}{field('phone', 'Phone', 'tel')}</div>}
+        {!isRecipeCreator && field('address', isHomeCook ? 'Pickup address (optional)' : 'Street address', 'text', '', !isHomeCook)}
+        {!isRecipeCreator && field('location_text', isHomeCook ? 'Service area' : 'Display location', 'text', 'Neighborhood, City', true)}
         {field('website_url', 'Website or social link', 'url', 'https://')}
         <label className="block"><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-hs-gold">Description</span><textarea value={form.description} onChange={(event) => update('description', event.target.value)} rows={3} className="w-full resize-none rounded-2xl border border-white/[0.08] bg-hs-charcoal px-4 py-3.5 outline-none focus:border-hs-gold/50" /></label>
-        {field('hours_text', 'Hours')}
+        {!isRecipeCreator && field('hours_text', isHomeCook ? 'Availability' : 'Hours')}
       </section>
-      <section className="space-y-4 border-t border-white/[0.07] pt-6"><h2 className="text-xl font-black">Ordering</h2><label className="block"><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-hs-gold">Ordering method</span><select value={form.ordering_method} onChange={(event) => update('ordering_method', event.target.value)} className="w-full rounded-2xl border border-white/[0.08] bg-hs-charcoal px-4 py-3.5"><option value="none">Not configured</option><option value="link">Online ordering link</option><option value="phone">Phone</option><option value="in_app">In-app (not yet available)</option></select></label>{form.ordering_method === 'link' && field('ordering_url', 'Secure order URL', 'url', 'https://')}<div className="grid grid-cols-2 gap-3">{(['pickup_available', 'delivery_available'] as const).map((key) => <label key={key} className="flex items-center gap-2 rounded-2xl bg-hs-charcoal p-4 text-sm font-semibold"><input type="checkbox" checked={form[key]} onChange={(event) => update(key, event.target.checked)} className="h-5 w-5 accent-hs-gold" />{key === 'pickup_available' ? 'Pickup' : 'Delivery'}</label>)}</div></section>
+      {isRecipeCreator ? (
+        <section className="rounded-3xl border border-hs-gold/20 bg-hs-gold/10 p-5"><h2 className="text-lg font-black">Recipe publishing</h2><p className="mt-2 text-sm leading-relaxed text-hs-gray">Publish free recipes with measured ingredients and instructions. A storefront address and ordering phone are not required. Paid options are coming later.</p></section>
+      ) : (
+        <section className="space-y-4 border-t border-white/[0.07] pt-6"><h2 className="text-xl font-black">Ordering</h2><label className="block"><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-hs-gold">Ordering method</span><select value={form.ordering_method} onChange={(event) => update('ordering_method', event.target.value)} className="w-full rounded-2xl border border-white/[0.08] bg-hs-charcoal px-4 py-3.5"><option value="none">Not configured</option><option value="link">Online ordering link</option><option value="phone">Phone</option><option value="in_app">In-app (not yet available)</option></select></label>{form.ordering_method === 'link' && field('ordering_url', 'Secure order URL', 'url', 'https://')}<div className="grid grid-cols-2 gap-3">{(['pickup_available', 'delivery_available'] as const).map((key) => <label key={key} className="flex items-center gap-2 rounded-2xl bg-hs-charcoal p-4 text-sm font-semibold"><input type="checkbox" checked={form[key]} onChange={(event) => update(key, event.target.checked)} className="h-5 w-5 accent-hs-gold" />{key === 'pickup_available' ? 'Pickup' : 'Delivery'}</label>)}</div></section>
+      )}
       <button onClick={save} disabled={saving} className="min-h-14 w-full rounded-2xl bg-hs-gold font-black text-hs-black disabled:opacity-50">{saving ? 'Saving…' : 'Save seller setup'}</button>
     </main>
     <MobileNav />

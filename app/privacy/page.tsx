@@ -49,7 +49,7 @@ export default function PrivacyPage() {
 
       <section className="mt-6 space-y-4">
         <h2 className="text-xl font-bold">Retention and deletion</h2>
-        <p>Swipe and saved-item history is retained while your account exists so you can revisit it in History. Community posts remain until you delete them or we remove them for policy reasons. Seller listings remain until the seller or an admin removes them. You may request account deletion by contacting support.</p>
+        <p>Swipe and saved-item history is retained while your account exists so you can revisit it in History. Community posts remain until you delete them or we remove them for policy reasons. Seller listings remain until the seller or an admin removes them. You can permanently delete your account in the app from Account → Delete Account, or request help from support.</p>
       </section>
 
       <section className="mt-6 space-y-4">
@@ -64,7 +64,7 @@ export default function PrivacyPage() {
 
       <section className="mt-6 space-y-4">
         <h2 className="text-xl font-bold">Contact</h2>
-        <p>For privacy questions or deletion requests, contact support through your seller dashboard or the app’s support channels.</p>
+        <p>For privacy questions or deletion help, email <a className="text-[#FF5722] underline" href="mailto:support@hungerswipes.com">support@hungerswipes.com</a> or visit the <Link className="text-[#FF5722] underline" href="/support">Hunger Swipes support page</Link>.</p>
       </section>
     </main>
   )

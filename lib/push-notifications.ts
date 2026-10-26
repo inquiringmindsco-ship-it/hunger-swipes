@@ -14,9 +14,9 @@ export function initPushNotifications() {
   if (!isNativeApp() || listenersAttached) return
   listenersAttached = true
 
-  PushNotifications.addListener('registration', (token) => {
-    // eslint-disable-next-line no-console
-    console.log('Push registration token:', token.value)
+  PushNotifications.addListener('registration', () => {
+    // Token persistence is intentionally deferred until the approved backend
+    // registration endpoint exists. Never print APNs device tokens to logs.
   })
 
   PushNotifications.addListener('registrationError', (error) => {
@@ -24,9 +24,9 @@ export function initPushNotifications() {
     console.error('Push registration error:', error)
   })
 
-  PushNotifications.addListener('pushNotificationReceived', (notification) => {
-    // eslint-disable-next-line no-console
-    console.log('Push received:', notification)
+  PushNotifications.addListener('pushNotificationReceived', () => {
+    // Foreground presentation will be added with the approved notification UX.
+    // Do not log notification payloads because they may contain user data.
   })
 }
 

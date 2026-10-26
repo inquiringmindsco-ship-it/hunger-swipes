@@ -22,9 +22,11 @@ export async function PUT(request: NextRequest) {
     const admin = getSupabaseAdmin()
     if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
 
+    // Posting and engagement rewards are intentionally excluded. Swipe Bucks
+    // may only be configured for a future verified-purchase/order integration.
     const allowed = [
-      'active', 'right_swipe_cents', 'save_cents', 'click_cents', 'verified_order_cents',
-      'first_photo_cents', 'daily_cap_cents', 'monthly_cap_cents', 'max_per_post_cents', 'global_budget_cents',
+      'active', 'verified_order_cents', 'daily_cap_cents', 'monthly_cap_cents',
+      'max_per_post_cents', 'global_budget_cents',
     ]
     const update: any = { updated_at: new Date().toISOString() }
     for (const key of allowed) {
