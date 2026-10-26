@@ -17,10 +17,12 @@ const repoRoot = join(__dirname, '..')
 const apiDir = join(repoRoot, 'app', 'api')
 const robotsFile = join(repoRoot, 'app', 'robots.ts')
 const sitemapFile = join(repoRoot, 'app', 'sitemap.ts')
+const dishPreviewDir = join(repoRoot, 'app', 'preview', 'dishes')
 const holdDir = join(repoRoot, '..', '.hunger-swipes-ios-hold')
 const apiHold = join(holdDir, 'api')
 const robotsHold = join(holdDir, 'robots.ts')
 const sitemapHold = join(holdDir, 'sitemap.ts')
+const dishPreviewHold = join(holdDir, 'preview-dishes')
 const nextCache = join(repoRoot, '.next')
 const distDir = join(repoRoot, 'dist')
 
@@ -45,6 +47,11 @@ async function move(from, to) {
 }
 
 async function main() {
+  // Native routes run from capacitor://localhost, so relative API URLs cannot
+  // reach the production backend. Keep the release build deterministic even
+  // when the shell has not exported this public build-time value.
+  process.env.NEXT_PUBLIC_API_BASE_URL ||= 'https://hungerswipes.com'
+
   // Clean caches so moving files doesn't leave stale type references.
   if (existsSync(nextCache)) rmSync(nextCache, { recursive: true, force: true })
   if (existsSync(distDir)) rmSync(distDir, { recursive: true, force: true })
@@ -54,6 +61,8 @@ async function main() {
     await move(apiDir, apiHold); movedPaths.push([apiDir, apiHold])
     await move(robotsFile, robotsHold); movedPaths.push([robotsFile, robotsHold])
     await move(sitemapFile, sitemapHold); movedPaths.push([sitemapFile, sitemapHold])
+    // Internal server-rendered admin preview; never part of the customer app.
+    await move(dishPreviewDir, dishPreviewHold); movedPaths.push([dishPreviewDir, dishPreviewHold])
     run('IOS_BUILD=true next build')
   } finally {
     for (const [from, to] of movedPaths) {

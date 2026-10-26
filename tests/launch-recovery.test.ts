@@ -60,3 +60,15 @@ test('Swipe Bucks and replay remain idempotent', () => {
   assert.match(ledger, /unique\s*\(\s*user_id,\s*post_id,\s*event_type,\s*source_user_id,\s*source_event_id\s*\)/)
   assert.match(guard, /unique\s*\(\s*user_id,\s*idempotency_key\s*\)/)
 })
+
+test('iOS Build 16 keeps release signing and static-export safeguards', () => {
+  const project = read('../ios/App/App.xcodeproj/project.pbxproj')
+  const info = read('../ios/App/App/Info.plist')
+  const exporter = read('../scripts/build-ios-export.mjs')
+  assert.match(project, /CURRENT_PROJECT_VERSION = 16;/)
+  assert.match(project, /DEVELOPMENT_TEAM = 39A3BYR7NN;/)
+  assert.match(project, /CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements;/)
+  assert.match(info, /<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/)
+  assert.match(exporter, /NEXT_PUBLIC_API_BASE_URL \|\|= 'https:\/\/hungerswipes\.com'/)
+  assert.match(exporter, /dishPreviewDir/)
+})
