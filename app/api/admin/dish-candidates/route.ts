@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkAdmin } from '@/lib/admin-auth'
+import { getAdminPrincipal } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { isOwnedManagedPhotoUrl } from '@/lib/food'
 
 // IMG-DS dish-candidate console (dish-launch mission, 2026-10-25)
 // Rights doctrine enforced server-side:
@@ -19,7 +20,7 @@ function bucketOf(row: any) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await getAdminPrincipal(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const db = getSupabaseAdmin()
   if (!db) return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   const { searchParams } = new URL(request.url)
@@ -74,7 +75,8 @@ async function audit(db: any, actor: string, action: string, targetStagingIds: s
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await checkAdmin(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const principal = await getAdminPrincipal(request)
+  if (!principal) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const db = getSupabaseAdmin()
   if (!db) return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   const body = await request.json().catch(() => ({}))
@@ -83,7 +85,42 @@ export async function POST(request: NextRequest) {
   if (!ids.length || !action) return NextResponse.json({ error: 'id/ids and action required' }, { status: 400 })
   const { data: rows, error: loadError } = await db.from('place_image_candidates').select('*').in('id', ids)
   if (loadError) return NextResponse.json({ error: loadError.message }, { status: 500 })
-  const actor = 'sentinel-dish-admin'
+  const actor = principal.kind === 'owner' ? `owner:${principal.userId}` : 'legacy-dish-admin'
+
+  if (action === 'replace_image') {
+    if (principal.kind !== 'owner') {
+      return NextResponse.json({ error: 'Image replacement requires an authenticated owner account.' }, { status: 403 })
+    }
+    const imageUrl = String(body.image_url || '').trim()
+    const evidence = String(body.permission_evidence || '').trim()
+    if (!isOwnedManagedPhotoUrl(imageUrl, principal.userId)) {
+      return NextResponse.json({ error: 'Replacement must be an image uploaded by the signed-in owner.' }, { status: 400 })
+    }
+    if (evidence.length < 8) {
+      return NextResponse.json({ error: 'Document who owns or authorized this replacement image.' }, { status: 400 })
+    }
+    const outs: any[] = []
+    for (const row of rows || []) {
+      const previous = row.notes || ''
+      const stamp = `\n[OWNER IMAGE ${new Date().toISOString()} by ${actor}] ${evidence}`
+      const { error } = await db.from('place_image_candidates').update({
+        image_url: imageUrl,
+        source_url: imageUrl,
+        source_type: 'owner_upload',
+        rights_status: 'approved',
+        notes: `${previous}${stamp}`,
+        updated_at: new Date().toISOString(),
+      }).eq('id', row.id)
+      let placeError = null
+      if (!error && row.usage_status === 'temporary_staging') {
+        const result = await db.from('places').update({ temporary_staging_place_image_url: imageUrl }).eq('id', row.place_id)
+        placeError = result.error
+      }
+      outs.push({ id: row.id, ok: !error && !placeError, liveImageUpdated: row.usage_status === 'temporary_staging' && !placeError })
+    }
+    await audit(db, actor, 'replace_image', ids, evidence.slice(0, 200), rows, { image_url: imageUrl, rights_status: 'approved', source_type: 'owner_upload' })
+    return NextResponse.json({ results: outs })
+  }
 
   if (action === 'approve_rights') {
     // Publishing authorization requires DOCUMENTED permission evidence from the owner.

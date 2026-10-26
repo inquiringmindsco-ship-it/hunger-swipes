@@ -290,6 +290,14 @@ function AdminContent() {
           </div>
         )}
 
+        <Link
+          href="/admin/dish-candidates"
+          className="mb-5 flex min-h-16 items-center justify-between rounded-2xl border border-[#D4AF37]/30 bg-[#D4AF37]/10 p-4 font-bold text-[#D4AF37]"
+        >
+          <span className="inline-flex items-center gap-2"><UtensilsCrossed size={20} /> Dish Manager</span>
+          <span>Review dishes →</span>
+        </Link>
+
         {renees && (
           <div className="mb-5 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
