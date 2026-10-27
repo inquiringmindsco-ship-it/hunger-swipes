@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
 import { boundedLimit, buildDiscoverDeck, diversifyFoodOrder, isOwnedManagedPhotoUrl, mapCommunityPost, mapOfficialDish, mapPlaceStagingCard } from '@/lib/food'
 import { haversineMiles } from '@/lib/geo'
+import { normalizeDishAllergens, normalizeDishIngredients, normalizeServingSize } from '@/lib/dish-details'
 
 export async function GET(request: NextRequest) {
   try {
@@ -264,6 +265,9 @@ export async function POST(request: NextRequest) {
       availability,
       category,
       tags,
+      ingredients,
+      allergens,
+      serving_size,
       status,
     } = body
 
@@ -300,6 +304,9 @@ export async function POST(request: NextRequest) {
       availability: availability || 'available',
       category: category || null,
       tags: tags || [],
+      ingredients: normalizeDishIngredients(ingredients),
+      allergens: normalizeDishAllergens(allergens),
+      serving_size: normalizeServingSize(serving_size),
       status: status || 'active',
     }
     if (video_media_id) insert.video_media_id = video_media_id
@@ -329,12 +336,15 @@ export async function PUT(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     const allowed = [
       'name', 'description', 'photo_url', 'video_media_id', 'poster_url', 'price', 'availability', 'category', 'tags', 'status',
-      'recipe_available', 'recipe_access_type', 'recipe_price', 'recipe_preview'
+      'ingredients', 'allergens', 'serving_size', 'recipe_available', 'recipe_access_type', 'recipe_price', 'recipe_preview'
     ]
     const update: any = {}
     for (const key of allowed) {
       if (body[key] !== undefined) update[key] = body[key]
     }
+    if (body.ingredients !== undefined) update.ingredients = normalizeDishIngredients(body.ingredients)
+    if (body.allergens !== undefined) update.allergens = normalizeDishAllergens(body.allergens)
+    if (body.serving_size !== undefined) update.serving_size = normalizeServingSize(body.serving_size)
     if (Object.keys(update).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }

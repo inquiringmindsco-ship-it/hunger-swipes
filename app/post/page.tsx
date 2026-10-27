@@ -35,6 +35,7 @@ export default function CommunityPostPage() {
   const [dishName, setDishName] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
+  const [includePrice, setIncludePrice] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -170,7 +171,7 @@ export default function CommunityPostPage() {
       const upload = new FormData(); upload.append('file', file); upload.append('folder', 'community-posts')
       const uploadResponse = await authFetch('/api/upload', { method: 'POST', body: upload })
       const uploadData = await uploadResponse.json(); if (!uploadResponse.ok) throw new Error(uploadData.error || 'Photo upload failed')
-      const response = await authFetch('/api/community-posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ place_id: resolvedPlaceId, dish_name: dishName, description, photo_url: uploadData.url, price: price ? Number(price) : null }) })
+      const response = await authFetch('/api/community-posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ place_id: resolvedPlaceId, dish_name: dishName, description, photo_url: uploadData.url, price: includePrice && price ? Number(price) : null }) })
       const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not publish post')
       router.push('/swipe')
     } catch (err: any) { setError(err.message || 'Could not publish post') } finally { setBusy(false) }
@@ -207,7 +208,7 @@ export default function CommunityPostPage() {
         <main className="max-w-md mx-auto px-4 py-8">
           <p className="text-xs font-semibold uppercase tracking-wider text-hs-gold">Choose a post type</p>
           <h1 className="mt-2 text-3xl font-black text-hs-cream">What are you posting?</h1>
-          <p className="mt-2 text-sm text-hs-gray">Pick the option that matches where the food came from.</p>
+          <p className="mt-2 text-sm text-hs-gray">Choose where the food came from.</p>
           <div className="mt-7 grid gap-4">
             <button
               type="button"
@@ -231,7 +232,7 @@ export default function CommunityPostPage() {
                 <div className="w-12 h-12 rounded-2xl bg-hs-gold text-hs-black flex items-center justify-center"><ChefHat size={24} /></div>
                 <div className="flex-1">
                   <h2 className="font-bold text-hs-cream">My own food</h2>
-                  <p className="mt-1 text-xs text-hs-gray">List food you make or sell. Every dish is reviewed before it goes live.</p>
+                  <p className="mt-1 text-xs text-hs-gray">Share food you make. Selling details are optional.</p>
                 </div>
                 <ChevronRight size={20} className="text-hs-gold" />
               </div>
@@ -261,9 +262,7 @@ export default function CommunityPostPage() {
         <button type="button" onClick={() => setPostingType(null)} className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-hs-gold">
           <ArrowLeft size={17} /> Change post type
         </button>
-        <p className="text-sm text-hs-gray mb-6">
-          Share your own food photo from a real place. Community posts are clearly labeled.
-        </p>
+        <p className="text-sm text-hs-gray mb-5">Share a food photo from a real place.</p>
 
         {error && (
           <div className="mb-5 rounded-2xl border border-hs-red/30 bg-hs-red/10 p-4">
@@ -467,7 +466,7 @@ export default function CommunityPostPage() {
           )}
 
           <section>
-            <label htmlFor="description" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Description <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
+            <label htmlFor="description" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">About this dish <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
             <textarea
               id="description"
               value={description}
@@ -480,17 +479,13 @@ export default function CommunityPostPage() {
           </section>
 
           <section>
-            <label htmlFor="price" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Price <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
-            <input
-              id="price"
-              type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={e => setPrice(e.target.value)}
-              placeholder="0.00"
-              className="w-full rounded-2xl border border-white/[0.08] bg-hs-charcoal px-4 py-3.5 text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
-            />
+            <button type="button" aria-expanded={includePrice} onClick={() => setIncludePrice((current) => !current)} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/[0.08] bg-hs-charcoal px-4 text-sm font-semibold text-hs-gold">
+              {includePrice ? 'Remove price' : '+ Add price'}
+            </button>
+            {includePrice && <div className="mt-3">
+              <label htmlFor="price" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">Price</label>
+              <input id="price" type="number" min="0" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="0.00" className="w-full rounded-2xl border border-white/[0.08] bg-hs-charcoal px-4 py-3.5 text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition" />
+            </div>}
           </section>
 
           <section className="pt-2">
