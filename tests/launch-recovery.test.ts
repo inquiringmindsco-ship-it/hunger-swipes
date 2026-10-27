@@ -72,3 +72,10 @@ test('iOS Build 16 keeps release signing and static-export safeguards', () => {
   assert.match(exporter, /NEXT_PUBLIC_API_BASE_URL \|\|= 'https:\/\/hungerswipes\.com'/)
   assert.match(exporter, /dishPreviewDir/)
 })
+
+test('App Store icon is a 1024px PNG without an alpha channel', () => {
+  const icon = readFileSync(new URL('../ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png', import.meta.url))
+  assert.equal(icon.readUInt32BE(16), 1024)
+  assert.equal(icon.readUInt32BE(20), 1024)
+  assert.ok(![4, 6].includes(icon[25]), 'PNG color type must not contain alpha')
+})
