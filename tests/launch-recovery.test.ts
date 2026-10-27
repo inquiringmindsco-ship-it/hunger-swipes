@@ -48,6 +48,47 @@ test('right swipe countdown is visible, timed, and advances the deck', () => {
   assert.match(swipe, /setCurrentIndex\(\(index\) => index \+ 1\)/)
 })
 
+test('local discovery defaults to 3 miles and never expands silently', () => {
+  const preferences = read('../lib/preferences.ts')
+  const filters = read('../app/components/ui/FilterSheet.tsx')
+  const swipe = read('../app/swipe/page.tsx')
+  assert.match(preferences, /distanceMiles: 3/)
+  assert.match(preferences, /\[1, 3, 5, 10, 15\]/)
+  assert.match(filters, /Hunger Swipes will ask before expanding it/)
+  assert.match(swipe, /Expand to \{nextRadius\} miles/)
+})
+
+test('following feed reuses follows, creator identities, blocks, and moderation', () => {
+  const route = read('../app/api/dishes/route.ts')
+  const swipe = read('../app/swipe/page.tsx')
+  const food = read('../lib/food.ts')
+  assert.match(route, /user_follows/)
+  assert.match(route, /blocked_users/)
+  assert.match(route, /blocker_user_id\.eq\.\$\{user\.id\},blocked_user_id\.eq\.\$\{user\.id\}/)
+  assert.match(route, /mode === 'following'/)
+  assert.match(route, /moderation_status', 'approved'/)
+  assert.match(food, /creator_user_id: post\.user_id/)
+  assert.match(swipe, /currentDish\.creatorUserId! : currentDish\.seller\.id/)
+})
+
+test('MAKE has an honest empty state and retired experiences redirect', () => {
+  const swipe = read('../app/swipe/page.tsx')
+  assert.match(swipe, /Recipes are coming soon/)
+  assert.match(swipe, /No publish-ready recipes are available yet/)
+  assert.match(read('../app/social/layout.tsx'), /redirect\('\/swipe'\)/)
+  assert.match(read('../app/visits/layout.tsx'), /redirect\('\/history'\)/)
+})
+
+test('verified hours and outbound actions are connected without checkout', () => {
+  const food = read('../lib/food.ts')
+  const actions = read('../app/components/PlaceActions.tsx')
+  const swipe = read('../app/swipe/page.tsx')
+  assert.match(food, /hours_text: place\.hours/)
+  assert.match(actions, /onAction\?\.\('order'\)/)
+  assert.match(actions, /onAction\?\.\('google_maps'\)/)
+  assert.match(swipe, /action === 'order' \? 'order_intent' : 'creator_engagement'/)
+})
+
 test('anonymous right swipes browse without writing or forced authentication', () => {
   const swipe = read('../app/swipe/page.tsx')
   assert.match(swipe, /if \(!user\) \{ window\.setTimeout\(\(\) => finishAdvance\(dish, direction, false\), 350\); return \}/)
@@ -61,11 +102,11 @@ test('Swipe Bucks and replay remain idempotent', () => {
   assert.match(guard, /unique\s*\(\s*user_id,\s*idempotency_key\s*\)/)
 })
 
-test('iOS Build 16 keeps release signing and static-export safeguards', () => {
+test('iOS Build 17 keeps release signing and static-export safeguards', () => {
   const project = read('../ios/App/App.xcodeproj/project.pbxproj')
   const info = read('../ios/App/App/Info.plist')
   const exporter = read('../scripts/build-ios-export.mjs')
-  assert.match(project, /CURRENT_PROJECT_VERSION = 16;/)
+  assert.match(project, /CURRENT_PROJECT_VERSION = 17;/)
   assert.match(project, /DEVELOPMENT_TEAM = 39A3BYR7NN;/)
   assert.match(project, /CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements;/)
   assert.match(info, /<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/)

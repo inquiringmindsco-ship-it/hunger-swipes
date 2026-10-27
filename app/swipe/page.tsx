@@ -25,12 +25,12 @@ import RecipeUnlockSheet from '@/app/components/RecipeUnlockSheet'
 import FollowButton from '@/app/components/FollowButton'
 import TutorialCoachMark, { type TutorialStep } from '@/app/components/TutorialCoachMark'
 import ContentSafetyMenu from '@/app/components/ContentSafetyMenu'
-import { Eye, RotateCcw } from 'lucide-react'
+import { Clock3, Eye, RotateCcw } from 'lucide-react'
 
 
 interface FoodDish {
   id: string
-  contentKind: 'official' | 'community'
+  contentKind: 'official' | 'community' | 'place_staging'
   imageUrl: string
   videoUrl?: string
   posterUrl?: string
@@ -48,7 +48,7 @@ interface FoodDish {
   spiceLevel?: number
   healthCategory?: string
   distanceMiles?: number
-  seller: { id: string; business_name: string; location_text?: string; address?: string; city?: string; state?: string; latitude?: number; longitude?: number; phone?: string; website?: string; order_url?: string; ordering_method?: string; ordering_url?: string; owner_user_id?: string }
+  seller: { id: string; business_name: string; location_text?: string; address?: string; city?: string; state?: string; latitude?: number; longitude?: number; phone?: string; website?: string; order_url?: string; ordering_method?: string; ordering_url?: string; owner_user_id?: string; hours_text?: string }
   creatorUserId?: string
 }
 
@@ -121,7 +121,7 @@ export default function SwipePage() {
   const [filters, setFilters] = useState<TemporaryFilters>(EMPTY_FILTERS)
   const [preferences, setPreferences] = useState<DiscoveryPreferences>(DEFAULT_DISCOVERY_PREFERENCES)
   const [preferencesReady, setPreferencesReady] = useState(false)
-  const [feedTab, setFeedTab] = useState<'for-you' | 'nearby' | 'trending'>('for-you')
+  const [feedTab, setFeedTab] = useState<'for-you' | 'nearby' | 'following' | 'trending'>('for-you')
   const { mode: discoveryMode, setMode: setDiscoveryMode, ready: discoveryModeReady } = useStoredDiscoveryMode('eat')
   const [recipeSheetRecipeId, setRecipeSheetRecipeId] = useState<string | null>(null)
   const [replayMode, setReplayMode] = useState(false)
@@ -129,7 +129,7 @@ export default function SwipePage() {
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null)
 
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'ready' | 'denied' | 'unavailable'>('idle')
-  const [radius, setRadius] = useState(15)
+  const [radius, setRadius] = useState(DEFAULT_DISCOVERY_PREFERENCES.distanceMiles)
   const [online, setOnline] = useState(true)
   const [dragX, setDragX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
@@ -180,7 +180,7 @@ export default function SwipePage() {
     } catch { setSavedCount(0) }
   }, [])
 
-  const fetchDishes = useCallback(async ({ reset = false, nextFilters = filters, nextMode = feedTab, nextDiscoveryMode = discoveryMode, replay = replayMode }: { reset?: boolean; nextFilters?: TemporaryFilters; nextMode?: typeof feedTab; nextDiscoveryMode?: 'eat' | 'make' | 'explore'; replay?: boolean } = {}) => {
+  const fetchDishes = useCallback(async ({ reset = false, nextFilters = filters, nextMode = feedTab, nextDiscoveryMode = discoveryMode, nextRadius = radius, replay = replayMode }: { reset?: boolean; nextFilters?: TemporaryFilters; nextMode?: typeof feedTab; nextDiscoveryMode?: 'eat' | 'make' | 'explore'; nextRadius?: number; replay?: boolean } = {}) => {
     if (!preferencesReady || authLoading || !discoveryModeReady) return
     if (nextMode === 'nearby' && !coordinates) {
       setLoading(false)
@@ -211,7 +211,7 @@ export default function SwipePage() {
       if (spice > 0) params.set('spiceLevel', String(spice))
       for (const key of seenKeys.current) params.append('exclude', key)
       if (nextMode === 'nearby' && coordinates) {
-        params.set('lat', String(coordinates.lat)); params.set('lng', String(coordinates.lng)); params.set('radius', String(radius))
+        params.set('lat', String(coordinates.lat)); params.set('lng', String(coordinates.lng)); params.set('radius', String(nextRadius))
       }
       const controller = new AbortController()
       const timeout = window.setTimeout(() => controller.abort(), 10000)
@@ -236,6 +236,10 @@ export default function SwipePage() {
       if (generation === requestGeneration.current) { setLoading(false); setLoadingMore(false) }
     }
   }, [authLoading, coordinates, feedTab, filters, hasMore, loadingMore, preferences, preferencesReady, radius])
+
+  useEffect(() => {
+    if (!authLoading && !user && feedTab === 'following') setFeedTab('for-you')
+  }, [authLoading, feedTab, user])
 
   useEffect(() => {
     localStorage.removeItem('hungerswipes_matches')
@@ -369,6 +373,13 @@ export default function SwipePage() {
     void fetchDishes({ reset: true, nextFilters: EMPTY_FILTERS, nextMode: 'for-you', nextDiscoveryMode: discoveryMode })
   }
   const changeMode = (mode: typeof feedTab) => { setFeedTab(mode); if (mode === 'nearby' && !coordinates && locationState === 'idle') requestLocation() }
+  const changeRadius = (nextRadius: number) => {
+    const nextPreferences = { ...preferences, distanceMiles: nextRadius }
+    setRadius(nextRadius)
+    setPreferences(nextPreferences)
+    writeDiscoveryPreferences(nextPreferences)
+    if (user) void getSupabase()?.auth.updateUser({ data: { [ACCOUNT_DISCOVERY_PREFERENCES_KEY]: nextPreferences } })
+  }
   const onDiscoveryModeChange = (mode: 'eat' | 'make' | 'explore') => {
     setDiscoveryMode(mode)
     setReplayMode(false)
@@ -408,6 +419,27 @@ export default function SwipePage() {
   const rotation = Math.max(-10, Math.min(10, dragX * 0.025))
   const hasTemporaryFilters = Boolean(filters.cuisine || filters.dietary || filters.health || filters.priceRange || filters.spiceLevel)
   const hasSavedPreferences = hasActiveDiscoveryPreferences(preferences)
+  const nextRadius = radius < 3 ? 3 : radius < 5 ? 5 : radius < 10 ? 10 : radius < 15 ? 15 : null
+  const expandNearby = () => {
+    if (!nextRadius) return
+    changeRadius(nextRadius)
+    void fetchDishes({ reset: true, nextMode: 'nearby', nextRadius })
+  }
+  const trackExternalAction = useCallback((action: 'order' | 'apple_maps' | 'google_maps' | 'call' | 'website') => {
+    const actionDish = matchDish
+    if (!user || !actionDish) return
+    void authFetch('/api/impact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_type: action === 'order' ? 'order_intent' : 'creator_engagement',
+        dish_id: actionDish.contentKind === 'official' ? actionDish.id : null,
+        community_post_id: actionDish.contentKind === 'community' ? actionDish.id : null,
+        seller_id: actionDish.contentKind === 'official' ? actionDish.seller.id : null,
+        metadata: { action, content_kind: actionDish.contentKind, content_id: actionDish.id, place_id: actionDish.contentKind === 'official' ? null : actionDish.seller.id },
+      }),
+    }).catch(() => undefined)
+  }, [matchDish, user])
 
   useEffect(() => {
     if (!currentDish || tourAutoChecked.current) return
@@ -462,10 +494,20 @@ export default function SwipePage() {
     <div className="flex-1 flex flex-col justify-center">
       <EmptyState
         icon={<BrandMark size={56} />}
-        title={replayMode ? 'Nothing to replay in this mode' : 'No dishes match'}
-        body={replayMode ? 'This mode has no dishes to replay right now.' : 'Adjust your filters or check back when more food is published.'}
+        title={replayMode ? 'Nothing to replay in this mode' : discoveryMode === 'make' ? 'Recipes are coming soon' : feedTab === 'following' ? 'No new food from people you follow' : feedTab === 'nearby' ? `No food found within ${radius} ${radius === 1 ? 'mile' : 'miles'}` : 'No dishes match'}
+        body={replayMode ? 'This mode has no dishes to replay right now.' : discoveryMode === 'make' ? 'No publish-ready recipes are available yet. We will show them here after their food and recipe are approved.' : feedTab === 'following' ? 'Follow creators from a community dish or food profile, then their approved posts will appear here.' : feedTab === 'nearby' ? 'Keep your current distance or choose when to expand it. Hunger Swipes will never expand it silently.' : 'Adjust your filters or check back when more food is published.'}
         action={
           <div className="flex flex-col gap-3">
+            {!replayMode && feedTab === 'nearby' && nextRadius && (
+              <button onClick={expandNearby} className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">
+                Expand to {nextRadius} miles
+              </button>
+            )}
+            {!replayMode && feedTab === 'following' && (
+              <button onClick={() => { setFeedTab('for-you'); void fetchDishes({ reset: true, nextMode: 'for-you' }) }} className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">
+                Browse all local food
+              </button>
+            )}
             {!replayMode && (
               <button
                 onClick={enableReplay}
@@ -574,10 +616,20 @@ export default function SwipePage() {
                 <h2 className="text-white text-[1.35rem] sm:text-[1.55rem] font-black leading-[1.1] tracking-tight mb-0.5 drop-shadow-lg">{currentDish.dish}</h2>
                 <p className="text-white/85 text-sm font-medium drop-shadow-md">{currentDish.restaurant}</p>
                 <p className="flex items-center gap-2 mt-1 text-white/60 text-xs font-medium">{locationLabel && <span className="truncate max-w-[140px] sm:max-w-[180px]">{locationLabel}</span>}{locationLabel && currentDish.priceRange && <span className="text-white/30">•</span>}{currentDish.priceRange && <span className="text-hs-gold">{currentDish.priceRange}</span>}</p>
+                {currentDish.seller.hours_text && <p className="mt-1 flex items-center gap-1 text-[11px] text-white/65"><Clock3 size={12} aria-hidden="true" /><span className="truncate">{currentDish.seller.hours_text}</span></p>}
               </div>
               <div className="flex items-center justify-between gap-3 mb-3">
-                {currentDish.seller?.id && user?.id && currentDish.seller?.owner_user_id !== user.id && (
-                  <FollowButton followingType={currentDish.contentKind === 'community' ? 'user' : 'seller'} followingId={currentDish.seller.id} variant="compact" />
+                {currentDish.seller?.id && user?.id && currentDish.seller?.owner_user_id !== user.id && (currentDish.contentKind !== 'community' || currentDish.creatorUserId) && (
+                  <FollowButton
+                    followingType={currentDish.contentKind === 'community' ? 'user' : 'seller'}
+                    followingId={currentDish.contentKind === 'community' ? currentDish.creatorUserId! : currentDish.seller.id}
+                    variant="compact"
+                    onChange={(following) => {
+                      if (!following && feedTab === 'following') {
+                        setDishes((items) => items.filter((item) => item.contentKind === 'community' ? item.creatorUserId !== currentDish.creatorUserId : item.seller.id !== currentDish.seller.id))
+                      }
+                    }}
+                  />
                 )}
               </div>
                 <div className="flex items-center justify-center gap-7">
@@ -622,7 +674,7 @@ export default function SwipePage() {
               onPointerDown={() => setMatchPaused(true)}
               onFocusCapture={() => setMatchPaused(true)}
             >
-              <PlaceActions place={{ ...matchDish.seller, name: matchDish.seller.business_name, order_url: matchDish.seller.order_url || matchDish.seller.ordering_url }} />
+              <PlaceActions place={{ ...matchDish.seller, name: matchDish.seller.business_name, order_url: matchDish.seller.order_url || matchDish.seller.ordering_url }} onAction={trackExternalAction} />
             </div>
             <div className="rounded-2xl bg-hs-soft/70 px-4 py-3 mb-4" aria-live="polite">
               <p className="text-sm font-bold text-hs-cream">
@@ -641,7 +693,7 @@ export default function SwipePage() {
           </div>
         </div>
       )}
-      <FilterSheet open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} onApply={applyFilters} onClear={clearFilters} mode={feedTab} onModeChange={changeMode} radius={radius} onRadiusChange={setRadius} locationState={locationState} onRequestLocation={requestLocation} />
+      <FilterSheet open={showFilters} onClose={() => setShowFilters(false)} filters={filters} onChange={setFilters} onApply={applyFilters} onClear={clearFilters} mode={feedTab} onModeChange={changeMode} canUseFollowing={Boolean(user)} radius={radius} onRadiusChange={changeRadius} locationState={locationState} onRequestLocation={requestLocation} />
       <MobileNav />
       <TutorialCoachMark open={showDiscoverTour} steps={DISCOVER_TOUR_STEPS} storageKey={DISCOVER_TOUR_KEY} onClose={closeDiscoverTour} />
     </div>

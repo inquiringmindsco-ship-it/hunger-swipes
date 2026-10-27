@@ -24,8 +24,10 @@ export const DEFAULT_DISCOVERY_PREFERENCES: DiscoveryPreferences = {
   health: [],
   spice: 0,
   price: [],
-  distanceMiles: 15,
+  distanceMiles: 3,
 }
+
+export const DISCOVERY_RADIUS_OPTIONS = [1, 3, 5, 10, 15] as const
 
 function stringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
@@ -39,7 +41,9 @@ export function normalizeDiscoveryPreferences(value: any): DiscoveryPreferences 
     health: stringArray(value?.health ?? value?.healthFocus),
     spice: Number.isFinite(Number(value?.spice ?? value?.spicePreference)) ? Number(value?.spice ?? value?.spicePreference) : 0,
     price: stringArray(value?.price ?? value?.priceRange).filter((range) => ['$', '$$', '$$$'].includes(range)),
-    distanceMiles: [5, 10, 15, 25, 50].includes(Number(value?.distanceMiles)) ? Number(value.distanceMiles) : 15,
+    distanceMiles: DISCOVERY_RADIUS_OPTIONS.includes(Number(value?.distanceMiles) as typeof DISCOVERY_RADIUS_OPTIONS[number])
+      ? Number(value.distanceMiles)
+      : DEFAULT_DISCOVERY_PREFERENCES.distanceMiles,
   }
 }
 

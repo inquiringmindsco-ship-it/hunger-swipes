@@ -7,10 +7,12 @@ export default function PlaceActions({
   place,
   compact = false,
   showWebsiteWhenCompact = false,
+  onAction,
 }: {
   place: ActionablePlace
   compact?: boolean
   showWebsiteWhenCompact?: boolean
+  onAction?: (action: 'order' | 'apple_maps' | 'google_maps' | 'call' | 'website') => void
 }) {
   const call = getCallUrl(place)
   const website = safePlaceWebUrl(place.website)
@@ -25,6 +27,7 @@ export default function PlaceActions({
           href={order}
           target="_blank"
           rel="noreferrer"
+          onClick={() => onAction?.('order')}
           className={`${button} bg-hs-gold text-hs-black hover:bg-hs-gold-light`}
         >
           Order
@@ -39,6 +42,7 @@ export default function PlaceActions({
             href={getAppleMapsUrl(place)}
             target="_blank"
             rel="noreferrer"
+            onClick={() => onAction?.('apple_maps')}
             className="block rounded-xl px-3 py-2 text-sm text-hs-cream hover:bg-hs-soft"
           >
             Apple Maps
@@ -47,6 +51,7 @@ export default function PlaceActions({
             href={getGoogleMapsUrl(place)}
             target="_blank"
             rel="noreferrer"
+            onClick={() => onAction?.('google_maps')}
             className="block rounded-xl px-3 py-2 text-sm text-hs-cream hover:bg-hs-soft"
           >
             Google Maps
@@ -54,7 +59,7 @@ export default function PlaceActions({
         </div>
       </details>
       {call && (
-        <a href={call} className={`${button} flex items-center gap-1 text-hs-gold`}>
+        <a href={call} onClick={() => onAction?.('call')} className={`${button} flex items-center gap-1 text-hs-gold`}>
           <Phone size={compact ? 13 : 16} /> {compact ? 'Call' : formatPhone(place.phone)}
         </a>
       )}
@@ -63,6 +68,7 @@ export default function PlaceActions({
           href={website}
           target="_blank"
           rel="noreferrer"
+          onClick={() => onAction?.('website')}
           className={`${button} flex items-center gap-1`}
         >
           <ExternalLink size={15} /> Website

@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import MobileNav from '@/app/components/MobileNav'
+import FollowButton from '@/app/components/FollowButton'
+import { useAuth } from '@/lib/auth'
 
 interface ProfileData {
   handle: string
@@ -64,7 +66,9 @@ function safeExternalLink(href: string, label: string, icon?: React.ReactNode) {
 
 export default function FoodProfileClient({ initialData }: { initialData: ProfileData }) {
   const [data] = useState<ProfileData>(initialData)
+  const { user } = useAuth()
   const displayName = data.owner_type === 'seller' ? data.entity?.business_name : `@${data.handle}`
+  const canFollow = Boolean(user && data.entity?.id && !(data.owner_type === 'user' && data.entity.id === user.id))
 
   const website = normalizeExternalUrl(data.profile?.website_url)
   const youtube = normalizeExternalUrl(data.profile?.youtube_url)
@@ -109,6 +113,11 @@ export default function FoodProfileClient({ initialData }: { initialData: Profil
               <p className="text-sm text-hs-gold">@{data.handle}</p>
             </div>
           </div>
+          {canFollow && (
+            <div className="mt-4">
+              <FollowButton followingType={data.owner_type} followingId={data.entity!.id!} />
+            </div>
+          )}
           {data.profile?.bio && <p className="mt-4 text-sm text-hs-gray leading-relaxed">{data.profile.bio}</p>}
 
           {hasLinks && (

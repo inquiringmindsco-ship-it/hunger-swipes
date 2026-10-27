@@ -8,6 +8,7 @@ interface FollowButtonProps {
   followingType: 'user' | 'seller'
   followingId: string
   variant?: 'default' | 'compact'
+  onChange?: (following: boolean) => void
 }
 
 async function api(path: string, init?: RequestInit) {
@@ -20,7 +21,7 @@ async function api(path: string, init?: RequestInit) {
   return data
 }
 
-export default function FollowButton({ followingType, followingId, variant = 'default' }: FollowButtonProps) {
+export default function FollowButton({ followingType, followingId, variant = 'default', onChange }: FollowButtonProps) {
   const [following, setFollowing] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -39,6 +40,7 @@ export default function FollowButton({ followingType, followingId, variant = 'de
       if (following) {
         await api(`/api/follows?following_type=${followingType}&following_id=${followingId}`, { method: 'DELETE' })
         setFollowing(false)
+        onChange?.(false)
       } else {
         await api('/api/follows', {
           method: 'POST',
@@ -46,6 +48,7 @@ export default function FollowButton({ followingType, followingId, variant = 'de
           body: JSON.stringify({ following_type: followingType, following_id: followingId }),
         })
         setFollowing(true)
+        onChange?.(true)
       }
     } catch (err: any) {
       // eslint-disable-next-line no-console

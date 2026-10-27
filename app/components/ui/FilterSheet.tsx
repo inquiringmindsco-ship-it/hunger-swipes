@@ -3,6 +3,7 @@
 import { useDialogA11y } from '@/lib/dialog-a11y'
 import { CloseIcon, FilterIcon, LocationIcon, ResetIcon } from '@/app/components/icons/HungerIcons'
 import { CUISINE_TAGS, DIETARY_TAGS, HEALTH_CATEGORIES, SPICE_LEVELS } from '@/lib/tags'
+import { DISCOVERY_RADIUS_OPTIONS } from '@/lib/preferences'
 
 interface FilterState {
   cuisine: string
@@ -19,8 +20,9 @@ interface FilterSheetProps {
   onChange: (filters: FilterState) => void
   onApply: () => void
   onClear: () => void
-  mode: 'for-you' | 'nearby' | 'trending'
-  onModeChange: (mode: 'for-you' | 'nearby' | 'trending') => void
+  mode: 'for-you' | 'nearby' | 'following' | 'trending'
+  onModeChange: (mode: 'for-you' | 'nearby' | 'following' | 'trending') => void
+  canUseFollowing: boolean
   radius: number
   onRadiusChange: (radius: number) => void
   locationState: 'idle' | 'requesting' | 'ready' | 'denied' | 'unavailable'
@@ -34,7 +36,7 @@ const PRICE_OPTIONS = [
   { value: '$$$', label: '$$$' },
 ]
 
-export function FilterSheet({ open, onClose, filters, onChange, onApply, onClear, mode, onModeChange, radius, onRadiusChange, locationState, onRequestLocation }: FilterSheetProps) {
+export function FilterSheet({ open, onClose, filters, onChange, onApply, onClear, mode, onModeChange, canUseFollowing, radius, onRadiusChange, locationState, onRequestLocation }: FilterSheetProps) {
   if (!open) return null
 
   const hasActiveFilters = Boolean(filters.cuisine || filters.dietary || filters.health || filters.priceRange || filters.spiceLevel)
@@ -72,11 +74,12 @@ export function FilterSheet({ open, onClose, filters, onChange, onApply, onClear
         <div className="min-h-0 space-y-6 overflow-y-auto scrollbar-hide pr-1">
           <section aria-label="Feed mode">
             <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Feed</label>
-            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Discovery feed mode">
-              {(['for-you', 'nearby', 'trending'] as const).map((value) => (
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Discovery feed mode">
+              {(['for-you', 'nearby', 'following', 'trending'] as const).map((value) => (
                 <button key={value} onClick={() => onModeChange(value)} role="radio" aria-checked={mode === value}
-                  className={`min-h-11 rounded-xl px-2 text-xs font-bold capitalize ${mode === value ? 'bg-hs-gold text-hs-black' : 'bg-hs-soft text-hs-cream'}`}>
-                  {value.replace('-', ' ')}
+                  disabled={value === 'following' && !canUseFollowing}
+                  className={`min-h-11 rounded-xl px-2 text-xs font-bold capitalize disabled:cursor-not-allowed disabled:opacity-50 ${mode === value ? 'bg-hs-gold text-hs-black' : 'bg-hs-soft text-hs-cream'}`}>
+                  {value === 'following' && !canUseFollowing ? 'Following · sign in' : value.replace('-', ' ')}
                 </button>
               ))}
             </div>
@@ -89,8 +92,9 @@ export function FilterSheet({ open, onClose, filters, onChange, onApply, onClear
                 <label htmlFor="discover-radius" className="mt-2 block text-xs text-hs-gray">Within {radius} miles</label>
                 <select id="discover-radius" value={radius} onChange={(event) => onRadiusChange(Number(event.target.value))}
                   className="mt-1 w-full min-h-11 rounded-xl border border-white/10 bg-hs-charcoal px-3 text-sm text-hs-cream">
-                  {[5, 10, 15, 25, 50].map((miles) => <option key={miles} value={miles}>{miles} miles</option>)}
+                  {DISCOVERY_RADIUS_OPTIONS.map((miles) => <option key={miles} value={miles}>{miles} {miles === 1 ? 'mile' : 'miles'}</option>)}
                 </select>
+                <p className="mt-2 text-xs text-hs-gray">Your distance stays selected. Hunger Swipes will ask before expanding it.</p>
                 {(locationState === 'denied' || locationState === 'unavailable') && (
                   <p role="status" className="mt-2 text-xs text-hs-red">Location is unavailable. Choose For You or allow location access to use Nearby.</p>
                 )}

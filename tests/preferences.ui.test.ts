@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { clearDiscoveryPreferences, DISCOVERY_PREFERENCES_KEY, readDiscoveryPreferences, writeDiscoveryPreferences } from '@/lib/preferences'
+import { clearDiscoveryPreferences, DEFAULT_DISCOVERY_PREFERENCES, DISCOVERY_PREFERENCES_KEY, DISCOVERY_RADIUS_OPTIONS, normalizeDiscoveryPreferences, readDiscoveryPreferences, writeDiscoveryPreferences } from '@/lib/preferences'
 
 describe('canonical discovery preferences', () => {
   const storage = window.localStorage
@@ -21,5 +21,13 @@ describe('canonical discovery preferences', () => {
     expect(storage.getItem('hungerswipes_preferences')).not.toBeNull()
     clearDiscoveryPreferences()
     expect(storage.length).toBe(0)
+  })
+
+  it('defaults local discovery to 3 miles and accepts only launch radius choices', () => {
+    expect(DEFAULT_DISCOVERY_PREFERENCES.distanceMiles).toBe(3)
+    expect(DISCOVERY_RADIUS_OPTIONS).toEqual([1, 3, 5, 10, 15])
+    expect(normalizeDiscoveryPreferences({ distanceMiles: 1 }).distanceMiles).toBe(1)
+    expect(normalizeDiscoveryPreferences({ distanceMiles: 15 }).distanceMiles).toBe(15)
+    expect(normalizeDiscoveryPreferences({ distanceMiles: 25 }).distanceMiles).toBe(3)
   })
 })

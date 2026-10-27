@@ -155,6 +155,7 @@ export function mapPlaceStagingCard(place: any, candidate: any) {
       latitude: place.latitude ?? null,
       longitude: place.longitude ?? null,
       phone: place.phone || null,
+      hours_text: place.hours || null,
       website: place.website || null,
       order_url: place.order_url || null,
       ordering_url: place.order_url || null,
@@ -183,6 +184,7 @@ export function mapCommunityPost(post: any) {
     moderation_status: post.moderation_status,
     moderation_reason: post.moderation_reason,
     creator_name: post.creator_name,
+    creator_user_id: post.user_id,
     seller: {
       id: post.place?.id,
       business_name: post.place?.name || 'Community place',
@@ -194,6 +196,7 @@ export function mapCommunityPost(post: any) {
       latitude: post.place?.latitude ?? null,
       longitude: post.place?.longitude ?? null,
       phone: post.place?.phone || null,
+      hours_text: post.place?.hours || null,
       website: post.place?.website || null,
       order_url: post.place?.order_url || null,
       ordering_url: post.place?.order_url || null,
