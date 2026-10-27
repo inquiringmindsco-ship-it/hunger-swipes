@@ -24,6 +24,8 @@
   <string>$(CURRENT_PROJECT_VERSION)</string>
   <key>LSRequiresIPhoneOS</key>
   <true/>
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
   <key>NSCameraUsageDescription</key>
   <string>Hunger Swipes uses your camera so you can take photos of food you want to share.</string>
   <key>NSLocationWhenInUseUsageDescription</key>
