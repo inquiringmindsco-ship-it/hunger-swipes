@@ -43,6 +43,7 @@ Updated: 2026-10-26
 - Retired Social and Visits entry points redirect to supported Discover and History experiences.
 - Swipe Bucks earning and redemption remain disabled. The activation and liability analysis is recorded in `docs/SWIPE_BUCKS_ACTIVATION.md`.
 - These bundled web changes require Build 17; processed Build 16 is not the release candidate for this branch.
+- Native smoke testing found that production API responses lacked CORS permission for the Capacitor origin. The launch candidate adds an API-only `capacitor://localhost` allow-origin policy with explicit methods and headers; wildcard origins remain forbidden.
 
 ## Release policy
 

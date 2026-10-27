@@ -114,6 +114,14 @@ test('iOS Build 17 keeps release signing and static-export safeguards', () => {
   assert.match(exporter, /dishPreviewDir/)
 })
 
+test('iOS production API permits only the Capacitor app origin', () => {
+  const vercel = read('../vercel.json')
+  assert.match(vercel, /"source": "\/api\/\(\.\*\)"/)
+  assert.match(vercel, /"Access-Control-Allow-Origin", "value": "capacitor:\/\/localhost"/)
+  assert.doesNotMatch(vercel, /"Access-Control-Allow-Origin", "value": "\*"/)
+  assert.match(vercel, /Authorization, Content-Type/)
+})
+
 test('App Store icon is a 1024px PNG without an alpha channel', () => {
   const icon = readFileSync(new URL('../ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png', import.meta.url))
   assert.equal(icon.readUInt32BE(16), 1024)
