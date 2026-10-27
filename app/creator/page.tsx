@@ -197,8 +197,8 @@ export default function CreatorDashboard() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Link href="/social" className="px-3 py-2 bg-white/10 rounded-full text-sm hover:bg-white/20 transition">
-                <MessageCircle size={16} className="inline-block mr-1" aria-hidden="true" /> Social
+              <Link href="/swipe" className="px-3 py-2 bg-white/10 rounded-full text-sm hover:bg-white/20 transition">
+                <MessageCircle size={16} className="inline-block mr-1" aria-hidden="true" /> Discover
               </Link>
               <Link href="/creator/upload" className="px-4 py-2 bg-[#FF5722] rounded-full font-semibold hover:bg-[#e64a19] transition">
                 + Upload
@@ -591,11 +591,11 @@ export default function CreatorDashboard() {
               </div>
             </div>
 
-            {/* Post a Food Mood */}
+            {/* Share real food through the supported community-post flow. */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-[#1A1A2E] mb-4 inline-flex items-center gap-2"><MessageCircle size={20} aria-hidden="true" /> Share Your Food Mood</h2>
-              <Link href="/social" className="block w-full py-3 bg-[#FF5722] text-white rounded-xl font-semibold text-center hover:bg-[#e64a19] transition">
-                Go to Social Feed →
+              <h2 className="text-lg font-bold text-[#1A1A2E] mb-4 inline-flex items-center gap-2"><MessageCircle size={20} aria-hidden="true" /> Share Real Food</h2>
+              <Link href="/post" className="block w-full py-3 bg-[#FF5722] text-white rounded-xl font-semibold text-center hover:bg-[#e64a19] transition">
+                Post Food →
               </Link>
             </div>
           </div>

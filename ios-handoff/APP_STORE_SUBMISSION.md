@@ -63,7 +63,7 @@ Screenshots must show production-like content, must not contain debug overlays, 
 ## Release selections
 
 - Version: 1.0
-- Build: 16
+- Build: 17
 - Platform: iPhone only
 - Minimum iOS: 15.0
 - Category: Food & Drink

@@ -4,9 +4,9 @@ Updated: 2026-10-26
 
 ## Authoritative development state
 
-- Production source branch: `main` at merge commit `8348cb542f1bb480eff9fd30226804f956848929`.
-- Current production deployment: `dpl_BFMGBx2FwTLmnvt6d5LvPf3x2cme`. It contains the narrow recovery UI and is not the approved Build 15 experience.
-- Corrective release branch: `codex/build15-recovery`.
+- Production source branch: `main` at merge commit `d8b062fd4daa77b5fe69fd25b1e68eb27481ce67`.
+- Current production deployment: `dpl_FWF9pq5CPnuTBKWSZkprsQqx93dz`.
+- Launch-completion release branch: `codex/launch-completion`.
 - Canonical Discover route: `/swipe`; `/` redirects there immediately.
 - Authoritative mobile UX reference: archived iOS Build 15 at `.ios-build/Hunger Swipes 1.0 Build 15.xcarchive`, created October 24, 2026 at 10:23 CDT.
 - Preserved source snapshot for that app build: `a2ed9d2ba1ced90f33c9b2feb03d2874049e1a08`.
@@ -28,12 +28,22 @@ Updated: 2026-10-26
 
 ## Verification
 
-- `npm test`: 42/42 passed.
-- `npm run test:ui`: 20/20 passed.
+- `npm test`: 54/54 passed.
+- `npm run test:ui`: 21/21 passed.
 - `npm run lint`: passed.
 - `npm run build`: passed.
-- `tests/e2e/swipe.spec.ts`: 27/27 passed across 320×568, 360×800, 390×844, 430×932, tablet, and desktop checks.
-- Local live-catalog tests require the real Supabase environment; fixture-backed interaction tests are green.
+- Browser checks: 35/35 passed; 31 fixture-backed tests passed in the default local environment and the 4 live-catalog integration tests passed with the protected production-connected environment.
+
+## Build 17 launch-completion candidate
+
+- Default Nearby radius is 3 miles with explicit 1, 3, 5, 10, and 15-mile choices. The preference persists locally and in authenticated account metadata. Empty local results offer an explicit next-radius action and never expand silently.
+- A Following feed reuses the existing follow graph, approved community posts, seller dishes, and blocked-user controls. Creator/profile follow and unfollow remain available without exposing saves or location history.
+- MAKE does not surface the only active test recipe because its linked dish is removed. The release candidate uses an honest publish-readiness empty state instead of inventing content.
+- Cards surface verified place hours when available. Directions, order, call, and website actions use existing verified fields and record lightweight outbound intent/engagement events for signed-in users.
+- Retired Social and Visits entry points redirect to supported Discover and History experiences.
+- Swipe Bucks earning and redemption remain disabled. The activation and liability analysis is recorded in `docs/SWIPE_BUCKS_ACTIVATION.md`.
+- These bundled web changes require Build 17; processed Build 16 is not the release candidate for this branch.
+- Native smoke testing found that production API responses lacked CORS permission for the Capacitor origin. The launch candidate adds an API-only `capacitor://localhost` allow-origin policy with explicit methods and headers; wildcard origins remain forbidden.
 
 ## Release policy
 

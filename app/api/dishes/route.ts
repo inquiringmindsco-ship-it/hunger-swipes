@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
     const excludedByClient = new Set(searchParams.getAll('exclude').filter((value) => /^(official|community):[0-9a-f-]{36}$/i.test(value)).slice(0, 100))
     const lat = Number(searchParams.get('lat'))
     const lng = Number(searchParams.get('lng'))
-    const radius = Math.min(Math.max(Number(searchParams.get('radius')) || 15, 1), 100)
-    if (!['for-you', 'nearby', 'trending'].includes(mode)) return NextResponse.json({ error: 'Invalid feed mode', dishes: [] }, { status: 400 })
+    const radius = Math.min(Math.max(Number(searchParams.get('radius')) || 3, 1), 15)
+    if (!['for-you', 'nearby', 'following', 'trending'].includes(mode)) return NextResponse.json({ error: 'Invalid feed mode', dishes: [] }, { status: 400 })
     if (mode === 'nearby' && (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180)) {
       return NextResponse.json({ error: 'Location is required for Nearby', code: 'LOCATION_REQUIRED', dishes: [] }, { status: 400 })
     }
@@ -34,10 +34,16 @@ export async function GET(request: NextRequest) {
     }
 
     const user = await getRequestUser(request)
-    const [{ data: swiped }, { data: saved }] = user ? await Promise.all([
+    if (mode === 'following' && !user) return NextResponse.json({ error: 'Sign in to view food from people you follow', code: 'AUTH_REQUIRED', dishes: [] }, { status: 401 })
+    const [{ data: swiped }, { data: saved }, { data: following }, { data: blocked }] = user ? await Promise.all([
       admin.from('food_swipes').select('content_kind,content_id').eq('actor_id', user.id),
       admin.from('saved_food').select('content_kind,content_id').eq('actor_id', user.id),
-    ]) : [{ data: [] }, { data: [] }]
+      admin.from('user_follows').select('following_type,following_id').eq('follower_id', user.id),
+      admin.from('blocked_users').select('blocker_user_id,blocked_user_id').or(`blocker_user_id.eq.${user.id},blocked_user_id.eq.${user.id}`),
+    ]) : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }]
+    const followedUserIds = (following || []).filter((row: any) => row.following_type === 'user').map((row: any) => row.following_id)
+    const followedSellerIds = (following || []).filter((row: any) => row.following_type === 'seller').map((row: any) => row.following_id)
+    const blockedUserIds = new Set((blocked || []).map((row: any) => row.blocker_user_id === user?.id ? row.blocked_user_id : row.blocker_user_id))
     const replay = searchParams.get('replay') === 'true'
     // A new app session should show the whole eligible catalog again. Historical
     // swipes are used only to put unseen food first; client exclusions prevent a
@@ -51,7 +57,7 @@ export async function GET(request: NextRequest) {
     const discoveryMode = ['eat','make','explore'].includes(discoveryModeRaw) ? discoveryModeRaw as 'eat'|'make'|'explore' : 'eat'
     if (discoveryModeRaw && !['eat','make','explore'].includes(discoveryModeRaw)) return NextResponse.json({ error: 'Invalid discoveryMode', dishes: [] }, { status: 400 })
 
-    let communityQuery = admin.from('community_food_posts').select(`*, place:places!inner(id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,status)`)
+    let communityQuery = admin.from('community_food_posts').select(`*, place:places!inner(id,name,location_text,address,city,state,latitude,longitude,phone,website,order_url,hours,status)`)
       .eq('status', 'active').eq('moderation_status', 'approved').eq('places.status', 'active').order(mode === 'trending' ? 'right_swipes' : 'created_at', { ascending: false }).limit(Math.min((offset + limit + 1) * 2, 1000))
 
     let officialQuery = admin
@@ -74,6 +80,11 @@ export async function GET(request: NextRequest) {
     if (sellerId) {
       officialQuery = officialQuery.eq('seller_id', sellerId)
       communityQuery = communityQuery.eq('place_id', sellerId)
+    }
+
+    if (mode === 'following') {
+      communityQuery = followedUserIds.length ? communityQuery.in('user_id', followedUserIds) : communityQuery.limit(0)
+      officialQuery = followedSellerIds.length ? officialQuery.in('seller_id', followedSellerIds) : officialQuery.limit(0)
     }
 
     if (discoveryMode === 'make') {
@@ -119,7 +130,7 @@ export async function GET(request: NextRequest) {
     // unclaimed restaurant starter imagery a swipeable food card without fabricating
     // a seller record or a fake community post.
     let placeStagingItems: any[] = []
-    if (discoveryMode !== 'make') {
+    if (discoveryMode !== 'make' && mode !== 'following') {
       let placeStagingQuery = admin
         .from('places')
         .select(`
@@ -156,7 +167,7 @@ export async function GET(request: NextRequest) {
       ...(official || []).map(mapOfficialDish),
       ...(community || []).map(mapCommunityPost),
       ...placeStagingItems,
-    ]
+    ].filter((item: any) => item.content_kind !== 'community' || !blockedUserIds.has(item.creator_user_id))
 
 
     // EAT mode: try strict eligibility first (official sellers that can be obtained +
