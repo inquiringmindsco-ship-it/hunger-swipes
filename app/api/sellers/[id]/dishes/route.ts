@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
+import { normalizeDishAllergens, normalizeDishIngredients, normalizeServingSize } from '@/lib/dish-details'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -37,6 +38,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       availability,
       category,
       tags,
+      ingredients,
+      allergens,
+      serving_size,
       status,
     } = body
 
@@ -73,6 +77,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         availability: availability || 'available',
         category: category || null,
         tags: tags || [],
+        ingredients: normalizeDishIngredients(ingredients),
+        allergens: normalizeDishAllergens(allergens),
+        serving_size: normalizeServingSize(serving_size),
         status: status || 'active',
       })
       .select()

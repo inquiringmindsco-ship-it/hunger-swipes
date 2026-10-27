@@ -15,6 +15,7 @@ interface Dish {
   photo_url: string | null
   price: number
   status?: string
+  ingredients?: { quantity: string; unit: string; name: string }[]
 }
 
 export default function NewRecipePage() {
@@ -29,7 +30,8 @@ export default function NewRecipePage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [photoUrl, setPhotoUrl] = useState('')
-  const [ingredients, setIngredients] = useState([{ quantity: '', unit: '', name: '' }])
+  const [ingredients, setIngredients] = useState<{ quantity: string; unit: string; name: string }[]>([])
+  const [ingredientsOpen, setIngredientsOpen] = useState(false)
   const [instructions, setInstructions] = useState([''])
 
   useEffect(() => {
@@ -57,6 +59,9 @@ export default function NewRecipePage() {
           setDishId(initialDish.id)
           setTitle(initialDish.name)
           setPhotoUrl(initialDish.photo_url || '')
+          const dishIngredients = Array.isArray(initialDish.ingredients) ? initialDish.ingredients.filter((item: { name?: string }) => item?.name?.trim()) : []
+          setIngredients(dishIngredients)
+          setIngredientsOpen(dishIngredients.length > 0)
         }
       } catch {
         setError('Unable to load your dishes.')
@@ -192,6 +197,9 @@ export default function NewRecipePage() {
               if (d) {
                 setTitle((t) => (t.startsWith('Recipe:') ? `Recipe: ${d.name}` : t || d.name))
                 setPhotoUrl((p) => p || d.photo_url || '')
+                const dishIngredients = Array.isArray(d.ingredients) ? d.ingredients.filter((item: { name?: string }) => item?.name?.trim()) : []
+                setIngredients(dishIngredients)
+                setIngredientsOpen(dishIngredients.length > 0)
               }
             }}
             className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream focus:border-hs-gold/50 focus:outline-none transition appearance-none"
@@ -214,7 +222,7 @@ export default function NewRecipePage() {
         </section>
 
         <section>
-          <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Description</label>
+          <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">About this recipe</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -224,9 +232,9 @@ export default function NewRecipePage() {
           />
         </section>
 
-        <section className="rounded-2xl border border-hs-gold/20 bg-hs-gold/10 p-4">
-          <p className="font-bold text-hs-cream">Free recipe for launch</p>
-          <p className="mt-1 text-xs leading-relaxed text-hs-gray">Your recipe will be submitted with this dish for review. Optional paid recipes are coming in a future update.</p>
+        <section className="flex items-center justify-between rounded-2xl border border-white/[0.08] bg-hs-charcoal px-4 py-3">
+          <p className="text-sm font-bold text-hs-cream">Recipe access</p>
+          <span className="rounded-full bg-hs-gold/10 px-3 py-1 text-xs font-bold text-hs-gold">Free</span>
         </section>
 
         <section>
@@ -246,40 +254,43 @@ export default function NewRecipePage() {
             <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider">Ingredients</label>
             <button
               type="button"
-              onClick={() => setIngredients([...ingredients, { quantity: '', unit: '', name: '' }])}
+              aria-expanded={ingredientsOpen}
+              onClick={() => {
+                setIngredientsOpen(true)
+                setIngredients((current) => [...current, { quantity: '', unit: '', name: '' }])
+              }}
               className="text-xs text-hs-gold font-semibold inline-flex items-center gap-1"
             >
-              <Plus size={14} /> Add
+              <Plus size={14} /> Add ingredient
             </button>
           </div>
-          <div className="space-y-2">
+          {ingredientsOpen && <div className="space-y-2">
             {ingredients.map((item, idx) => (
               <div key={idx} className="grid grid-cols-[0.7fr_0.9fr_1.8fr_auto] gap-2">
                 <input
                   aria-label={`Ingredient ${idx + 1} quantity`}
                   value={item.quantity}
                   onChange={(e) => setIngredients((current) => current.map((ingredient, ingredientIndex) => ingredientIndex === idx ? { ...ingredient, quantity: e.target.value } : ingredient))}
-                  placeholder="2"
+                  placeholder="Qty"
                   className="min-w-0 px-3 py-3 bg-hs-charcoal border border-white/[0.08] rounded-xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition text-sm"
                 />
                 <input
                   aria-label={`Ingredient ${idx + 1} unit`}
                   value={item.unit}
                   onChange={(e) => setIngredients((current) => current.map((ingredient, ingredientIndex) => ingredientIndex === idx ? { ...ingredient, unit: e.target.value } : ingredient))}
-                  placeholder="cups"
+                  placeholder="Unit"
                   className="min-w-0 px-3 py-3 bg-hs-charcoal border border-white/[0.08] rounded-xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition text-sm"
                 />
                 <input
                   aria-label={`Ingredient ${idx + 1} name`}
                   value={item.name}
                   onChange={(e) => setIngredients((current) => current.map((ingredient, ingredientIndex) => ingredientIndex === idx ? { ...ingredient, name: e.target.value } : ingredient))}
-                  placeholder="flour"
+                  placeholder="Ingredient"
                   className="min-w-0 px-3 py-3 bg-hs-charcoal border border-white/[0.08] rounded-xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setIngredients(ingredients.filter((_, i) => i !== idx))}
-                  disabled={ingredients.length === 1}
                   aria-label={`Remove ingredient ${idx + 1}`}
                   className="min-h-11 min-w-11 text-hs-gray hover:text-hs-red disabled:opacity-30"
                 >
@@ -287,7 +298,7 @@ export default function NewRecipePage() {
                 </button>
               </div>
             ))}
-          </div>
+          </div>}
         </section>
 
         <section>
