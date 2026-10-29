@@ -146,6 +146,7 @@ export default function CommunityPostPage() {
     event.preventDefault()
     if (!file) return setError('Choose a food photo')
     if (!placeId && (!manual || !newPlace.trim() || !location.trim())) return setError('Select a real place, or add one with its name and location')
+    if (!placeId && !selectedAddress) return setError('Search the address and choose a suggestion so people nearby can find this food')
     setBusy(true); setError('')
     try {
       let resolvedPlaceId = placeId

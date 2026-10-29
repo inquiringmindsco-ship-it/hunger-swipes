@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
 import { boundedLimit } from '@/lib/food'
+import { cleanPlaceText, parsePlaceCoordinates } from '@/lib/place-location'
 
 export async function GET(request: NextRequest) {
   const params = new URL(request.url).searchParams
@@ -42,11 +43,34 @@ export async function POST(request: NextRequest) {
   const location = typeof body.location_text === 'string' ? body.location_text.trim() : ''
   const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
   if (name.length < 2 || name.length > 160 || location.length < 2 || location.length > 240) return NextResponse.json({ error: 'Place name and location are required' }, { status: 400 })
+  const coordinates = parsePlaceCoordinates(body.latitude, body.longitude)
+  if (!coordinates) return NextResponse.json({ error: 'Choose a suggested address so nearby food can be located correctly' }, { status: 400 })
   const admin = getSupabaseAdmin()
   if (!admin) return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   const { data: existing } = await admin.from('places').select('*').eq('name', name).eq('location_text', location).eq('status', 'active').maybeSingle()
-  if (existing) return NextResponse.json({ place: existing })
-  const { data, error } = await admin.from('places').insert({ name, location_text: location, phone: phone || null, address: body.address || null, latitude: body.latitude || null, longitude: body.longitude || null, source: 'community', claimed_status: 'unclaimed', created_by: user.id }).select().single()
+  const locationFields = {
+    address: cleanPlaceText(body.address, 240) || location,
+    city: cleanPlaceText(body.city, 120),
+    state: cleanPlaceText(body.state, 80),
+    postal_code: cleanPlaceText(body.postal_code, 30),
+    latitude: coordinates.latitude,
+    longitude: coordinates.longitude,
+  }
+  if (existing) {
+    if (existing.latitude != null && existing.longitude != null) return NextResponse.json({ place: existing })
+    const { data: repaired, error: repairError } = await admin.from('places').update(locationFields).eq('id', existing.id).is('latitude', null).is('longitude', null).select().single()
+    if (repairError) return NextResponse.json({ error: repairError.message }, { status: 500 })
+    return NextResponse.json({ place: repaired })
+  }
+  const { data, error } = await admin.from('places').insert({
+    name,
+    location_text: location,
+    phone: phone || null,
+    ...locationFields,
+    source: 'community',
+    claimed_status: 'unclaimed',
+    created_by: user.id,
+  }).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ place: data }, { status: 201 })
 }

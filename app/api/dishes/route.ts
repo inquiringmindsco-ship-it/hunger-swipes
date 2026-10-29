@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const limit = boundedLimit(searchParams.get('limit'))
     const mode = searchParams.get('mode') || 'for-you'
     const offset = Math.max(0, Math.min(Number.parseInt(searchParams.get('offset') || '0', 10) || 0, 500))
-    const excludedByClient = new Set(searchParams.getAll('exclude').filter((value) => /^(official|community):[0-9a-f-]{36}$/i.test(value)).slice(0, 100))
+    const excludedByClient = new Set(searchParams.getAll('exclude').filter((value) => /^(official|community|place_staging):[0-9a-f-]{36}$/i.test(value)).slice(0, 100))
     const lat = Number(searchParams.get('lat'))
     const lng = Number(searchParams.get('lng'))
     const radius = Math.min(Math.max(Number(searchParams.get('radius')) || 3, 1), 15)

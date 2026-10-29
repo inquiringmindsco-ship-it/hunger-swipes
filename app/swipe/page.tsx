@@ -180,7 +180,7 @@ export default function SwipePage() {
     } catch { setSavedCount(0) }
   }, [])
 
-  const fetchDishes = useCallback(async ({ reset = false, nextFilters = filters, nextMode = feedTab, nextDiscoveryMode = discoveryMode, nextRadius = radius, replay = replayMode }: { reset?: boolean; nextFilters?: TemporaryFilters; nextMode?: typeof feedTab; nextDiscoveryMode?: 'eat' | 'make' | 'explore'; nextRadius?: number; replay?: boolean } = {}) => {
+  const fetchDishes = useCallback(async ({ reset = false, preserveSeen = false, nextFilters = filters, nextMode = feedTab, nextDiscoveryMode = discoveryMode, nextRadius = radius, replay = replayMode }: { reset?: boolean; preserveSeen?: boolean; nextFilters?: TemporaryFilters; nextMode?: typeof feedTab; nextDiscoveryMode?: 'eat' | 'make' | 'explore'; nextRadius?: number; replay?: boolean } = {}) => {
     if (!preferencesReady || authLoading || !discoveryModeReady) return
     if (nextMode === 'nearby' && !coordinates) {
       setLoading(false)
@@ -189,7 +189,8 @@ export default function SwipePage() {
     }
     const generation = reset ? ++requestGeneration.current : requestGeneration.current
     if (reset) {
-      setLoading(true); setFeedError(null); setRefillError(false); setHasMore(true); seenKeys.current.clear()
+      setLoading(true); setFeedError(null); setRefillError(false); setHasMore(true)
+      if (!preserveSeen) seenKeys.current.clear()
     } else {
       if (loadingMore || !hasMore) return
       setLoadingMore(true); setRefillError(false)
@@ -399,6 +400,8 @@ export default function SwipePage() {
     if (loading || loadingMore || feedError || !preferencesReady || authLoading || !discoveryModeReady) return
     if (currentIndex < dishes.length) return
 
+    if (feedTab === 'nearby' && !replayMode) return
+
     if (dishes.length === 0) {
       if (!replayMode) enableReplay()
       return
@@ -412,7 +415,7 @@ export default function SwipePage() {
       void fetchDishes({ reset: true, replay: true })
         }, 150)
     return () => window.clearTimeout(timer)
-  }, [authLoading, currentIndex, discoveryModeReady, dishes.length, feedError, loading, loadingMore, preferencesReady, replayMode])
+  }, [authLoading, currentIndex, discoveryModeReady, dishes.length, feedError, feedTab, loading, loadingMore, preferencesReady, replayMode])
   const currentDish = dishes[currentIndex]
   const nextDish = dishes[currentIndex + 1]
   const locationLabel = currentDish ? shortLocation(currentDish) : null
@@ -420,10 +423,10 @@ export default function SwipePage() {
   const hasTemporaryFilters = Boolean(filters.cuisine || filters.dietary || filters.health || filters.priceRange || filters.spiceLevel)
   const hasSavedPreferences = hasActiveDiscoveryPreferences(preferences)
   const nextRadius = radius < 3 ? 3 : radius < 5 ? 5 : radius < 10 ? 10 : radius < 15 ? 15 : null
-  const expandNearby = () => {
+  const expandNearby = (preserveSeen = false) => {
     if (!nextRadius) return
     changeRadius(nextRadius)
-    void fetchDishes({ reset: true, nextMode: 'nearby', nextRadius })
+    void fetchDishes({ reset: true, preserveSeen, nextMode: 'nearby', nextRadius })
   }
   const trackExternalAction = useCallback((action: 'order' | 'apple_maps' | 'google_maps' | 'call' | 'website') => {
     const actionDish = matchDish
@@ -499,7 +502,7 @@ export default function SwipePage() {
         action={
           <div className="flex flex-col gap-3">
             {!replayMode && feedTab === 'nearby' && nextRadius && (
-              <button onClick={expandNearby} className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">
+              <button onClick={() => expandNearby(false)} className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">
                 Expand to {nextRadius} miles
               </button>
             )}
@@ -545,12 +548,22 @@ export default function SwipePage() {
     <div className="flex-1 flex flex-col justify-center">
       <EmptyState
         icon={<WantItIcon size={48} className="text-hs-gold" />}
-        title={replayMode ? 'Replayed everything' : 'You’re all caught up'}
-        body={refillError ? 'More dishes could not be loaded.' : replayMode ? 'You’ve cycled through everything available for replay.' : 'You’ve seen everything available for these filters.'}
+        title={feedTab === 'nearby' && !replayMode ? `That’s everything within ${radius} ${radius === 1 ? 'mile' : 'miles'}` : replayMode ? 'Replayed everything' : 'You’re all caught up'}
+        body={refillError ? 'More dishes could not be loaded.' : feedTab === 'nearby' && !replayMode ? nextRadius ? 'Would you like us to look farther away?' : 'You’ve seen all nearby food within your widest distance.' : replayMode ? 'You’ve cycled through everything available for replay.' : 'You’ve seen everything available for these filters.'}
         action={
           <div className="flex flex-col gap-3">
             {refillError && <button onClick={() => fetchDishes()} className="px-6 py-3 bg-hs-soft text-hs-cream rounded-full font-semibold text-sm">Retry</button>}
-            {!replayMode && (
+            {feedTab === 'nearby' && !replayMode && nextRadius && (
+              <button onClick={() => expandNearby(true)} className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm">
+                Look up to {nextRadius} miles away
+              </button>
+            )}
+            {feedTab === 'nearby' && !replayMode && !nextRadius && (
+              <button onClick={enableReplay} className="px-8 py-3 bg-hs-soft text-hs-cream rounded-full font-bold text-sm inline-flex items-center justify-center gap-2">
+                <ReplayFoodIcon size={18} /> Review nearby food again
+              </button>
+            )}
+            {!replayMode && feedTab !== 'nearby' && (
               <button
                 onClick={enableReplay}
                 className="px-8 py-3 bg-hs-gold text-hs-black rounded-full font-bold text-sm inline-flex items-center justify-center gap-2"
@@ -579,6 +592,11 @@ export default function SwipePage() {
       <main className="flex-1 flex flex-col max-w-md mx-auto w-full px-4 pt-2 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
         <div id="discover-mode-switch"><DiscoveryModeSwitch value={discoveryMode} onChange={onDiscoveryModeChange} /></div>
         <div className="flex items-center justify-between mb-1 shrink-0"><div className="flex items-center gap-2 text-hs-gray text-xs font-medium min-w-0"><span className="capitalize whitespace-nowrap">{feedTab.replace('-', ' ')}</span>{feedTab === 'nearby' && currentDish.distanceMiles != null && <span className="text-hs-gold">• {currentDish.distanceMiles} mi</span>}{loadingMore && <span aria-live="polite">• loading more</span>}</div><button id="discover-filter-button" onClick={() => setShowFilters(true)} className={`flex items-center justify-center min-w-[44px] min-h-[44px] px-2.5 rounded-full text-[11px] font-semibold transition border ${filters.cuisine || filters.dietary || filters.health || filters.priceRange ? 'bg-hs-gold text-hs-black border-hs-gold' : 'bg-hs-soft/60 text-hs-cream border-transparent hover:border-hs-gold/30'}`} aria-label="Filters"><FilterIcon size={12} /><span className="hidden sm:inline ml-1">Filters</span></button></div>
+        {feedTab === 'nearby' && dishes.length <= 2 && nextRadius && (
+          <button type="button" onClick={() => expandNearby(false)} className="mb-2 min-h-10 w-full rounded-xl border border-hs-gold/30 bg-hs-gold/10 px-3 text-xs font-bold text-hs-gold">
+            Only {dishes.length} nearby {dishes.length === 1 ? 'dish' : 'dishes'} within {radius} mi · Look farther
+          </button>
+        )}
         {!online && <div role="status" className="mb-2 rounded-xl bg-hs-red/10 px-3 py-2 text-center text-xs text-hs-red">Offline — authenticated choices stay on the card until saved.</div>}
         {swipeFailure && <div role="alert" className="mb-2 flex items-center gap-2 rounded-xl border border-hs-red/30 bg-hs-red/10 px-3 py-2 text-xs text-hs-cream"><span className="flex-1">{swipeFailure.message}</span>{swipeFailure.retryable ? <button onClick={retrySwipe} className="min-h-9 rounded-lg bg-hs-gold px-3 font-bold text-hs-black">Retry</button> : swipeFailure.kind === 'auth' ? <Link href="/auth?next=/swipe" className="font-bold text-hs-gold">Sign in</Link> : <button onClick={() => { setSwipeFailure(null); setPendingSwipe(null); setActionState('idle') }} className="font-bold text-hs-gold">Dismiss</button>}</div>}
         <div className="relative flex-1 min-h-0 w-full mx-auto">
