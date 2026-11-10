@@ -339,7 +339,7 @@ export default function StaffUploadPage() {
         </section>
 
         <section>
-          <label htmlFor="description" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">Description <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
+          <label htmlFor="description" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">About this dish <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
           <textarea
             id="description"
             value={form.description}
