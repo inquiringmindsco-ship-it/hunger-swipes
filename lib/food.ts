@@ -17,6 +17,14 @@ export function formatOptionalFoodPrice(value: unknown) {
   return Number.isFinite(price) && price > 0 ? `$${price.toFixed(2)}` : null
 }
 
+/** Release feeds require a real dish label, not an intake placeholder. */
+export function isPublishableDishName(value: unknown) {
+  if (typeof value !== 'string') return false
+  const name = value.trim()
+  if (!name) return false
+  return !/^(?:tbd|unknown|placeholder)(?:\s+from\s+menu)?$/i.test(name)
+}
+
 const FOOD_FAMILIES: Array<[string, RegExp]> = [
   ['pizza', /\b(pizza|pepperoni|calzone)\b/],
   ['burger', /\b(burger|cheeseburger|hamburger|slider)\b/],

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { boundedLimit, formatOptionalFoodPrice, isHttpsUrl, normalizeContentKind } from '../lib/food.ts'
+import { boundedLimit, formatOptionalFoodPrice, isHttpsUrl, isPublishableDishName, normalizeContentKind } from '../lib/food.ts'
 import { hasValidImageSignature, MAX_IMAGE_BYTES, validateImageMetadata } from '../lib/upload-validation.ts'
 import { mapOsmElement } from '../lib/openstreetmap-places.ts'
 import { findDuplicate } from '../lib/place-dedup.ts'
@@ -28,6 +28,12 @@ test('food prices are hidden when unknown or zero', () => {
   assert.equal(formatOptionalFoodPrice(undefined), null)
   assert.equal(formatOptionalFoodPrice(0), null)
   assert.equal(formatOptionalFoodPrice(12.5), '$12.50')
+})
+
+test('release feeds reject placeholder dish names', () => {
+  assert.equal(isPublishableDishName('TBD from menu'), false)
+  assert.equal(isPublishableDishName('placeholder'), false)
+  assert.equal(isPublishableDishName('Scorned Buffalo'), true)
 })
 
 test('public links require HTTPS', () => {

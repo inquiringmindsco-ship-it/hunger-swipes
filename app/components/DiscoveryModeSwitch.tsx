@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 
 type DiscoveryMode = 'eat' | 'make' | 'explore'
 
+// MAKE remains implemented behind the API and seller tools, but stays out of
+// primary Discover until a real approved recipe is publish-ready.
 const MODES: { value: DiscoveryMode; label: string }[] = [
   { value: 'eat', label: 'EAT' },
-  { value: 'make', label: 'MAKE' },
   { value: 'explore', label: 'EXPLORE' },
 ]
 
@@ -26,6 +27,9 @@ export function DiscoveryModeSwitch({ value, onChange }: Props) {
       const saved = localStorage.getItem(STORAGE_KEY) as DiscoveryMode | null
       if (saved && MODES.some((m) => m.value === saved) && saved !== value) {
         onChange(saved)
+      } else if (saved === 'make') {
+        localStorage.setItem(STORAGE_KEY, 'eat')
+        if (value !== 'eat') onChange('eat')
       }
     } catch {
       // localStorage unavailable
@@ -74,6 +78,9 @@ export function useStoredDiscoveryMode(defaultMode: DiscoveryMode = 'eat') {
       const saved = localStorage.getItem(STORAGE_KEY) as DiscoveryMode | null
       if (saved && MODES.some((m) => m.value === saved)) {
         setMode(saved)
+      } else if (saved === 'make') {
+        localStorage.setItem(STORAGE_KEY, 'eat')
+        setMode('eat')
       }
     } catch {
       // ignore

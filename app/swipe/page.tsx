@@ -59,7 +59,7 @@ const REFILL_AT = 5
 const MATCH_CONFIRMATION_SECONDS = 15
 const DISCOVER_TOUR_KEY = 'hs_discover_tour_v1'
 const DISCOVER_TOUR_STEPS: TutorialStep[] = [
-  { targetId: 'discover-mode-switch', title: 'Pick your mood', body: 'EAT finds food to order. MAKE finds recipes. EXPLORE finds nearby food spots.', placement: 'below' },
+  { targetId: 'discover-mode-switch', title: 'Pick your mood', body: 'EAT finds dishes. EXPLORE finds nearby food spots.', placement: 'below' },
   { targetId: 'discover-swipe-card', title: 'Choose what looks good', body: 'Swipe right when you want it. Sign in to save it. Swipe left to pass.', placement: 'center', dimBackground: true },
   { targetId: 'mobile-nav', title: 'Get around', body: 'Discover, save, post, review your history, sell, or manage your profile.', placement: 'above' },
   { targetId: 'discover-filter-button', title: 'Make it yours', body: 'Narrow food by cuisine, diet, price, distance, and more.', placement: 'below' },

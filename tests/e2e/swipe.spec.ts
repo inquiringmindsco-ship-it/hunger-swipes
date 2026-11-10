@@ -54,7 +54,7 @@ test('homepage enters Discover directly with one mobile navigation bar', async (
   await expect(page.getByRole('heading', { name: 'Test Dish 1' })).toBeVisible()
   await expect(page.getByTestId('mobile-nav')).toHaveCount(1)
   await expect(page.getByRole('button', { name: 'EAT' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'MAKE' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'MAKE' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'EXPLORE' })).toBeVisible()
 })
 

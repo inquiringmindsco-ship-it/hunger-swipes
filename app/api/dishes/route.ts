@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { getRequestUser } from '@/lib/server-auth'
-import { boundedLimit, buildDiscoverDeck, diversifyFoodOrder, isOwnedManagedPhotoUrl, mapCommunityPost, mapOfficialDish, mapPlaceStagingCard } from '@/lib/food'
+import { boundedLimit, buildDiscoverDeck, diversifyFoodOrder, isOwnedManagedPhotoUrl, isPublishableDishName, mapCommunityPost, mapOfficialDish, mapPlaceStagingCard } from '@/lib/food'
 import { haversineMiles } from '@/lib/geo'
 import { normalizeDishAllergens, normalizeDishIngredients, normalizeServingSize } from '@/lib/dish-details'
 
@@ -160,7 +160,16 @@ export async function GET(request: NextRequest) {
         const representedPlaceIds = new Set((official || []).map((d: any) => d.place_id).filter(Boolean))
         placeStagingItems = (placeRows || [])
           .filter((row: any) => !representedPlaceIds.has(row.id))
-          .map((row: any) => mapPlaceStagingCard(row, row.candidate?.[0] || row.candidate))
+          .map((row: any) => {
+            const candidates = (Array.isArray(row.candidate) ? row.candidate : [row.candidate]).filter(Boolean)
+            // A place can retain several review candidates. Only the candidate whose
+            // image is actually staged may name the public card; never pair another
+            // candidate's label with the displayed image.
+            const candidate = candidates.find((item: any) => item.image_url === row.temporary_staging_place_image_url)
+            return { row, candidate }
+          })
+          .filter(({ candidate }: any) => candidate && isPublishableDishName(candidate.dish_name))
+          .map(({ row, candidate }: any) => mapPlaceStagingCard(row, candidate))
       }
     }
 
