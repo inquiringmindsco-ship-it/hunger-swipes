@@ -56,6 +56,11 @@ test('local discovery defaults to 3 miles and never expands silently', () => {
   assert.match(preferences, /\[1, 3, 5, 10, 15\]/)
   assert.match(filters, /Hunger Swipes will ask before expanding it/)
   assert.match(swipe, /Expand to \{nextRadius\} miles/)
+  assert.match(swipe, /Only \{dishes\.length\} nearby/)
+  assert.match(swipe, /Would you like us to look farther away\?/)
+  assert.match(swipe, /Look up to \{nextRadius\} miles away/)
+  assert.match(swipe, /if \(feedTab === 'nearby' && !replayMode\) return/)
+  assert.match(swipe, /expandNearby\(true\)/)
 })
 
 test('following feed reuses follows, creator identities, blocks, and moderation', () => {

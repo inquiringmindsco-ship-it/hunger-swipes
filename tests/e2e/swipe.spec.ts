@@ -58,6 +58,41 @@ test('homepage enters Discover directly with one mobile navigation bar', async (
   await expect(page.getByRole('button', { name: 'EXPLORE' })).toBeVisible()
 })
 
+test('nearby exhaustion asks before expanding and does not loop the same dishes', async ({ page, context }) => {
+  await context.grantPermissions(['geolocation'], { origin: 'http://localhost:3100' })
+  await context.setGeolocation({ latitude: 38.7386, longitude: -90.3031 })
+  const nearby = fixtureDishes.slice(0, 2).map((dish, index) => ({ ...dish, distance_miles: index * 0.4 }))
+  const farther = fixtureDishes.slice(2, 5).map((dish, index) => ({ ...dish, distance_miles: 4.3 + index * 0.3 }))
+  let expansionExcludes: string[] = []
+
+  await page.route('**/api/dishes?**', (route) => {
+    const url = new URL(route.request().url())
+    const radius = Number(url.searchParams.get('radius') || 3)
+    if (url.searchParams.get('mode') === 'nearby' && radius === 5) expansionExcludes = url.searchParams.getAll('exclude')
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ dishes: radius >= 5 ? farther : nearby, hasMore: false }),
+    })
+  })
+
+  await page.goto('/swipe')
+  await expect(page.getByText('Only 2 nearby dishes within 3 mi · Look farther')).toBeVisible()
+  await page.getByRole('button', { name: 'Pass on Test Dish 1' }).click()
+  await page.getByRole('button', { name: 'Pass on Test Dish 2' }).click()
+  await expect(page.getByRole('heading', { name: 'That’s everything within 3 miles' })).toBeVisible()
+  await expect(page.getByText('Would you like us to look farther away?')).toBeVisible()
+  await page.waitForTimeout(500)
+  await expect(page.getByRole('heading', { name: 'Test Dish 1' })).not.toBeVisible()
+
+  await page.getByRole('button', { name: 'Look up to 5 miles away' }).click()
+  await expect(page.getByRole('heading', { name: 'Test Dish 3' })).toBeVisible()
+  expect(expansionExcludes).toEqual(expect.arrayContaining([
+    `official:${nearby[0].id}`,
+    `official:${nearby[1].id}`,
+  ]))
+})
+
 test('gesture threshold and axis lock preserve the current card', async ({ page }) => {
   await openGuestFeed(page)
   const card = page.getByTestId('swipe-card')
