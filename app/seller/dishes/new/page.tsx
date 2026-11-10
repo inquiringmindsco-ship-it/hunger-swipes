@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus, Plus, Trash2, Video } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ImagePlus, Plus, Trash2 } from 'lucide-react'
 import { authFetch } from '@/lib/auth-fetch'
 import { BrandMark } from '@/app/components/icons/HungerIcons'
 import { LoadingState } from '@/app/components/ui/LoadingState'
 import MobileNav from '@/app/components/MobileNav'
+import { dishDraftKey, readDishDraft } from '@/lib/dish-form-draft'
 
 const CATEGORIES = [
   'American', 'BBQ', 'Breakfast', 'Cajun', 'Chinese', 'Dessert', 'Healthy', 'Indian', 'Italian',
@@ -30,13 +31,16 @@ function NewDishContent() {
     photo_url: '',
   })
   const [preview, setPreview] = useState('')
-  const [ingredients, setIngredients] = useState([{ quantity: '', unit: '', name: '' }])
+  const [ingredients, setIngredients] = useState<{ quantity: string; unit: string; name: string }[]>([])
+  const [ingredientsOpen, setIngredientsOpen] = useState(false)
   const [allergens, setAllergens] = useState<string[]>([])
   const [servingSize, setServingSize] = useState('')
+  const [offerForSale, setOfferForSale] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [createdDishId, setCreatedDishId] = useState('')
   const [addRecipeNext, setAddRecipeNext] = useState(false)
+  const [draftReady, setDraftReady] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -65,6 +69,35 @@ function NewDishContent() {
     }
     loadSeller()
   }, [router])
+
+  useEffect(() => {
+    if (!sellerId) return
+    const draft = readDishDraft(localStorage.getItem(dishDraftKey(sellerId)))
+    if (draft) {
+      setForm(draft.form)
+      setIngredients(draft.ingredients)
+      setIngredientsOpen(draft.ingredientsOpen || draft.ingredients.length > 0)
+      setAllergens(draft.allergens)
+      setServingSize(draft.servingSize)
+      setAddRecipeNext((current) => sellerType === 'recipe_creator' ? true : draft.addRecipeNext || current)
+      setOfferForSale(draft.offerForSale)
+    }
+    setDraftReady(true)
+  }, [sellerId, sellerType])
+
+  useEffect(() => {
+    if (!sellerId || !draftReady || done) return
+    localStorage.setItem(dishDraftKey(sellerId), JSON.stringify({
+      version: 1,
+      form,
+      ingredients,
+      ingredientsOpen,
+      allergens,
+      servingSize,
+      addRecipeNext,
+      offerForSale,
+    }))
+  }, [sellerId, draftReady, done, form, ingredients, ingredientsOpen, allergens, servingSize, addRecipeNext, offerForSale])
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -102,18 +135,19 @@ function NewDishContent() {
           seller_id: sellerId,
           name: form.name,
           description: form.description,
-          price: parseFloat(form.price || '0'),
+          price: offerForSale ? parseFloat(form.price || '0') : 0,
           category: form.category,
           tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
           ingredients: ingredients.filter((item) => item.name.trim()),
           allergens,
           serving_size: servingSize,
-          availability: form.availability,
+          availability: offerForSale ? form.availability : 'available',
           photo_url: form.photo_url,
         }),
       })
       const data = await res.json()
       if (data.dish) {
+        localStorage.removeItem(dishDraftKey(sellerId))
         setCreatedDishId(data.dish.id)
         if (sellerType === 'recipe_creator' || addRecipeNext) {
           router.replace(`/seller/recipes/new?dish=${encodeURIComponent(data.dish.id)}`)
@@ -194,7 +228,6 @@ function NewDishContent() {
     )
   }
 
-  const isHomeCook = sellerType === 'home_cook' || sellerType === 'home_kitchen'
   const isRecipeCreator = sellerType === 'recipe_creator'
   const allergenOptions = ['Milk', 'Eggs', 'Fish', 'Shellfish', 'Tree nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame']
 
@@ -209,7 +242,7 @@ function NewDishContent() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-md mx-auto px-4 py-5 space-y-5">
         {error && (
           <div className="rounded-2xl border border-hs-red/30 bg-hs-red/10 p-4">
             <p className="text-sm text-hs-red font-medium">{error}</p>
@@ -217,59 +250,85 @@ function NewDishContent() {
         )}
 
         <section>
-          <label htmlFor="name" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">{isRecipeCreator ? 'Recipe / Dish Name' : 'Dish Name'} *</label>
+          <label htmlFor="name" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">{isRecipeCreator ? 'Recipe / Dish Name' : 'Dish Name'} *</label>
           <input
             id="name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder={isRecipeCreator ? 'Ex: Grandma’s Smothered Chicken' : 'Ex: Smoked Brisket Plate'}
-            className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
+            className="w-full px-4 py-3.5 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
           />
         </section>
 
-        <section className="rounded-3xl border border-hs-gold/20 bg-hs-gold/5 p-4">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={sellerType === 'recipe_creator' || addRecipeNext}
-            onClick={() => sellerType !== 'recipe_creator' && setAddRecipeNext((current) => !current)}
-            className="flex w-full items-center justify-between gap-4 text-left"
-          >
-            <span>
-              <span className="block font-black text-hs-cream">Add the recipe next</span>
-              <span className="mt-1 block text-xs leading-relaxed text-hs-gray">
-                Continue straight to ingredients and instructions after this photo uploads. You do not have to wait for dish approval.
-              </span>
-            </span>
-            <span className={`relative h-7 w-12 shrink-0 rounded-full transition ${sellerType === 'recipe_creator' || addRecipeNext ? 'bg-hs-gold' : 'bg-hs-soft'}`}>
-              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition ${sellerType === 'recipe_creator' || addRecipeNext ? 'left-6' : 'left-1'}`} />
-            </span>
-          </button>
-          {sellerType === 'recipe_creator' && <p className="mt-3 text-[11px] font-semibold text-hs-gold">Recipe Creator accounts continue automatically.</p>}
+        <section>
+          <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">Photo *</label>
+          <label className="block cursor-pointer">
+            <div className="border-2 border-dashed border-white/15 rounded-2xl p-5 text-center hover:border-hs-gold/40 transition bg-hs-charcoal">
+              {preview || form.photo_url ? (
+                <img src={preview || form.photo_url} alt="Preview" className="h-32 w-full rounded-xl object-cover" />
+              ) : (
+                <div className="text-hs-gray flex flex-col items-center gap-2">
+                  <ImagePlus size={24} aria-hidden="true" />
+                  <span className="text-sm font-medium">Add food photo</span>
+                </div>
+              )}
+            </div>
+            <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+          </label>
+          <details className="mt-2 px-1 py-1">
+            <summary className="cursor-pointer text-xs font-semibold text-hs-gray">Use an image URL instead</summary>
+            <label htmlFor="photo-url" className="sr-only">Image URL</label>
+            <input id="photo-url" value={form.photo_url} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} placeholder="https://..." className="mt-2 w-full rounded-xl border border-white/[0.08] bg-hs-charcoal px-4 py-3 text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
+          </details>
         </section>
 
-        {isHomeCook && <section className="rounded-3xl border border-hs-gold/20 bg-hs-gold/5 p-4">
-          <div className="mb-4">
-            <h2 className="font-black text-hs-cream">What’s in this dish?</h2>
-            <p className="mt-1 text-xs leading-relaxed text-hs-gray">Add the ingredients customers should know about. Full recipe instructions stay private unless you publish a separate recipe.</p>
+        <section>
+          <button
+            type="button"
+            aria-pressed={sellerType === 'recipe_creator' || addRecipeNext}
+            onClick={() => sellerType !== 'recipe_creator' && setAddRecipeNext((current) => !current)}
+            className={`flex min-h-11 w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-bold transition ${sellerType === 'recipe_creator' || addRecipeNext ? 'border-hs-gold/50 bg-hs-gold/10 text-hs-gold' : 'border-white/[0.08] bg-hs-charcoal text-hs-cream'}`}
+          >
+            <span className="inline-flex items-center gap-2"><Plus size={16} /> Add a recipe</span>
+            <span className="text-xs">{sellerType === 'recipe_creator' || addRecipeNext ? 'Selected' : 'Optional'}</span>
+          </button>
+        </section>
+
+        <section className="rounded-2xl border border-white/[0.08] bg-hs-charcoal p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-bold text-hs-cream">Ingredients</h2>
+            <button
+              type="button"
+              aria-expanded={ingredientsOpen}
+              onClick={() => {
+                setIngredientsOpen(true)
+                setIngredients((current) => current.length ? current : [{ quantity: '', unit: '', name: '' }])
+              }}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-xs font-bold text-hs-gold"
+            >
+              <Plus size={15} /> Add ingredient
+            </button>
           </div>
-          <div className="space-y-3">
+          {ingredientsOpen && <div className="mt-4">
+            <div className="space-y-3">
             {ingredients.map((ingredient, index) => <div key={index} className="grid grid-cols-[0.7fr_0.9fr_1.8fr_auto] gap-2">
-              <input aria-label={`Ingredient ${index + 1} quantity`} value={ingredient.quantity} onChange={(event) => setIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} placeholder="2" className="min-w-0 rounded-xl border border-white/[0.08] bg-hs-charcoal px-3 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
-              <input aria-label={`Ingredient ${index + 1} unit`} value={ingredient.unit} onChange={(event) => setIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, unit: event.target.value } : item))} placeholder="cups" className="min-w-0 rounded-xl border border-white/[0.08] bg-hs-charcoal px-3 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
-              <input aria-label={`Ingredient ${index + 1} name`} value={ingredient.name} onChange={(event) => setIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} placeholder="flour" className="min-w-0 rounded-xl border border-white/[0.08] bg-hs-charcoal px-3 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
-              <button type="button" aria-label={`Remove ingredient ${index + 1}`} disabled={ingredients.length === 1} onClick={() => setIngredients((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 min-w-11 rounded-xl text-hs-gray disabled:opacity-30"><Trash2 size={17} className="mx-auto" /></button>
+              <input aria-label={`Ingredient ${index + 1} quantity`} value={ingredient.quantity} onChange={(event) => setIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} placeholder="Qty" className="min-w-0 rounded-xl border border-white/[0.08] bg-hs-soft px-2.5 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
+              <input aria-label={`Ingredient ${index + 1} unit`} value={ingredient.unit} onChange={(event) => setIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, unit: event.target.value } : item))} placeholder="Unit" className="min-w-0 rounded-xl border border-white/[0.08] bg-hs-soft px-2.5 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
+              <input aria-label={`Ingredient ${index + 1} name`} value={ingredient.name} onChange={(event) => setIngredients((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} placeholder="Ingredient" className="min-w-0 rounded-xl border border-white/[0.08] bg-hs-soft px-2.5 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
+              <button type="button" aria-label={`Remove ingredient ${index + 1}`} onClick={() => setIngredients((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 min-w-11 rounded-xl text-hs-gray hover:text-hs-red"><Trash2 size={17} className="mx-auto" /></button>
             </div>)}
-          </div>
-          <button type="button" onClick={() => setIngredients((current) => [...current, { quantity: '', unit: '', name: '' }])} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-full bg-hs-soft px-4 text-xs font-bold text-hs-gold"><Plus size={15} /> Add Ingredient</button>
-          <label htmlFor="serving-size" className="mt-5 block text-xs font-semibold uppercase tracking-wider text-hs-gold">Serving Size</label>
-          <input id="serving-size" value={servingSize} onChange={(event) => setServingSize(event.target.value)} placeholder="Example: Serves 2 or one 12 oz bowl" className="mt-2 w-full rounded-2xl border border-white/[0.08] bg-hs-charcoal px-4 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
-          <fieldset className="mt-5"><legend className="text-xs font-semibold uppercase tracking-wider text-hs-gold">Contains Allergens</legend><div className="mt-2 flex flex-wrap gap-2">{allergenOptions.map((allergen) => <button type="button" key={allergen} aria-pressed={allergens.includes(allergen)} onClick={() => setAllergens((current) => current.includes(allergen) ? current.filter((item) => item !== allergen) : [...current, allergen])} className={`min-h-10 rounded-full px-3 text-xs font-bold ${allergens.includes(allergen) ? 'bg-hs-gold text-hs-black' : 'border border-white/[0.08] bg-hs-soft text-hs-gray'}`}>{allergen}</button>)}</div></fieldset>
-          <p className="mt-3 text-[11px] leading-relaxed text-hs-muted">Customers with allergies should always confirm ingredients directly with the seller.</p>
-        </section>}
+            </div>
+            <button type="button" onClick={() => setIngredients((current) => [...current, { quantity: '', unit: '', name: '' }])} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-full bg-hs-soft px-4 text-xs font-bold text-hs-gold"><Plus size={15} /> Add another</button>
+            <label htmlFor="serving-size" className="mt-4 block text-xs font-semibold uppercase tracking-wider text-hs-gold">Serving size</label>
+            <input id="serving-size" value={servingSize} onChange={(event) => setServingSize(event.target.value)} placeholder="Serves 2" className="mt-2 w-full rounded-2xl border border-white/[0.08] bg-hs-soft px-4 py-3 text-sm text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none" />
+            <fieldset className="mt-4"><legend className="text-xs font-semibold uppercase tracking-wider text-hs-gold">Allergens</legend><div className="mt-2 flex flex-wrap gap-2">{allergenOptions.map((allergen) => <button type="button" key={allergen} aria-pressed={allergens.includes(allergen)} onClick={() => setAllergens((current) => current.includes(allergen) ? current.filter((item) => item !== allergen) : [...current, allergen])} className={`min-h-10 rounded-full px-3 text-xs font-bold ${allergens.includes(allergen) ? 'bg-hs-gold text-hs-black' : 'border border-white/[0.08] bg-hs-soft text-hs-gray'}`}>{allergen}</button>)}</div></fieldset>
+            <p className="mt-3 text-[11px] leading-relaxed text-hs-muted">Allergy information may be incomplete. Check before eating.</p>
+            <button type="button" onClick={() => setIngredientsOpen(false)} className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-hs-gray"><ChevronDown size={14} className="rotate-180" /> Hide ingredients</button>
+          </div>}
+        </section>
 
         <section>
-          <label htmlFor="description" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Description <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
+          <label htmlFor="description" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">About this dish <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
           <textarea
             id="description"
             value={form.description}
@@ -280,9 +339,14 @@ function NewDishContent() {
           />
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="price" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Price ($)</label>
+        <section>
+          <button type="button" aria-pressed={offerForSale} onClick={() => setOfferForSale((current) => !current)} className={`flex min-h-11 w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm font-bold transition ${offerForSale ? 'border-hs-gold/50 bg-hs-gold/10 text-hs-gold' : 'border-white/[0.08] bg-hs-charcoal text-hs-cream'}`}>
+            <span>Offer this dish for sale</span>
+            <span className="text-xs">{offerForSale ? 'Yes' : 'No'}</span>
+          </button>
+          {offerForSale && <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="price" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">Price ($)</label>
             <input
               id="price"
               type="number"
@@ -291,16 +355,27 @@ function NewDishContent() {
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
               placeholder="0.00"
-              className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
+                className="w-full px-4 py-3.5 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
             />
-          </div>
+            </div>
+            <div>
+              <label htmlFor="availability" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">Availability</label>
+              <select id="availability" value={form.availability} onChange={(event) => setForm({ ...form, availability: event.target.value })} className="w-full px-4 py-3.5 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream focus:border-hs-gold/50 focus:outline-none appearance-none">
+                <option value="available">Available</option>
+                <option value="sold_out">Sold out</option>
+              </select>
+            </div>
+          </div>}
+        </section>
+
+        <section>
           <div>
-            <label htmlFor="category" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Category</label>
+            <label htmlFor="category" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">Category</label>
             <select
               id="category"
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream focus:border-hs-gold/50 focus:outline-none transition appearance-none"
+              className="w-full px-4 py-3.5 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream focus:border-hs-gold/50 focus:outline-none transition appearance-none"
             >
               {CATEGORIES.map(c => (
                 <option key={c} value={c}>{c}</option>
@@ -310,7 +385,7 @@ function NewDishContent() {
         </section>
 
         <section>
-          <label htmlFor="tags" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Tags <span className="text-hs-gray font-normal normal-case">(comma separated)</span></label>
+          <label htmlFor="tags" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-2 block">Tags <span className="text-hs-gray font-normal normal-case">(optional)</span></label>
           <input
             id="tags"
             value={form.tags}
@@ -318,46 +393,6 @@ function NewDishContent() {
             placeholder="gluten-free, spicy, comfort food"
             className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
           />
-        </section>
-
-        <section>
-          <label className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Photo *</label>
-          <label className="block cursor-pointer">
-            <div className="border-2 border-dashed border-white/15 rounded-2xl p-6 text-center hover:border-hs-gold/40 transition bg-hs-charcoal">
-              {preview || form.photo_url ? (
-                <img src={preview || form.photo_url} alt="Preview" className="w-32 h-32 object-cover rounded-xl mx-auto" />
-              ) : (
-                <div className="text-hs-gray flex flex-col items-center gap-2">
-                  <ImagePlus size={24} aria-hidden="true" />
-                  <span className="text-sm font-medium">Tap to upload dish photo</span>
-                </div>
-              )}
-            </div>
-            <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-          </label>
-        </section>
-
-        <section>
-          <label htmlFor="photo-url" className="text-xs font-semibold text-hs-gold uppercase tracking-wider mb-3 block">Or Paste Image URL</label>
-          <input
-            id="photo-url"
-            value={form.photo_url}
-            onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
-            placeholder="https://..."
-            className="w-full px-4 py-4 bg-hs-charcoal border border-white/[0.08] rounded-2xl text-hs-cream placeholder:text-hs-muted focus:border-hs-gold/50 focus:outline-none transition"
-          />
-        </section>
-
-        <section>
-          <div className="rounded-2xl border border-hs-gold/20 bg-hs-gold/10 p-5 flex items-center gap-4">
-            <div className="w-11 h-11 rounded-xl bg-hs-gold/15 text-hs-gold flex items-center justify-center shrink-0">
-              <Video size={22} aria-hidden="true" />
-            </div>
-            <div>
-              <p className="font-bold text-hs-cream">Food videos — Coming Soon</p>
-              <p className="mt-1 text-xs text-hs-gray">Launch with a great photo today. Short food videos will arrive in a future update.</p>
-            </div>
-          </div>
         </section>
 
         <section className="flex gap-3 pt-4">

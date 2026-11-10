@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { boundedLimit, formatOptionalFoodPrice, isHttpsUrl, normalizeContentKind } from '../lib/food.ts'
+import { boundedLimit, formatOptionalFoodPrice, isHttpsUrl, isPublishableDishName, normalizeContentKind } from '../lib/food.ts'
 import { hasValidImageSignature, MAX_IMAGE_BYTES, validateImageMetadata } from '../lib/upload-validation.ts'
 import { mapOsmElement } from '../lib/openstreetmap-places.ts'
 import { findDuplicate } from '../lib/place-dedup.ts'
@@ -9,6 +9,7 @@ import { scoreGoogleCandidate } from '../lib/google-places.ts'
 import { haversineMiles } from '../lib/geo.ts'
 import { assertTestMode, computeRecipeEcon, getStripe, getWebhookSecret } from '../lib/stripe.ts'
 import { readFileSync } from 'node:fs'
+import { cleanPlaceText, parsePlaceCoordinates } from '../lib/place-location.ts'
 
 test('content kinds reject arbitrary table selectors', () => {
   assert.equal(normalizeContentKind('official'), 'official')
@@ -27,6 +28,12 @@ test('food prices are hidden when unknown or zero', () => {
   assert.equal(formatOptionalFoodPrice(undefined), null)
   assert.equal(formatOptionalFoodPrice(0), null)
   assert.equal(formatOptionalFoodPrice(12.5), '$12.50')
+})
+
+test('release feeds reject placeholder dish names', () => {
+  assert.equal(isPublishableDishName('TBD from menu'), false)
+  assert.equal(isPublishableDishName('placeholder'), false)
+  assert.equal(isPublishableDishName('Scorned Buffalo'), true)
 })
 
 test('public links require HTTPS', () => {
@@ -77,6 +84,15 @@ test('Google matching requires exact normalized name and close coordinates', () 
 test('nearby distance uses real coordinates', () => {
   assert.equal(haversineMiles(38.7442, -90.3054, 38.7442, -90.3054), 0)
   assert.ok(haversineMiles(38.627, -90.1994, 38.7442, -90.3054) > 8)
+})
+
+test('community places require valid coordinates and keep normalized address fields', () => {
+  assert.deepEqual(parsePlaceCoordinates('38.7336033', '-90.3016414'), { latitude: 38.7336033, longitude: -90.3016414 })
+  assert.equal(parsePlaceCoordinates('', '-90.3016414'), null)
+  assert.equal(parsePlaceCoordinates('91', '-90.3016414'), null)
+  assert.equal(parsePlaceCoordinates('38.7', '-181'), null)
+  assert.equal(cleanPlaceText('  Ferguson  ', 120), 'Ferguson')
+  assert.equal(cleanPlaceText('   ', 120), null)
 })
 
 test('atomic swipe migration preserves duplicate and save semantics', () => {

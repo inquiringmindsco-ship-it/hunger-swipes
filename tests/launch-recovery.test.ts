@@ -56,6 +56,11 @@ test('local discovery defaults to 3 miles and never expands silently', () => {
   assert.match(preferences, /\[1, 3, 5, 10, 15\]/)
   assert.match(filters, /Hunger Swipes will ask before expanding it/)
   assert.match(swipe, /Expand to \{nextRadius\} miles/)
+  assert.match(swipe, /Only \{dishes\.length\} nearby/)
+  assert.match(swipe, /Would you like us to look farther away\?/)
+  assert.match(swipe, /Look up to \{nextRadius\} miles away/)
+  assert.match(swipe, /if \(feedTab === 'nearby' && !replayMode\) return/)
+  assert.match(swipe, /expandNearby\(true\)/)
 })
 
 test('following feed reuses follows, creator identities, blocks, and moderation', () => {
@@ -77,6 +82,12 @@ test('MAKE has an honest empty state and retired experiences redirect', () => {
   assert.match(swipe, /No publish-ready recipes are available yet/)
   assert.match(read('../app/social/layout.tsx'), /redirect\('\/swipe'\)/)
   assert.match(read('../app/visits/layout.tsx'), /redirect\('\/history'\)/)
+})
+
+test('MAKE stays out of primary Discover until a publish-ready recipe exists', () => {
+  const modeSwitch = read('../app/components/DiscoveryModeSwitch.tsx')
+  assert.doesNotMatch(modeSwitch, /value:\s*'make',\s*label:\s*'MAKE'/)
+  assert.match(modeSwitch, /saved === 'make'/)
 })
 
 test('verified hours and outbound actions are connected without checkout', () => {
@@ -102,11 +113,11 @@ test('Swipe Bucks and replay remain idempotent', () => {
   assert.match(guard, /unique\s*\(\s*user_id,\s*idempotency_key\s*\)/)
 })
 
-test('iOS Build 17 keeps release signing and static-export safeguards', () => {
+test('iOS Build 18 keeps release signing and static-export safeguards', () => {
   const project = read('../ios/App/App.xcodeproj/project.pbxproj')
   const info = read('../ios/App/App/Info.plist')
   const exporter = read('../scripts/build-ios-export.mjs')
-  assert.match(project, /CURRENT_PROJECT_VERSION = 17;/)
+  assert.match(project, /CURRENT_PROJECT_VERSION = 18;/)
   assert.match(project, /DEVELOPMENT_TEAM = 39A3BYR7NN;/)
   assert.match(project, /CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements;/)
   assert.match(info, /<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/)
